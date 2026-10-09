@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#fffdf7">
+  <title>Amen City · net harness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #fffdf7; font-family: Inter, system-ui, sans-serif; }
+    #world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+    #ui { position: fixed; inset: 0; pointer-events: none; }
+    #ui > * { pointer-events: auto; }
+    .dev-card {
+      position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 10px; z-index: 20; max-width: min(330px, calc(100vw - 20px));
+      background: rgba(255, 253, 247, .92); border: 2px solid #000; border-radius: 12px; box-shadow: 4px 4px 0 #000;
+      padding: 8px 12px; font-size: 12px; line-height: 1.45; color: #18181b;
+    }
+    .dev-card h1 { margin: 0 0 2px; font: 700 15px/1.2 "Space Grotesk", Inter, sans-serif; letter-spacing: -.3px; }
+    .dev-card .k { color: #52525b; font-weight: 600; }
+    .dev-card .help { margin-top: 4px; color: #52525b; }
+    .dev-card kbd { display: inline-block; padding: 0 4px; border: 1.5px solid #000; border-radius: 4px; background: #fff; font: 700 10px/1.4 "Space Grotesk", sans-serif; }
+    @media (max-width: 600px) { .dev-card .help { display: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="world" aria-label="3D view"></canvas>
+  <div id="ui"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

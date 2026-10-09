@@ -1,0 +1,177 @@
+/* Touch controls (floating joystick + action buttons), neo-brutalist style.
+   Shown only on touch devices: .amen-tc[data-touch="true"].
+   Set --amen-tc-lift (e.g. 72px) on :root to raise the controls above a bottom navigation bar. */
+.amen-tc {
+  --tc-ink: #000;
+  --tc-paper: #fffdf7;
+  --tc-safe-b: calc(env(safe-area-inset-bottom, 0px) + var(--amen-tc-lift, 0px));
+  --tc-safe-r: env(safe-area-inset-right, 0px);
+  --tc-safe-l: env(safe-area-inset-left, 0px);
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.amen-tc[data-touch="false"],
+.amen-tc.is-hidden { display: none; }
+.amen-tc.is-disabled { opacity: .35; }
+.amen-tc.is-disabled * { pointer-events: none !important; }
+
+/* ------------------------------------------------------------ joystick */
+.amen-tc__stick {
+  position: absolute;
+  left: calc(100px + var(--tc-safe-l));
+  top: calc(100% - 132px - var(--tc-safe-b));
+  width: 132px;
+  height: 132px;
+  transform: translate(-50%, -50%) scale(.86);
+  opacity: .62;
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.amen-tc__stick.is-active { opacity: 1; transform: translate(-50%, -50%) scale(1); transition: opacity .08s ease; }
+.amen-tc__base {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid var(--tc-ink);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 253, 247, .0) 0 34%, rgba(0, 0, 0, .06) 35% 36%, rgba(255, 253, 247, 0) 37%),
+    rgba(255, 253, 247, .72);
+  box-shadow: 4px 4px 0 0 var(--tc-ink);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.amen-tc__chev {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  opacity: .55;
+}
+.amen-tc__chev--n { left: 50%; top: 9px; transform: translateX(-50%); border-bottom: 7px solid var(--tc-ink); border-top: 0; }
+.amen-tc__chev--s { left: 50%; bottom: 9px; transform: translateX(-50%); border-top: 7px solid var(--tc-ink); border-bottom: 0; }
+.amen-tc__chev--w { top: 50%; left: 9px; transform: translateY(-50%); border-right: 7px solid var(--tc-ink); border-left: 0; }
+.amen-tc__chev--e { top: 50%; right: 9px; transform: translateY(-50%); border-left: 7px solid var(--tc-ink); border-right: 0; }
+.amen-tc__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  border-radius: 9999px;
+  border: 2px solid var(--tc-ink);
+  background: radial-gradient(circle at 50% 50%, var(--tc-ink) 0 3px, transparent 3.5px), #fff;
+  box-shadow: 3px 3px 0 0 var(--tc-ink);
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+.amen-tc__stick.is-run .amen-tc__knob { background: radial-gradient(circle at 50% 50%, var(--tc-ink) 0 3px, transparent 3.5px), #86efac; }
+.amen-tc__run {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translate(-50%, -100%);
+  padding: 3px 10px;
+  border: 2px solid var(--tc-ink);
+  border-radius: 9999px;
+  background: #86efac;
+  box-shadow: 2px 2px 0 0 var(--tc-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--tc-ink);
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+.amen-tc__stick.is-run .amen-tc__run { opacity: 1; }
+
+/* ------------------------------------------------------------ action buttons */
+.amen-tc__pad {
+  position: absolute;
+  right: calc(22px + var(--tc-safe-r));
+  bottom: calc(20px + var(--tc-safe-b));
+  width: 200px;
+  height: 190px;
+  pointer-events: none;
+}
+.amen-tc__btn {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 2px solid var(--tc-ink);
+  border-radius: 9999px;
+  color: var(--tc-ink);
+  background: var(--tc-paper);
+  box-shadow: 3px 3px 0 0 var(--tc-ink);
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .06s ease, box-shadow .06s ease;
+}
+.amen-tc__btn.is-yellow { background: #fde047; }
+.amen-tc__btn.is-green { background: #86efac; }
+.amen-tc__btn.is-blue { background: #bfdbfe; }
+.amen-tc__btn.is-pink { background: #ff9ebb; }
+.amen-tc__btn.is-purple { background: #c4b5fd; }
+.amen-tc__btn.is-down,
+.amen-tc__btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--tc-ink);
+}
+.amen-tc__btn:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+.amen-tc__btn[hidden] { display: none; }
+.amen-tc__icon { width: 21px; height: 21px; flex-shrink: 0; }
+.amen-tc__label {
+  max-width: 100%;
+  padding: 0 4px;
+  overflow: hidden;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Arc around the jump button (thumb-reachable, ≥ 44 px targets). */
+.amen-tc__btn--jump { right: 0; bottom: 0; width: 78px; height: 78px; box-shadow: 4px 4px 0 0 var(--tc-ink); }
+.amen-tc__btn--jump .amen-tc__icon { width: 28px; height: 28px; }
+.amen-tc__btn--jump .amen-tc__label { font-size: 11px; }
+.amen-tc__btn--interact { right: 104px; bottom: 6px; width: 64px; height: 64px; }
+.amen-tc__btn--interact .amen-tc__icon { width: 23px; height: 23px; }
+.amen-tc__btn--interact .amen-tc__label { font-size: 10px; max-width: 60px; }
+.amen-tc__btn--sit { right: 113px; bottom: 82px; }
+.amen-tc__btn--wave { right: 62px; bottom: 126px; }
+.amen-tc__btn--kneel { right: -4px; bottom: 136px; }
+
+/* Something to interact with is nearby: pulse the button. */
+.amen-tc__btn.is-hint { animation: amen-tc-pulse 1.4s ease-in-out infinite; }
+@keyframes amen-tc-pulse {
+  0%, 100% { box-shadow: 3px 3px 0 0 var(--tc-ink), 0 0 0 0 rgba(253, 224, 71, .0); }
+  50% { box-shadow: 3px 3px 0 0 var(--tc-ink), 0 0 0 7px rgba(253, 224, 71, .85); }
+}
+
+/* Short landscape phones: tighten the arc. */
+@media (max-height: 430px) {
+  .amen-tc__pad { transform: scale(.88); transform-origin: 100% 100%; bottom: calc(12px + var(--tc-safe-b)); }
+  .amen-tc__stick { top: calc(100% - 112px - var(--tc-safe-b)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .amen-tc__btn.is-hint { animation: none; box-shadow: 3px 3px 0 0 var(--tc-ink), 0 0 0 4px #fde047; }
+  .amen-tc__stick, .amen-tc__btn, .amen-tc__run { transition: none; }
+}

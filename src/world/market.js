@@ -150,9 +150,9 @@ export function buildMarket(W) {
       W.inst('plate', mat(tx + 0.7, 0.79, tz + 0.12));
     }
     // generator outside with its fumes corner
-    W.inst('generator', mat(x1 + 1.0, 0, z0 + 3.2, -Math.PI / 2));
-    W.collide(x1 + 0.7, 0, z0 + 2.85, x1 + 1.3, 0.7, z0 + 3.55, 'prop');
-    W.inst('jerrycan', mat(x1 + 1.0, 0, z0 + 4.1, 0.4), '#f2c200');
+    W.inst('generator', mat(x1 + 0.8, 0, z1 + 1.2, Math.PI));
+    W.collide(x1 + 0.5, 0, z1 + 0.85, x1 + 1.1, 0.7, z1 + 1.55, 'prop');
+    W.inst('jerrycan', mat(x1 + 1.6, 0, z1 + 1.1, 0.4), '#f2c200');
     W.interact('buka', V(x0 + 3.5, 0, z0 - 0.2), 2.2, "Buy food at Mama Nkechi's", 'buy-food');
   }
 

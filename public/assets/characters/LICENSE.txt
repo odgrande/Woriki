@@ -1,4 +1,4 @@
 Character models, hair and animations in this folder are CC0 1.0 (public domain) by Quaternius.
 https://quaternius.com — Universal Base Characters [Standard] and Universal Animation Library 1 & 2 [Standard].
 https://creativecommons.org/publicdomain/zero/1.0/
-Processed (texture resize/WebP, meshopt compression, clip selection) by tools/build-assets.mjs.
+Processed (texture resize/WebP, meshopt compression, clip selection, simplified *_low.glb crowd bodies) by tools/build-assets.mjs.

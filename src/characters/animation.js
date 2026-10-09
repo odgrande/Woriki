@@ -15,8 +15,11 @@ export const STATE_CLIPS = {
 export const ONCE_STATES = new Set(['jumpStart', 'jumpLand', 'sitDown', 'standUp', 'nod', 'interact', 'pickup', 'eat', 'lie']);
 export const LOCO_STATES = new Set(['idle', 'walk', 'jog', 'run']);
 
-/** Natural ground speed (m/s) of each locomotion clip at timeScale 1 (measured from foot plants). */
-export const LOCO_SPEED = { walk: 1.25, jog: 3.0, run: 5.6 };
+/**
+ * Ground speed (m/s) each locomotion clip matches at timeScale 1. Walk is measured from the
+ * planted toe (1.03 m/s); jog and sprint have long flight phases, so these are tuned values.
+ */
+export const LOCO_SPEED = { walk: 1.05, jog: 3.4, run: 5.8 };
 
 /**
  * Locomotion state for a speed, with hysteresis around the current state.
@@ -29,8 +32,8 @@ export function locomotionFor(speed, current = 'idle') {
   const h = (state) => (current === state ? 0.15 : 0);
   let state;
   if (s < 0.08 + (current === 'idle' ? 0.04 : 0)) state = 'idle';
-  else if (s < 2.3 + h('walk') - h('jog')) state = 'walk';
-  else if (s < 4.0 + h('jog') - h('run')) state = 'jog';
+  else if (s < 2.2 + h('walk') - h('jog')) state = 'walk';
+  else if (s < 4.2 + h('jog') - h('run')) state = 'jog';
   else state = 'run';
   if (state === 'idle') return { state, timeScale: 1 };
   const ts = s / LOCO_SPEED[state];
@@ -118,6 +121,9 @@ function aimBone(bone, dirWorld, w, palmLocal = null, palmWorld = null) {
  */
 export function createOverlays(bones, root, palm) {
   const active = [];
+  // Finger bones and their rest (open-hand T-pose) rotations, for relaxing the clips' fists.
+  const fingers = Object.values(bones).filter((b) => /^(index|middle|ring|pinky|thumb)_0[123]_[lr]$/.test(b.name));
+  const fingerRest = fingers.map((b) => b.quaternion.clone());
   const rootQ = new THREE.Quaternion();
   const v = (x, y, z) => new THREE.Vector3(x, y, z);
   const dirs = { upper: v(0, 0, 0), lower: v(0, 0, 0), palm: v(0, 0, 0) };
@@ -171,7 +177,18 @@ export function createOverlays(bones, root, palm) {
     },
     get active() { return active.length ? active[0].kind : null; },
     stop() { for (const o of active) o.dur = Math.min(o.dur, o.t + 0.3); },
-    update(dt) {
+    /**
+     * @param {number} dt
+     * @param {number} [relax] 0..1 how much to open the animation's fists (natural, calm hands)
+     */
+    update(dt, relax = 0) {
+      let open = relax;
+      if (active.length) {
+        const o = active[0];
+        const w = Math.min(1, o.t / 0.3, Math.max(0, (o.dur - o.t) / 0.35));
+        open = Math.max(open, 0.9 * w);
+      }
+      if (open > 0.01) for (let i = 0; i < fingers.length; i++) fingers[i].quaternion.slerp(fingerRest[i], open);
       if (!active.length) return;
       root.updateWorldMatrix(true, false);
       root.matrixWorld.decompose(_p, rootQ, _s);

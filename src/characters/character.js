@@ -9,6 +9,8 @@ import { getFabric } from './fabrics.js';
 import { SKIN_TONES } from './appearance.js';
 
 const IDENTITY = new THREE.Matrix4();
+/** States whose clenched fists are relaxed into calm, natural hands. */
+const RELAX_STATES = new Set(['idle', 'walk', 'walkFormal', 'jog', 'run', 'talk', 'sit', 'sitTalk', 'sitDown', 'standUp', 'dance', 'kneel', 'nod', 'shakeHead', 'jumpStart', 'jumpLoop', 'jumpLand', 'crouch', 'lie']);
 
 /**
  * @param {object} kit from loadCharacterKit
@@ -50,7 +52,7 @@ export function createCharacter(kit, appearance, { detail = 'high' } = {}) {
     m.bind(skeleton, IDENTITY);
     m.castShadow = true;
     m.receiveShadow = !low;
-    m.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.3);
+    m.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.85, 0), 1.55);
     rig.add(m);
     meshes.push(m);
     return m;
@@ -85,7 +87,7 @@ export function createCharacter(kit, appearance, { detail = 'high' } = {}) {
     for (const p of geos.patterns) addMesh(p.geo, makePatternMaterial(plan.fabrics[p.fabric], kit.anisotropy), 'fabric');
   } else {
     const slots = plan.slots.map((s) => ({ ...s, fx: 0 }));
-    slots[0] = { color: skinHex, rough: 0.6, metal: 0, fx: 0 };
+    slots[0] = { color: '#' + new THREE.Color(skinHex).multiplyScalar(0.8).getHexString(), rough: 0.65, metal: 0, fx: 0 };
     slots[1] = { color: a.hairColor, rough: 0.8, metal: 0, fx: 0 };
     for (const f of plan.fabrics) slots.push({ color: getFabric(f.kind, f.primary, f.secondary, kit.anisotropy).average, rough: f.rough, metal: 0, fx: 0 });
     const mat = makeClothMaterial(slots, { low: true });
@@ -124,6 +126,8 @@ export function createCharacter(kit, appearance, { detail = 'high' } = {}) {
     skeleton,
     meshes,
     get state() { return currentState; },
+    /** Hip point in the sit clips relative to the character origin (unrotated): put a seat's hip point here. */
+    sitOffset: new THREE.Vector3(0, body.lm.pelvisY * 0.59, -0.34),
     /**
      * Play an animation state with a crossfade.
      * @param {string} state
@@ -169,7 +173,7 @@ export function createCharacter(kit, appearance, { detail = 'high' } = {}) {
     update(dt) {
       mixer.update(dt);
       if (skirtRig) skirtRig.update(dt);
-      overlays.update(dt);
+      overlays.update(dt, low ? 0 : (RELAX_STATES.has(currentState) ? 0.55 : 0));
     },
     dispose() {
       object.removeFromParent();

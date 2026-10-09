@@ -6,9 +6,9 @@
 // lap and down the shins when sitting, without any cloth simulation.
 import * as THREE from 'three';
 import { smooth } from './garments.js';
+import { nearestVertexLookup } from './body.js';
 
 export const SKIRT_BONES = ['skirt_root', 'skirt_F', 'skirt_L', 'skirt_B', 'skirt_R', 'skirt_F2', 'skirt_L2', 'skirt_B2', 'skirt_R2'];
-const PANEL_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2]; // F, L, B, R
 
 /** Rest-pose rig layout for a body (character space). */
 export function skirtRigLayout(body) {
@@ -17,29 +17,6 @@ export function skirtRigLayout(body) {
   const knee = lm.hipY - lm.kneeY;
   const rest = SKIRT_BONES.map((_, i) => new THREE.Matrix4().makeTranslation(pivot.x, pivot.y - (i >= 5 ? knee : 0), pivot.z));
   return { pivot, knee, rest, inverses: rest.map((m) => m.clone().invert()), base: body.names.length };
-}
-
-/** Nearest body vertex lookup bucketed by height, for copying skin weights. */
-function weightLookup(M) {
-  const buckets = new Map();
-  for (let i = 0; i < M.count; i++) {
-    const g = M.group[i];
-    if (g !== 'torso' && g !== 'pelvis' && g !== 'thigh' && g !== 'neck') continue;
-    const k = Math.round(M.position[i * 3 + 1] / 0.03);
-    (buckets.get(k) || buckets.set(k, []).get(k)).push(i);
-  }
-  return (x, y, z) => {
-    const k = Math.round(y / 0.03);
-    let best = -1, bd = Infinity;
-    for (let d = -1; d <= 1; d++) {
-      for (const i of buckets.get(k + d) || []) {
-        const dx = M.position[i * 3] - x, dy = M.position[i * 3 + 1] - y, dz = M.position[i * 3 + 2] - z;
-        const dd = dx * dx + dy * dy * 4 + dz * dz;
-        if (dd < bd) { bd = dd; best = i; }
-      }
-    }
-    return best;
-  };
 }
 
 /**
@@ -51,33 +28,37 @@ function weightLookup(M) {
  * @param {{slot: number, low: boolean, slotFor?: (band) => number}} o
  */
 export function buildSkirt(body, M, spec, b, o) {
-  const lm = body.lm;
   const hull = body.hull;
   const rig = skirtRigLayout(body);
   const zc = hull.zc;
   const low = o.low;
   const arc = spec.arc || [-Math.PI, Math.PI];
   const span = arc[1] - arc[0];
-  const segs = Math.max(6, Math.round((low ? 14 : 48) * span / (Math.PI * 2)));
-  const rowsN = low ? 7 : 24;
+  const segs = Math.max(6, Math.round((low ? 14 : 36) * span / (Math.PI * 2)));
+  const rowsN = low ? 7 : 16;
   const top = spec.topY, hem = spec.hemY;
-  const lookup = weightLookup(M);
+  const lookup = nearestVertexLookup(M);
 
   // Column angles: uniform, plus exact band edges (stole) so colours change crisply.
   const rFront = hull.at(top, 0) + spec.ease;
   const cuts = [];
   for (let i = 0; i <= segs; i++) cuts.push(arc[0] + (span * i) / segs);
   const bandRanges = [];
+  const edges = []; // {ang, x} band edges (x is kept constant down the skirt)
   for (const band of spec.bands || []) {
     for (const sgn of [1, -1]) {
-      const a0 = Math.asin(Math.max(-1, Math.min(1, (sgn * band.x - band.halfW) / rFront)));
-      const a1 = Math.asin(Math.max(-1, Math.min(1, (sgn * band.x + band.halfW) / rFront)));
+      const x0 = sgn * band.x - band.halfW, x1 = sgn * band.x + band.halfW;
+      const a0 = Math.asin(Math.max(-1, Math.min(1, x0 / rFront)));
+      const a1 = Math.asin(Math.max(-1, Math.min(1, x1 / rFront)));
       bandRanges.push({ a0, a1, slot: band.slot });
-      cuts.push(a0, a1);
+      edges.push({ ang: a0, x: x0 }, { ang: a1, x: x1 });
     }
   }
-  cuts.sort((x, y) => x - y);
-  const angles = cuts.filter((v, i) => i === 0 || v - cuts[i - 1] > 1e-4);
+  // no uniform columns inside a band, so the band can narrow per row without crossing
+  const inBand = (a) => bandRanges.some((r) => a > r.a0 - 0.02 && a < r.a1 + 0.02);
+  const all = [...cuts.filter((a) => !inBand(a)), ...edges.map((e) => e.ang)].sort((x, y) => x - y);
+  const angles = all.filter((v, i) => i === 0 || v - all[i - 1] > 1e-4);
+  const edgeX = angles.map((a) => { const e = edges.find((q) => Math.abs(q.ang - a) < 1e-6); return e ? e.x : null; });
   const slotAt = (ang) => {
     for (const r of bandRanges) if (ang > r.a0 && ang < r.a1) return r.slot;
     return o.slot;
@@ -98,14 +79,16 @@ export function buildSkirt(body, M, spec, b, o) {
   for (let j = 0; j < ys.length; j++) {
     const y = ys[j];
     const t = (top - y) / (top - hem);
+    const rowFront = radius(0, y) + spec.ease + spec.flare * Math.pow(t, 1.5);
     for (let i = 0; i < nCols; i++) {
-      const ang = angles[i];
+      // band edges keep a constant x (a stole hangs straight), other columns are uniform
+      const ang = edgeX[i] === null ? angles[i] : Math.asin(Math.max(-1, Math.min(1, edgeX[i] / rowFront)));
       const rb = radius(ang, y);
       let r = rb + spec.ease + spec.flare * Math.pow(t, 1.5);
       if (!spec.arc) r += (spec.foldAmp || 0) * smooth(0.05, 0.6, t) * Math.sin(ang * (spec.folds || 8) + 1.3);
-      if (spec.wrapFold) r += 0.012 * Math.exp(-(((ang - 0.42) / 0.06) ** 2)) * (0.4 + 0.6 * t);
-      const xs = 1 + (spec.xScale - 1) * smooth(0, 0.25, t);
-      const zs = 1 + (spec.zScale - 1) * smooth(0, 0.25, t);
+      if (spec.wrapFold) r += 0.012 * Math.exp(-(((ang - 0.42) / 0.06) ** 2)) * smooth(0.12, 0.4, t);
+      const xs = 1 + (spec.xScale - 1) * smooth(0, spec.scaleIn || 0.25, t);
+      const zs = 1 + (spec.zScale - 1) * smooth(0, spec.scaleIn || 0.25, t);
       pos.push([Math.sin(ang) * r * xs, y, zc + Math.cos(ang) * r * zs]);
       restOnBody.push([Math.sin(ang) * rb, y, zc + Math.cos(ang) * rb]);
     }

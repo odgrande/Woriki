@@ -56,11 +56,12 @@ export function noiseField(w, h, cx, cy, octaves = 4, seed = 1, gain = 0.5) {
 /** Bilinear wrap-around sample of a noise field at u, v in [0, 1). */
 export function sample(field, u, v) {
   const { w, h, data } = field;
-  let x = u * w - 0.5, y = v * h - 0.5;
+  const x = u * w - 0.5, y = v * h - 0.5;
   const xi = Math.floor(x), yi = Math.floor(y);
   const fx = x - xi, fy = y - yi;
-  const x0 = ((xi % w) + w) % w, y0 = ((yi % h) + h) % h;
-  const x1 = (x0 + 1) % w, y1 = (y0 + 1) % h;
+  let x0 = xi % w; if (x0 < 0) x0 += w;
+  let y0 = yi % h; if (y0 < 0) y0 += h;
+  const x1 = x0 + 1 === w ? 0 : x0 + 1, y1 = y0 + 1 === h ? 0 : y0 + 1;
   const a = data[y0 * w + x0], b = data[y0 * w + x1], c = data[y1 * w + x0], d = data[y1 * w + x1];
   return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
 }

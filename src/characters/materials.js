@@ -40,7 +40,7 @@ export function makeSkinMaterial(src, avg, toneHex) {
   const t = linear(toneHex);
   m.color.setRGB(t.r / avg.r, t.g / avg.g, t.b / avg.b);
   m.vertexColors = false;
-  m.roughness = 0.62;
+  m.roughness = 0.68;
   m.metalness = 0;
   m.envMapIntensity = 0.7;
   if (m.normalScale) m.normalScale.set(0.8, 0.8);
@@ -85,7 +85,7 @@ export function makeClothMaterial(slots, o = {}) {
     uSlotColor: { value: colors },
     uSlotMat: { value: mats },
     uFx0: { value: new THREE.Vector4(lm ? lm.chestY - 0.02 : 1.3, lm ? lm.waistY + 0.02 : 1.0, 0.022, lm ? lm.shoulderX * 0.52 : 0.1) },
-    uFx1: { value: new THREE.Vector4(lm ? lm.neckY - 0.012 : 1.5, lm ? lm.neck.z : 0, 0.075, 0.12) },
+    uFx1: { value: new THREE.Vector4(lm ? lm.necklineFront + 0.035 : 1.5, lm ? lm.neckZ + 0.03 : 0, 0.04, 0.26) },
     uEmb: { value: new THREE.Vector3(emb.r, emb.g, emb.b) },
   };
   m.userData.uniforms = uniforms;
@@ -127,19 +127,26 @@ if (fx > 0.5 && fx < 1.5) {
   clothRough = mix(clothRough, 0.3, band);
   clothMetal = mix(clothMetal, 0.55, band);
 } else if (fx > 1.5 && fx < 2.5) {
-  // embroidery round the neckline and down the front placket
+  // embroidered yoke round the front neckline and a panel down the placket
   vec2 q = vec2(vRest.x, vRest.y - uFx1.x);
-  float front = step(uFx1.y, vRest.z);
+  float front = smoothstep(uFx1.y - 0.01, uFx1.y + 0.01, vRest.z);
   float d = length(q);
-  float ring = step(uFx1.z, d) * step(d, uFx1.z + 0.03) * step(q.y, 0.03);
-  float placket = step(abs(q.x), 0.016) * step(q.y, -uFx1.z) * step(-uFx1.w - uFx1.z, q.y);
+  float r1 = uFx1.z, r2 = uFx1.z + 0.05;
+  float v = (d - r1) / (r2 - r1);
+  float inRing = step(0.0, v) * step(v, 1.0) * step(q.y, 0.01);
   float ang = atan(q.x, -q.y);
-  float motif = step(0.35, abs(fract(ang * 9.0) - 0.5) * 2.0 + abs(fract((d - uFx1.z) * 66.0) - 0.5));
-  float motif2 = step(0.45, abs(fract(q.y * 40.0) - 0.5) + abs(q.x) * 30.0);
-  float e = front * max(ring * motif, placket * (1.0 - motif2 * 0.0) * step(0.3, abs(fract(q.y * 36.0) - 0.5) + abs(q.x) * 25.0));
-  diffuseColor.rgb = mix(diffuseColor.rgb, uEmb, e);
-  clothRough = mix(clothRough, 0.35, e);
-  clothMetal = mix(clothMetal, 0.5, e);
+  vec2 cell = vec2(fract(ang * 6.0), fract(v * 1.5 + 0.25));
+  float motif = smoothstep(0.36, 0.3, abs(cell.x - 0.5) + abs(cell.y - 0.5)) - smoothstep(0.24, 0.18, abs(cell.x - 0.5) + abs(cell.y - 0.5));
+  float lines = step(abs(v - 0.1), 0.05) + step(abs(v - 0.9), 0.05);
+  float inPl = step(abs(q.x), 0.032) * step(q.y, -r1 + 0.005) * step(-uFx1.w, q.y);
+  vec2 pc = vec2(q.x / 0.064 + 0.5, fract(q.y * 22.0));
+  float pm = smoothstep(0.34, 0.28, abs(pc.x - 0.5) + abs(pc.y - 0.5)) + step(0.42, abs(pc.x - 0.5));
+  float region = front * max(inRing, inPl);
+  float thread = front * max(inRing * min(1.0, motif + lines), inPl * min(1.0, pm));
+  diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, uEmb, 0.35), region);
+  diffuseColor.rgb = mix(diffuseColor.rgb, uEmb, thread);
+  clothRough = mix(clothRough, 0.4, thread);
+  clothMetal = mix(clothMetal, 0.4, thread);
 } else if (fx > 2.5 && fx < 3.5) {
   // aso-oke: fine woven stripes with metallic threads
   #ifdef USE_MAP
@@ -152,8 +159,8 @@ if (fx > 0.5 && fx < 1.5) {
 } else if (fx > 3.5 && fx < 4.5) {
   // denim twill
   #ifdef USE_MAP
-  float tw = step(0.5, fract((vMapUv.x + vMapUv.y) * 2.0));
-  diffuseColor.rgb *= 0.86 + 0.18 * tw;
+  float tw = smoothstep(0.3, 0.7, abs(fract((vMapUv.x + vMapUv.y) * 5.0) - 0.5) * 2.0);
+  diffuseColor.rgb *= 0.93 + 0.1 * tw;
   #endif
 }`}`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = clothRough;')

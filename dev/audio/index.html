@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fffdf7">
+  <title>Sound Lab · Amen City</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="app" class="lab">
+    <header class="lab-head">
+      <div>
+        <p class="eyebrow">Amen City · dev harness</p>
+        <h1>Sound Lab</h1>
+        <p class="muted">Every sound is generated live in your browser. No audio files.</p>
+      </div>
+      <div class="status-row" aria-live="polite">
+        <span class="chip" id="st-state">● locked</span>
+        <span class="chip" id="st-voices">0 voices</span>
+        <span class="chip" id="st-baked">0 baked</span>
+      </div>
+    </header>
+
+    <section class="card start-card">
+      <button class="btn btn-big btn-yellow" id="unlock" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+        Tap to start sound
+      </button>
+      <button class="btn" id="mute" type="button" aria-pressed="false">Mute</button>
+      <div class="meter" aria-label="Output level">
+        <div class="meter-bar"><span id="meter-fill"></span></div>
+        <span class="meter-label" id="meter-label">−∞ dB</span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Ambience</h2>
+        <p class="muted">Crossfades like walking between zones. Music placement changes too.</p>
+        <div class="btn-row" id="zones" role="group" aria-label="Ambience zone"></div>
+      </section>
+
+      <section class="card card-purple">
+        <h2>Worship music</h2>
+        <p class="muted">Gospel praise groove: keys, organ, highlife guitar, bass, claps, shaker, congas, talking drum, choir.</p>
+        <div class="btn-row">
+          <button class="btn btn-green" id="music" type="button" aria-pressed="false">▶ Start praise</button>
+          <span class="chip" id="music-pos">stopped</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>One-shots</h2>
+        <div class="btn-grid" id="sounds"></div>
+      </section>
+
+      <section class="card card-blue">
+        <h2>Footsteps</h2>
+        <div class="btn-row" id="surfaces" role="group" aria-label="Surface"></div>
+        <div class="btn-row">
+          <button class="btn" id="run" type="button" aria-pressed="false">Walk</button>
+          <button class="btn" id="step" type="button">One step</button>
+          <button class="btn" id="autowalk" type="button" aria-pressed="false">Auto-walk</button>
+        </div>
+      </section>
+
+      <section class="card card-wide">
+        <h2>Spatial pad</h2>
+        <p class="muted">You are the dot, facing up. Tap the pad to play the selected sound there (pad is 60 m across).</p>
+        <div class="btn-row" id="spatial-kind" role="group" aria-label="Spatial sound"></div>
+        <canvas id="pad" width="600" height="360" aria-label="Spatial sound pad"></canvas>
+        <label class="slider">Facing <input id="yaw" type="range" min="-180" max="180" value="0"> <span id="yaw-val">0°</span></label>
+      </section>
+
+      <section class="card">
+        <h2>Volumes</h2>
+        <div id="volumes"></div>
+      </section>
+
+      <section class="card card-pink">
+        <h2>Game bus</h2>
+        <p class="muted">Fires the same events the game sends.</p>
+        <div class="btn-grid" id="bus"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="./harness.js"></script>
+</body>
+</html>

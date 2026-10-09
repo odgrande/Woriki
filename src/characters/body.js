@@ -174,22 +174,47 @@ export function prepareBody(gltf, lowGltf) {
     waistY: L.pelvis.y + 0.07,
     height: 0,
   };
-  // Measure the body: height, neck radius, head ellipsoid.
+  // Measure the body: height, neck column (centre + radius), neckline, head ellipsoid.
   let top = 0;
   const headPts = [];
-  const neckR = [];
+  const neckPts = [];
   for (let i = 0; i < high.count; i++) {
     const y = high.position[i * 3 + 1];
     top = Math.max(top, y);
     const g = high.group[i];
     if (g === 'head') headPts.push(i);
-    if ((g === 'neck' || g === 'head') && Math.abs(y - (lm.neckY + 0.02)) < 0.015) {
-      neckR.push(Math.hypot(high.position[i * 3], high.position[i * 3 + 2] - L.neck.z));
-    }
+    if ((g === 'neck' || g === 'head') && y > lm.neckY + 0.01 && y < lm.neckY + 0.045) neckPts.push(i);
   }
   lm.height = top;
-  neckR.sort((a, b) => a - b);
-  lm.neckRadius = neckR.length ? neckR[Math.floor(neckR.length * 0.9)] : 0.06;
+  let zMin = Infinity, zMax = -Infinity;
+  for (const i of neckPts) { zMin = Math.min(zMin, high.position[i * 3 + 2]); zMax = Math.max(zMax, high.position[i * 3 + 2]); }
+  lm.neckZ = neckPts.length ? (zMin + zMax) / 2 : L.neck.z;
+  const nr = neckPts.map((i) => Math.hypot(high.position[i * 3], high.position[i * 3 + 2] - lm.neckZ)).sort((a, b) => a - b);
+  lm.neckRadius = nr.length ? nr[Math.floor(nr.length * 0.8)] : 0.055;
+  // Neckline: where the body surface crosses the cylinder r = neckRadius + 1.4 cm, per angle.
+  const R = lm.neckRadius + 0.014;
+  const NL = 24;
+  const lines = Array.from({ length: NL }, () => []);
+  for (let i = 0; i < high.count; i++) {
+    const g = high.group[i];
+    if (g !== 'neck' && g !== 'torso') continue;
+    const x = high.position[i * 3], y = high.position[i * 3 + 1], z = high.position[i * 3 + 2] - lm.neckZ;
+    if (y < lm.neckY - 0.14 || y > lm.neckY + 0.03) continue;
+    const r = Math.hypot(x, z);
+    if (Math.abs(r - R) > 0.012) continue;
+    const s = ((Math.round((Math.atan2(x, z) / (Math.PI * 2)) * NL) % NL) + NL) % NL;
+    lines[s].push(y);
+  }
+  const med = lines.map((l) => (l.sort((a, b) => a - b), l.length ? l[Math.floor(l.length * 0.3)] : NaN));
+  for (let s = 0; s < NL; s++) if (Number.isNaN(med[s])) med[s] = med[(s + 1) % NL] || med[(s + NL - 1) % NL] || lm.neckY - 0.02;
+  lm.necklineR = R;
+  /** Neckline height at an angle (0 = front). */
+  lm.necklineAt = (ang) => {
+    const f = ((((ang / (Math.PI * 2)) * NL) % NL) + NL) % NL;
+    const s0 = Math.floor(f), t = f - s0;
+    return med[s0] * (1 - t) + med[(s0 + 1) % NL] * t;
+  };
+  lm.necklineFront = lm.necklineAt(0);
   const hb = new THREE.Box3();
   for (const i of headPts) hb.expandByPoint(_v.fromArray(high.position, i * 3));
   // The skull (exclude the jaw/neck): use points above the eyes for the cranium fit.
@@ -335,3 +360,27 @@ export function retargetHeadAsset(mesh, target, bodies) {
   }
   return data;
 }
+
+/** Nearest body vertex lookup bucketed by height, for copying skin weights. */
+export function nearestVertexLookup(M) {
+  const buckets = new Map();
+  for (let i = 0; i < M.count; i++) {
+    const g = M.group[i];
+    if (g !== 'torso' && g !== 'pelvis' && g !== 'thigh' && g !== 'neck') continue;
+    const k = Math.round(M.position[i * 3 + 1] / 0.03);
+    (buckets.get(k) || buckets.set(k, []).get(k)).push(i);
+  }
+  return (x, y, z) => {
+    const k = Math.round(y / 0.03);
+    let best = -1, bd = Infinity;
+    for (let d = -1; d <= 1; d++) {
+      for (const i of buckets.get(k + d) || []) {
+        const dx = M.position[i * 3] - x, dy = M.position[i * 3 + 1] - y, dz = M.position[i * 3 + 2] - z;
+        const dd = dx * dx + dy * dy * 4 + dz * dz;
+        if (dd < bd) { bd = dd; best = i; }
+      }
+    }
+    return best;
+  };
+}
+

@@ -2,7 +2,7 @@
 // random look generator. Pure logic (no three.js) so it is unit-tested.
 
 /** Skin tones, 0 = light brown … 5 = very deep brown (sRGB albedo targets). */
-export const SKIN_TONES = ['#9c6b4c', '#85573b', '#6e462f', '#583824', '#45291b', '#331d13'];
+export const SKIN_TONES = ['#8f5d40', '#7f5238', '#6e462f', '#583824', '#46291b', '#36201a'];
 
 export const BODIES = ['male', 'female'];
 export const HAIR_STYLES = ['buzzed', 'buzzedfemale', 'buns', 'long', 'simpleparted', 'none'];
@@ -23,8 +23,7 @@ const ANKARA = ['#c2410c', '#1d4ed8', '#15803d', '#7e22ce', '#b91c1c', '#0f766e'
 const ANKARA_2ND = ['#facc15', '#f97316', '#0ea5e9', '#22c55e', '#f5f0e6', '#111827', '#e11d48', '#a3e635', '#fde68a'];
 const RICH = ['#1e3a8a', '#14532d', '#7f1d1d', '#111827', '#e7e2d4', '#57534e', '#0c4a6e', '#4c1d95', '#713f12', '#f3efe4'];
 const AGBADA = ['#f3efe4', '#e8dcc2', '#9cc3e6', '#1e40af', '#7f1d1d', '#c9a227', '#14532d', '#e5e7eb', '#6b21a8'];
-const LACE = ['#f8f4ec', '#f3d3c0', '#e9d5a1', '#d8c8f0', '#f1c6d3', '#c8e6d4', '#d6b47a'];
-const GELE = ['#c9a227', '#be185d', '#7e22ce', '#0f766e', '#c2410c', '#1d4ed8', '#b45309', '#e11d48'];
+const LACE = ['#f8f4ec', '#f4efe2', '#d9b25c', '#b9a3e3', '#e06d8f', '#7fb8d9', '#c9a227', '#8c1d3f'];
 const SHIRT = ['#f8fafc', '#dbeafe', '#e0f2fe', '#fef3c7', '#f1f5f9', '#fce7f3', '#dcfce7', '#e2e8f0'];
 const TROUSERS = ['#1f2937', '#111827', '#374151', '#1e3a8a', '#44403c', '#78716c', '#0f172a', '#a8a29e'];
 const TEES = ['#111827', '#dc2626', '#2563eb', '#16a34a', '#f8fafc', '#f59e0b', '#7c3aed', '#0891b2', '#e11d48'];
@@ -42,7 +41,7 @@ export const OUTFIT_DEFAULT_COLORS = {
   senator: { primary: '#1e3a8a', secondary: '#d4af37', pattern: 'plain' },
   'ankara-gown': { primary: '#7e22ce', secondary: '#facc15', pattern: 'ankara-2' },
   'skirt-blouse': { primary: '#f8f4ec', secondary: '#1e3a8a', pattern: 'lace' },
-  'iro-buba': { primary: '#f3d3c0', secondary: '#be185d', pattern: 'ankara-3' },
+  'iro-buba': { primary: '#f8f4ec', secondary: '#8c1d3f', pattern: 'ankara-3' },
   'choir-robe': { primary: '#7f1d1d', secondary: '#d4af37', pattern: 'plain' },
   'white-garment': { primary: '#f8f8f4', secondary: '#f8f8f4', pattern: 'plain' },
   security: { primary: '#1f2937', secondary: '#111111', pattern: 'plain' },

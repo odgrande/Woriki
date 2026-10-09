@@ -138,41 +138,48 @@ export function navNodes() {
   // walkways both sides of the road
   for (let x = -66; x <= 66; x += 5.5) { add(x, -6.4, 'street'); add(x, 6.5, x < -46 && x > -62 ? 'busstop' : x > -46 && x < 2 ? 'market' : 'street'); }
   // slab crossings and the road between them
-  for (const [a, b] of CROSS_N) { const x = (a + b) / 2; add(x, -4.42, 'street'); }
-  for (const [a, b] of CROSS_S) { const x = (a + b) / 2; add(x, 4.42, x < -46 && x > -62 ? 'busstop' : 'street'); }
+  const sz = (x) => (x < -46 && x > -62 ? 'busstop' : x > -46 && x < 2 ? 'market' : 'street');
+  for (const [a, b] of CROSS_N) { const x = (a + b) / 2; add(x, -4.42, 'street'); add(x, -5.9, 'street'); }
+  for (const [a, b] of CROSS_S) { const x = (a + b) / 2; add(x, 4.42, sz(x)); add(x, 5.9, sz(x)); }
+  // road nodes where crossings face each other (NPCs cross there, Lagos style)
   for (const [a, b] of CROSS_N) {
     const x = (a + b) / 2;
-    if (CROSS_S.some(([c, d]) => x >= c - 2 && x <= d + 2)) add(x, 0, 'street');
+    const s = CROSS_S.find(([c, d]) => Math.abs((c + d) / 2 - x) < 7);
+    if (s) { add(x, -0.8, 'street'); add((s[0] + s[1]) / 2, 0.8, 'street'); }
   }
   // church gate, forecourt, car park, east yard, back yard
   add(9, -8.5, 'gate'); add(13.5, -8.6, 'gate'); add(9, -12, 'gate'); add(14, -13.2, 'gate');
   for (let x = 4; x <= 34; x += 5) for (const z of [-17.5, -13.5]) add(x, z, x > 3 && x < 19 && z > -15 ? 'gate' : 'compound');
-  for (let x = -18; x <= 0; x += 4.5) for (const z of [-11.5, -16.5, -21.5, -26]) add(x, z, 'carpark');
-  for (const z of [-19, -24, -28.5, -32.5, -37, -41]) { add(36, z, 'compound'); add(-1.5, z, z < -28 ? 'compound' : 'carpark'); }
+  for (const x of [-13, -9.5, 0.6]) for (const z of [-11.5, -16.5, -21.5, -26]) add(x, z, 'carpark');
+  add(-4.5, -11.5, 'carpark'); add(-4.5, -15.5, 'carpark'); add(-4.5, -26.4, 'carpark');
+  for (const z of [-19, -24, -28.5, -32.5, -37]) { add(36, z, 'compound'); add(-1.5, z, z < -28 ? 'compound' : 'carpark'); }
+  add(36, -41, 'compound'); add(0.5, -38.6, 'compound');
   for (const x of [40, 45, 50]) add(x, -19, 'compound');
-  add(51, -24, 'compound'); add(51, -31, 'compound'); add(51, -38, 'compound');
+  add(51.1, -20.5, 'compound'); add(51.1, -24, 'compound'); add(51.1, -31, 'compound'); add(51.1, -38, 'compound');
   for (let x = 3; x <= 35; x += 6) add(x, -43, 'compound');
   // auditorium: doors, aisles, cross aisle, altar, choir, media
-  add(19, -19, 'compound'); add(8, -19, 'compound');
+  add(19, -19, 'compound'); add(8.4, -18.4, 'compound');
   add(3, -27, 'carpark'); add(35, -27, 'compound');
-  for (const z of [-21.3, -24.6, -27.9, -31.2, -34.6]) { add(19, z, 'church-hall'); add(5.1, z, 'church-hall'); add(32.9, z, 'church-hall'); add(12, z, 'church-hall'); add(26, z, 'church-hall'); }
+  for (const z of [-21.3, -24.6, -27.9, -31.2, -34.6]) { add(19, z, 'church-hall'); add(5.1, z, 'church-hall'); add(z > -25 ? 33.35 : 32.9, z, 'church-hall'); add(12, z, 'church-hall'); add(26, z, 'church-hall'); }
   add(8, -21.3, 'church-hall'); add(16, -21.3, 'church-hall'); add(23, -21.3, 'church-hall');
   add(9, -34.6, 'church-hall'); add(15.5, -34.6, 'church-hall'); add(22.5, -34.6, 'church-hall'); add(29, -34.6, 'church-hall');
-  add(11, -37.3, 'altar'); add(15, -37.3, 'altar'); add(19, -36.9, 'altar'); add(22.5, -37.3, 'altar'); add(16, -40.5, 'altar'); add(21.5, -40.5, 'altar');
+  add(11, -37.3, 'altar'); add(15, -37.3, 'altar'); add(19, -36.4, 'altar'); add(22.5, -37.3, 'altar'); add(16, -40.5, 'altar'); add(21.5, -40.5, 'altar');
   add(27, -37.6, 'choir'); add(25.5, -39.4, 'choir'); add(28.5, -41, 'choir');
-  add(30.5, -23.5, 'media'); add(29, -21.2, 'media');
+  add(30.5, -22.7, 'media'); add(29, -21.2, 'media');
   // prayer room, canteen, children's church
   add(42.7, -32.8, 'compound'); add(42.7, -35.5, 'prayer-room'); add(40, -38, 'prayer-room'); add(45.5, -38, 'prayer-room'); add(42.7, -40.5, 'prayer-room');
-  add(41, -19.8, 'compound'); add(41, -22.5, 'kitchen'); add(44.5, -23, 'kitchen'); add(48, -23.5, 'kitchen'); add(44, -26.5, 'kitchen'); add(39.5, -26.5, 'kitchen');
+  add(41, -19.8, 'compound'); add(41.2, -22.1, 'kitchen'); add(44.6, -22.1, 'kitchen'); add(48.3, -22.1, 'kitchen'); add(40.3, -25.8, 'kitchen'); add(44, -25.8, 'kitchen'); add(47.6, -25.8, 'kitchen');
   add(39, -13, 'children'); add(43, -15.8, 'children'); add(47, -13, 'children');
   // home compound and house
-  add(13.8, 9.7, 'home'); add(13.8, 12.6, 'home'); add(9, 15, 'home'); add(19, 12.5, 'home'); add(27, 12.5, 'home'); add(28.5, 18, 'home');
-  add(28.5, 30, 'home'); add(18, 30.5, 'home'); add(8.5, 30, 'home'); add(8.5, 21, 'home');
+  add(13.8, 9.7, 'home'); add(13.8, 12.6, 'home'); add(9, 15, 'home'); add(19, 13.6, 'home'); add(28.6, 12.5, 'home'); add(28.5, 18, 'home');
+  add(24, 13.8, 'home'); add(30.6, 24.4, 'home'); add(30.8, 28.5, 'home'); add(8.5, 21, 'home'); add(8.5, 25.5, 'home'); add(8.5, 30, 'home');
+  for (const x of [8.5, 13.5, 18.5, 23.5, 28.5]) add(x, 32.6, 'home');
   add(14.6, 14.6, 'home'); add(14.6, 16.6, 'home'); add(21, 16.6, 'home');
   add(14.6, 19.3, 'home'); add(16.8, 22.5, 'home'); add(13, 25.2, 'home');
   // market and bus stop
-  for (let x = -44; x <= -18; x += 5.2) { add(x, 13.6, 'market'); add(x, 19.5, 'market'); }
-  add(-15, 13.5, 'market'); add(-13, 19.5, 'market'); add(-6, 12.6, 'market'); add(-6, 18.3, 'market'); add(0.5, 12.5, 'market'); add(1, 19.5, 'market');
-  add(-54, 6.6, 'busstop'); add(-59.5, 10.5, 'busstop'); add(-49, 10.5, 'busstop'); add(-54, 2.4, 'busstop');
+  for (let x = -44; x <= -17.9; x += 5.2) { add(x, 13.6, 'market'); add(x, 19.5, 'market'); }
+  for (const x of [-42.2, -37, -31.85, -26.6, -21.5, -17.4]) add(x, 9.2, 'market');
+  add(-15, 13.5, 'market'); add(-13, 19.5, 'market'); add(-2.0, 10.9, 'market'); add(-2.25, 8.9, 'market'); add(-6, 18.3, 'market'); add(0.5, 12.5, 'market'); add(1, 19.5, 'market');
+  add(-54, 6.6, 'busstop'); add(-59.5, 10.5, 'busstop'); add(-62, 9.6, 'busstop'); add(-49, 10.5, 'busstop');
   return n;
 }

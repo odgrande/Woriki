@@ -115,10 +115,10 @@ export function wall(W, axis, s0, s1, c, o) {
       const ho = t / 2;
       if (axis === 'x') {
         B.box(key, m, my, c + out * ho / 2, L, H, ho, { color: o.color });
-        B.box(key, m, my, c - out * ho / 2, L, H, ho, { color: o.inner });
+        B.box(o.innerMat || 'wallIn', m, my, c - out * ho / 2, L, H, ho, { color: o.inner });
       } else {
         B.box(key, c + out * ho / 2, my, m, ho, H, L, { color: o.color });
-        B.box(key, c - out * ho / 2, my, m, ho, H, L, { color: o.inner });
+        B.box(o.innerMat || 'wallIn', c - out * ho / 2, my, m, ho, H, L, { color: o.inner });
       }
     } else if (axis === 'x') B.box(key, m, my, c, L, H, t, { color: o.color });
     else B.box(key, c, my, m, t, H, L, { color: o.color });

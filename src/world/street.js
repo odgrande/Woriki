@@ -49,7 +49,7 @@ export function buildStreet(W) {
   const poleList = [];
   for (let x = -64; x <= 66; x += 20) poleList.push([x, -7.9]);
   for (let x = -60; x <= 66; x += 20) poleList.push([x, 7.9]);
-  for (const [x, z] of poleList) { W.inst('pole', mat(x, 0, z)); W.cylinder(x, z, 0.2, 9); }
+  for (const [x, z] of poleList) { W.inst('pole', mat(x, 0, z, z > 0 ? Math.PI : 0)); W.cylinder(x, z, 0.2, 9); }
   const wire = (a, b, sag) => {
     const n = 10;
     for (let i = 0; i < n; i++) {
@@ -115,6 +115,7 @@ function buildBusStop(W) {
   B.box('metal', (x0 + x1) / 2, 2.73, z0 - 0.4, x1 - x0 + 0.8, 0.12, 0.06, { color: '#1d3f66', uv: 'keep' });
   // back panel with adverts
   B.box('metal', (x0 + x1) / 2, 1.4, z1 - 0.05, x1 - x0 - 0.4, 1.6, 0.05, { color: '#d8d6d0' });
+  W.collide(x0 + 0.2, 0, z1 - 0.1, x1 - 0.2, 2.2, z1, 'wall');
   const ad = new THREE.PlaneGeometry(1.1, 1.65); rectUV(ad, W.S.crusade);
   B.add('signs', ad, { m: mat(x0 + 1.4, 1.45, z1 - 0.085, Math.PI) });
   B.add('signs', ad.clone(), { m: mat(x0 + 1.4, 1.45, z1 - 0.085 - 0.001, 0) });

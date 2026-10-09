@@ -1,19 +1,22 @@
 // Reusable prop kits (Map<materialKey, BufferGeometry>), built once and placed many times
 // by merging or instancing. Kits face +Z (seats) or +X (vehicles) unless noted.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { kit, mat, rectUV, bezier } from './geo.js';
 import { rng } from './noise.js';
 
-/** Box with a different atlas rectangle per face. faces: {px,nx,py,ny,pz,nz,all} → rect or {r, flip}. */
-export function atlasBox(sx, sy, sz, faces) {
-  const g = new THREE.BoxGeometry(sx, sy, sz);
+/** Box with a different atlas rectangle per face. faces: {px,nx,py,ny,pz,nz,all} → rect or {r, flip}.
+ *  With radius > 0 the box has rounded edges (faces are still mapped one rectangle each). */
+export function atlasBox(sx, sy, sz, faces, radius = 0) {
+  const g = radius > 0 ? new RoundedBoxGeometry(sx, sy, sz, 2, radius) : new THREE.BoxGeometry(sx, sy, sz);
   const uv = g.attributes.uv;
   const order = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+  const per = uv.count / 6;
   for (let f = 0; f < 6; f++) {
     const spec = faces[order[f]] ?? faces.all;
     const r = spec.r || spec, flip = !!spec.flip;
-    for (let k = 0; k < 4; k++) {
-      const i = f * 4 + k;
+    for (let k = 0; k < per; k++) {
+      const i = f * per + k;
       let u = uv.getX(i); const v = uv.getY(i);
       if (flip) u = 1 - u;
       uv.setXY(i, r.u0 + u * (r.u1 - r.u0), r.v0 + v * (r.v1 - r.v0));
@@ -40,16 +43,21 @@ export function lathe(profile, seg = 12) {
   return new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), seg);
 }
 
-/** Monobloc plastic chair (seat height 0.43), faces +Z. Tint with instance colour. */
+/** Monobloc plastic chair (seat height 0.43), faces +Z. Curved back and arms. Tint with instance colour. */
 export function plasticChair() {
   return kit((b) => {
     b.box('plastic', 0, 0.43, 0.02, 0.46, 0.035, 0.44, { uv: 'keep' });
-    b.box('plastic', 0, 0.69, -0.215, 0.44, 0.42, 0.03, { rx: -0.16, uv: 'keep' });
-    b.box('plastic', 0, 0.9, -0.25, 0.47, 0.05, 0.05, { rx: -0.16, uv: 'keep' });
+    b.box('plastic', 0, 0.405, 0.235, 0.46, 0.05, 0.02, { uv: 'keep' });
+    // curved backrest: open cylinder arc, leaning back
+    const back = new THREE.CylinderGeometry(0.5, 0.5, 0.44, 7, 1, true, Math.PI - 0.5, 1.0);
+    b.add('plastic', back, { m: mat(0, 0.69, 0.27, 0, -0.16, 0) });
+    const rail = new THREE.CylinderGeometry(0.515, 0.515, 0.06, 7, 1, true, Math.PI - 0.52, 1.04);
+    b.add('plastic', rail, { m: mat(0, 0.91, 0.235, 0, -0.16, 0) });
+    for (let i = 0; i < 3; i++) b.box('plastic', -0.12 + i * 0.12, 0.62, -0.215, 0.03, 0.16, 0.012, { rx: -0.16, uv: 'keep', color: '#8a8a8a' });
     for (const s of [-1, 1]) {
-      b.box('plastic', s * 0.235, 0.62, -0.02, 0.04, 0.03, 0.42, { uv: 'keep' });
-      b.box('plastic', s * 0.235, 0.53, 0.17, 0.035, 0.18, 0.035, { uv: 'keep' });
-      for (const t of [-1, 1]) b.box('plastic', s * 0.205, 0.21, t * 0.19, 0.045, 0.44, 0.05, { rz: s * 0.08, rx: -t * 0.08, uv: 'keep' });
+      b.box('plastic', s * 0.235, 0.63, -0.02, 0.045, 0.03, 0.44, { rx: 0.06, uv: 'keep' });
+      b.box('plastic', s * 0.235, 0.53, 0.18, 0.04, 0.2, 0.04, { uv: 'keep' });
+      for (const t of [-1, 1]) b.box('plastic', s * 0.205, 0.21, t * 0.19, 0.05, 0.44, 0.055, { rz: s * 0.08, rx: -t * 0.08, uv: 'keep' });
     }
   });
 }
@@ -162,17 +170,17 @@ export function shadeTree(R = 3.2, seed = 2) {
     }
     const cy = H + R * 0.62;
     const core = new THREE.IcosahedronGeometry(1, 1);
-    b.add('fabric', core, { m: mat(0, cy, 0, 0, 0, 0, R * 0.8, R * 0.6, R * 0.8), color: '#26401c' });
-    const F = { u0: 0.52, v0: 0.04, u1: 0.98, v1: 0.96 };
-    const cards = 34;
+    b.add('fabric', core, { m: mat(0, cy, 0, 0, 0, 0, R * 0.72, R * 0.52, R * 0.72), color: '#2d4a20', uv: 'keep' });
+    const F = { u0: 0.5, v0: 0.0, u1: 1.0, v1: 1.0 };
+    const cards = 46;
     for (let i = 0; i < cards; i++) {
-      const th = r() * Math.PI * 2, ph = Math.acos(1 - r() * 1.4);
+      const th = r() * Math.PI * 2, ph = Math.acos(1 - r() * 1.5);
       const nx = Math.sin(ph) * Math.cos(th), ny = Math.cos(ph), nz = Math.sin(ph) * Math.sin(th);
-      const s = R * (0.75 + r() * 0.35);
+      const s = R * (0.55 + r() * 0.3);
       for (const k of [0, 1]) {
-        const g = new THREE.PlaneGeometry(s, s * 0.85);
+        const g = new THREE.PlaneGeometry(s, s * 1.2);
         rectUV(g, F);
-        b.add('foliage', g, { m: mat(nx * R * 0.82, cy + ny * R * 0.62, nz * R * 0.82, th + k * Math.PI / 2 + r(), (r() - 0.5) * 1.2, (r() - 0.5) * 0.6), color: r() < 0.25 ? '#c9d690' : '#ffffff' });
+        b.add('foliage', g, { m: mat(nx * R * 0.85, cy + ny * R * 0.62, nz * R * 0.85, th + k * Math.PI / 2 + (r() - 0.5) * 0.6, (r() - 0.5) * 0.9, (r() - 0.5) * 0.5), color: r() < 0.2 ? '#d7e0a8' : '#ffffff' });
       }
     }
   });
@@ -213,6 +221,10 @@ export function pole() {
     }
     b.box('metal', 0, 7.9, 0.4, 0.05, 0.7, 0.05, { rx: 0.6, color: '#8a8f93' });
     b.box('metal', 0, 6.4, 0, 0.3, 0.12, 0.12, { color: '#444' });
+    // street lamp on a bent arm over the road
+    b.box('metal', 0, 7.35, 0.85, 0.06, 0.06, 1.7, { rx: -0.18, color: '#6d7276' });
+    b.box('paint', 0, 7.5, 1.75, 0.22, 0.09, 0.5, { color: '#5b6064' });
+    b.box('lamp', 0, 7.45, 1.78, 0.16, 0.02, 0.36, { color: '#d8dfe6' });
   });
 }
 
@@ -283,18 +295,18 @@ export function umbrella(c1, c2, R = 1.5) {
     g.computeVertexNormals();
     b.add('fabric', g);
     b.cyl('metal', 0, 0, 0, 0.025, 0.025, apex, 6, { color: '#cfcfcf' });
-    b.cyl('rubber', 0, 0, 0, 0.28, 0.3, 0.2, 10, { color: '#1a1a1a' });
+    b.cyl('rubber', 0, 0, 0, 0.2, 0.22, 0.18, 10, { color: '#1a1a1a' });
   });
 }
 
 /** Yellow danfo (VW-type minibus), forward +X, length 4.6 m. */
 export function danfo(P, S) {
   return kit((b) => {
-    const body = atlasBox(4.5, 1.6, 1.86, { px: P['danfo-front'], nx: P['danfo-back'], pz: P['danfo-side'], nz: { r: P['danfo-side'], flip: true }, py: P.white, ny: P.black });
+    const body = atlasBox(4.5, 1.6, 1.86, { px: P['danfo-front'], nx: P['danfo-back'], pz: P['danfo-side'], nz: { r: P['danfo-side'], flip: true }, py: P.white, ny: P.black }, 0.16);
     b.add('props', body, { m: mat(0, 1.22, 0) });
     // yellow tint only on the roof (white region) — vertex colour per face
-    const col = body.attributes.color;
-    for (let i = 8; i < 12; i++) col.setXYZ(i, 0.9, 0.62, 0.02);
+    const col = body.attributes.color, per = col.count / 6;
+    for (let i = 2 * per; i < 3 * per; i++) col.setXYZ(i, 0.9, 0.62, 0.02);
     for (const [x, z] of [[1.45, 0.86], [1.45, -0.86], [-1.5, 0.86], [-1.5, -0.86]]) b.add('props', wheelGeo(0.34, 0.22, P), { m: mat(x, 0.34, z) });
     b.add('props', atlasBox(0.12, 0.2, 1.9, { all: P.black }), { m: mat(2.29, 0.62, 0) });
     b.add('props', atlasBox(0.12, 0.2, 1.9, { all: P.black }), { m: mat(-2.29, 0.62, 0) });
@@ -315,20 +327,24 @@ export function danfo(P, S) {
 export function keke(P) {
   return kit((b) => {
     const Y = '#f0b800';
-    b.add('props', atlasBox(1.9, 0.6, 1.2, { pz: P['keke-side'], nz: { r: P['keke-side'], flip: true }, all: P.white }), { m: mat(-0.25, 0.62, 0), color: undefined });
-    const nose = atlasBox(0.55, 1.0, 0.75, { all: P.white });
-    b.add('props', nose, { m: mat(0.95, 0.8, 0), color: Y });
-    b.add('props', atlasBox(0.06, 0.6, 1.1, { all: P.glass }), { m: mat(0.92, 1.55, 0, 0, 0, -0.15) });
-    b.add('props', atlasBox(2.0, 0.06, 1.3, { all: P.black }), { m: mat(-0.15, 1.85, 0) });
-    for (const [x, z] of [[0.82, 0.58], [0.82, -0.58], [-1.15, 0.6], [-1.15, -0.6]]) b.add('props', atlasBox(0.05, 0.95, 0.05, { all: P.black }), { m: mat(x, 1.37, z) });
-    b.add('props', atlasBox(0.5, 0.45, 1.1, { all: P.black }), { m: mat(-0.75, 1.1, 0) });
-    b.add('props', wheelGeo(0.22, 0.14, P), { m: mat(1.05, 0.22, 0) });
-    for (const s of [-1, 1]) b.add('props', wheelGeo(0.22, 0.14, P), { m: mat(-0.75, 0.22, s * 0.62) });
-    b.add('props', atlasBox(0.06, 0.08, 0.6, { all: P.black }), { m: mat(0.75, 1.15, 0) });
-    // yellow tint for the white-region faces of the body box
-    const body = b.parts.get('props')[0];
-    const col = body.attributes.color;
-    for (let i = 0; i < 16; i++) col.setXYZ(i, 0.86, 0.58, 0.0);
+    const tint = (g, faces) => { const c = g.attributes.color, per = c.count / 6; for (const f of faces) for (let i = f * per; i < (f + 1) * per; i++) c.setXYZ(i, 0.86, 0.58, 0.0); };
+    const tub = b.add('props', atlasBox(1.85, 0.62, 1.22, { pz: P['keke-side'], nz: { r: P['keke-side'], flip: true }, all: P.white }, 0.14), { m: mat(-0.3, 0.62, 0) });
+    tint(tub, [0, 1, 2, 3]);
+    // rounded front cowl tapering to the single front wheel
+    const cowl = new THREE.CylinderGeometry(0.34, 0.46, 1.05, 10, 1);
+    cowl.scale(1, 1, 1.35);
+    b.add('props', cowl, { m: mat(0.86, 0.78, 0, 0, 0, -0.22), uv: P.white, color: Y });
+    b.add('props', atlasBox(0.05, 0.62, 1.04, { all: P.glass }, 0.02), { m: mat(0.9, 1.55, 0, 0, 0, -0.2) });
+    b.add('props', atlasBox(2.05, 0.08, 1.32, { all: P.black }, 0.035), { m: mat(-0.2, 1.86, 0) });
+    b.add('props', atlasBox(0.4, 0.05, 1.32, { all: P.black }, 0.02), { m: mat(0.9, 1.78, 0, 0, 0, -0.35) });
+    for (const [x, z] of [[0.62, 0.6], [0.62, -0.6], [-1.2, 0.62], [-1.2, -0.62]]) b.add('props', atlasBox(0.045, 0.95, 0.045, { all: P.black }), { m: mat(x, 1.38, z) });
+    b.add('props', atlasBox(0.5, 0.42, 1.1, { all: P.black }, 0.08), { m: mat(-0.78, 1.12, 0) });
+    b.add('props', atlasBox(0.4, 0.12, 1.1, { all: P.black }, 0.05), { m: mat(-0.62, 0.98, 0) });
+    b.add('props', atlasBox(0.32, 0.1, 0.4, { all: P.black }, 0.04), { m: mat(0.42, 1.0, 0) });
+    b.add('props', wheelGeo(0.22, 0.14, P), { m: mat(1.15, 0.22, 0) });
+    for (const s of [-1, 1]) b.add('props', wheelGeo(0.22, 0.14, P), { m: mat(-0.8, 0.22, s * 0.64) });
+    b.add('props', atlasBox(0.05, 0.05, 0.62, { all: P.black }), { m: mat(0.62, 1.12, 0) });
+    b.add('props', atlasBox(0.06, 0.06, 0.08, { all: P.white }), { m: mat(1.28, 0.95, 0) });
   });
 }
 

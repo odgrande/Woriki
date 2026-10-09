@@ -1,0 +1,12 @@
+:root { --ink: #000; --paper: #fffdf7; --yellow: #fde047; --green: #86efac; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #bcd9ee; font-family: Inter, system-ui, sans-serif; }
+#world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.hud { position: fixed; top: 12px; left: 12px; right: 12px; max-width: 520px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); padding: 8px 12px; font-size: 12px; }
+.hud strong { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 14px; }
+.views { position: fixed; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 8px; overflow-x: auto; padding: 4px 4px 8px; }
+.views button { flex: none; min-height: 44px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 9999px; background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink); font: 600 13px Inter, system-ui, sans-serif; cursor: pointer; }
+.views button[aria-pressed="true"] { background: var(--yellow); }
+.views button:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+body.shot .hud, body.shot .views { display: none; }

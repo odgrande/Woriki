@@ -1,14 +1,13 @@
 // Character kit: loads bodies, hair and clips once, prepares canonical rest-space data
 // and caches every derived geometry and shared material so characters stay cheap.
 import * as THREE from 'three';
-import { prepareBody, retargetHeadAsset } from './body.js';
+import { prepareBody, retargetHeadAsset, nearestVertexLookup } from './body.js';
 import { prepareClips } from './animation.js';
 import { textureAverage, makeSkinMaterial, makeHairMaterial } from './materials.js';
-import { makePlan, createBuilder, buildPiece, visibleBodyIndex } from './garments.js';
+import { makePlan, createBuilder, buildPiece, visibleBodyIndex, buildCollar } from './garments.js';
 import { buildSkirt } from './skirt.js';
 import { buildHeadwear } from './headwear.js';
 import { SKIN_TONES } from './appearance.js';
-import { getFabric } from './fabrics.js';
 
 const HAIR_FILES = {
   buzzed: 'hair_buzzed', buzzedfemale: 'hair_buzzedfemale', buns: 'hair_buns', long: 'hair_long', simpleparted: 'hair_simpleparted', beard: 'hair_beard',
@@ -26,6 +25,7 @@ export async function loadCharacterKit(ctx) {
     load('male'), load('female'), optional('male_low'), optional('female_low'), load('anims_1'), load('anims_2'),
     ...Object.values(HAIR_FILES).map(load),
   ]);
+  const tPrep = performance.now();
   const bodies = { male: prepareBody(male, maleLow), female: prepareBody(female, femaleLow) };
   const hairGltf = Object.fromEntries(Object.keys(HAIR_FILES).map((k, i) => [k, hairs[i]]));
 
@@ -53,7 +53,7 @@ export async function loadCharacterKit(ctx) {
   const kit = {
     ctx, bodies, hairGltf, anisotropy,
     cache: { geo: new Map(), hair: new Map(), mat: new Map() },
-    stats: { loadMs: Math.round(performance.now() - t0), high: null, low: null, built: 0 },
+    stats: { loadMs: Math.round(performance.now() - t0), prepareMs: Math.round(performance.now() - tPrep), high: null, low: null, built: 0 },
     makePlan,
     geometryFor: (body, plan, detail) => geometryFor(kit, body, plan, detail),
     hairGeometry: (body, hair, beard) => hairGeometry(kit, body, hair, beard),
@@ -136,14 +136,16 @@ function geometryFor(kit, body, plan, detail) {
   const low = detail === 'low';
   const M = low ? body.low : body.high;
   const uvScale = body.uvScale;
-  const opts = (slot) => ({ uvScale, rims: !low, slot, low });
+  const opts = (slot) => ({ uvScale, rims: !low, slot, low, boneGroups: body.groups, pelvisIndex: body.pelvisIndex });
   let result;
   if (!low) {
     const plain = createBuilder();
     const pats = plan.fabrics.map(() => createBuilder());
     const target = (item) => (item.fabric !== undefined ? pats[item.fabric] : plain);
-    for (const piece of plan.pieces) buildPiece(M, piece, target(piece), opts(piece.slot ?? 0));
+    const coversOf = (piece) => (piece.coveredBy || []).map((id) => plan.pieces.find((q) => q.id === id)).filter(Boolean);
+    for (const piece of plan.pieces) buildPiece(M, piece, target(piece), { ...opts(piece.slot ?? 0), covers: coversOf(piece) });
     for (const s of plan.skirts) buildSkirt(body, M, s, target(s), { slot: s.slot ?? 0, low: false });
+    for (const c of plan.collars) buildCollar(body, M, c, target(c), { slot: c.slot ?? 0, low: false, uvScale }, lookupFor(M));
     if (plan.headwear) {
       buildHeadwear(plan.headwear.kind, body, target(plan.headwear), { slot: plan.headwear.slot ?? 0, low: false, badgeSlot: plan.badgeSlot });
     }
@@ -161,7 +163,7 @@ function geometryFor(kit, body, plan, detail) {
     // One merged geometry: body regions + all garments, coloured by slot.
     const b = createBuilder();
     const fabricSlot = (i) => plan.slots.length + i;
-    const visible = visibleBodyIndex(M, plan);
+    const visible = visibleBodyIndex(M, plan, 0.006);
     const lm = body.lm;
     const map = new Map();
     const H = lm.head3;
@@ -184,13 +186,19 @@ function geometryFor(kit, body, plan, detail) {
       b.idx.push(v);
     }
     const slotOf = (item) => (item.fabric !== undefined ? fabricSlot(item.fabric) : (item.slot ?? 2));
-    for (const piece of plan.pieces) buildPiece(M, { ...piece, slotFn: piece.slotFn }, b, { uvScale: 0, rims: false, slot: slotOf(piece) });
+    for (const piece of plan.pieces) buildPiece(M, piece, b, { uvScale: 0, rims: false, slot: slotOf(piece), boneGroups: body.groups, pelvisIndex: body.pelvisIndex, offsetScale: 1.6, covers: (piece.coveredBy || []).map((id) => plan.pieces.find((q) => q.id === id)).filter(Boolean) });
     for (const s of plan.skirts) buildSkirt(body, M, s, b, { slot: slotOf(s), low: true });
+    for (const c of plan.collars) buildCollar(body, M, c, b, { slot: slotOf(c), low: true, uvScale: 0 }, lookupFor(M));
     if (plan.headwear) buildHeadwear(plan.headwear.kind, body, b, { slot: slotOf(plan.headwear), low: true });
     result = { merged: builderToGeometry(b, { rest: false, uv: false }), slotCount: plan.slots.length + plan.fabrics.length };
   }
   kit.cache.geo.set(key, result);
   return result;
+}
+
+function lookupFor(M) {
+  if (!M.lookup) M.lookup = nearestVertexLookup(M);
+  return M.lookup;
 }
 
 /** Merged hair + eyebrows (+ beard) geometry for a body. */
@@ -226,4 +234,3 @@ function hairGeometry(kit, body, hair, beard) {
   return res;
 }
 
-export { getFabric };

@@ -5,8 +5,13 @@
 import * as THREE from 'three';
 import { rng, noiseField, sample, clamp, smooth, lerp } from './noise.js';
 
-/** Let the browser breathe between heavy texture jobs. */
-export const tick = () => new Promise((r) => setTimeout(r, 0));
+/** Let the browser breathe between heavy jobs (MessageChannel is not throttled like setTimeout). */
+export const tick = () => new Promise((r) => {
+  if (typeof MessageChannel === 'undefined') { setTimeout(r, 0); return; }
+  const ch = new MessageChannel();
+  ch.port1.onmessage = () => { ch.port1.close(); r(); };
+  ch.port2.postMessage(0);
+});
 
 function makeCanvas(w, h) {
   const c = document.createElement('canvas');
@@ -93,37 +98,56 @@ function plaster(S) {
   const F1 = noiseField(96, 192, 4, 8, 5, 11);
   const F2 = noiseField(48, 96, 2, 4, 4, 23);
   const F3 = noiseField(160, 24, 40, 2, 2, 37);
-  const F4 = noiseField(64, 128, 3, 6, 4, 41);
+  const F4 = noiseField(160, 320, 12, 24, 3, 41);
+  const F5 = noiseField(48, 96, 3, 6, 3, 43);
   const r = rng(5);
   const p = pixels(w, h, (u, v, o) => {
     const ym = v * 8;
     const n1 = sample(F1, u, v);
-    let base = 0.9 + (n1 - 0.5) * 0.14 + (r() - 0.5) * 0.04;
-    let R = base, G = base * 0.985, B = base * 0.96;
-    const k = smooth(0.56, 0.82, sample(F2, u, v)) * 0.32;
-    R *= 1 - k; G *= 1 - k * 0.86; B *= 1 - k * 0.9;
-    const st = smooth(0.58, 0.9, sample(F3, u, v)) * smooth(0.3, 2.5, ym) * 0.2;
-    R *= 1 - st; G *= 1 - st; B *= 1 - st * 0.92;
+    let base = 0.91 + (n1 - 0.5) * 0.09 + (r() - 0.5) * 0.035;
+    let R = base, G = base * 0.988, B = base * 0.965;
+    // soft mildew / dirt, heavier near the ground
+    const k = smooth(0.5, 0.85, sample(F2, u, v)) * (0.08 + 0.14 * smooth(2.2, 0.2, ym));
+    R *= 1 - k; G *= 1 - k * 0.9; B *= 1 - k * 0.92;
+    // faint rain streaks
+    const st = smooth(0.6, 0.92, sample(F3, u, v)) * smooth(0.3, 2.5, ym) * 0.11;
+    R *= 1 - st; G *= 1 - st; B *= 1 - st * 0.95;
     let hh = n1 * 0.5 + r() * 0.25;
-    const pe = sample(F4, u, v);
-    if (pe > 0.71) {
-      const t = smooth(0.71, 0.735, pe);
-      R = lerp(R, 0.58, t); G = lerp(G, 0.57, t); B = lerp(B, 0.54, t);
-      hh -= t * 0.8;
-    } else if (pe > 0.69) { R *= 0.85; G *= 0.85; B *= 0.85; }
+    // small chips of flaked paint, only in some areas
+    const pe = sample(F4, u, v) * 0.75 + sample(F5, u, v) * 0.25;
+    if (pe > 0.7) {
+      const t = smooth(0.7, 0.715, pe);
+      R = lerp(R, 0.66, t * 0.8); G = lerp(G, 0.64, t * 0.8); B = lerp(B, 0.6, t * 0.8);
+      hh -= t * 0.6;
+    }
     // red laterite splash from the rain, strongest at the foot of the wall
-    const sp = smooth(0.75, 0.0, ym + (sample(F1, u * 3 % 1, v) - 0.5) * 0.5) * 0.85;
-    R = lerp(R, 0.6 * R + 0.12, sp); G = lerp(G, 0.36 * G + 0.04, sp); B = lerp(B, 0.24 * B + 0.02, sp);
+    const sp = smooth(0.7, 0.0, ym + (sample(F1, (u * 3) % 1, v) - 0.5) * 0.45) * 0.8;
+    R = lerp(R, 0.62 * R + 0.12, sp); G = lerp(G, 0.38 * G + 0.04, sp); B = lerp(B, 0.26 * B + 0.02, sp);
     o.r = R; o.g = G; o.b = B; o.h = hh;
   });
-  return { map: tex(p.canvas), normalMap: tex(normalMap(p.height, w, h, 1.2), { srgb: false }), size: [4, 8] };
+  return { map: tex(p.canvas), normalMap: tex(normalMap(p.height, w, h, 1.0), { srgb: false }), size: [4, 8] };
+}
+
+/** Clean interior emulsion paint: soft roller mottling, no splash or chips. */
+function plasterIn(S) {
+  const w = S / 2, h = S / 2; // 3 m × 3 m
+  const F1 = noiseField(64, 64, 6, 6, 4, 13);
+  const F2 = noiseField(32, 32, 2, 2, 3, 17);
+  const r = rng(7);
+  const p = pixels(w, h, (u, v, o) => {
+    const n1 = sample(F1, u, v), n2 = sample(F2, u, v);
+    const c = 0.93 + (n1 - 0.5) * 0.045 + (n2 - 0.5) * 0.05 + (r() - 0.5) * 0.02;
+    o.r = c; o.g = c * 0.99; o.b = c * 0.975; o.h = n1 * 0.4 + r() * 0.15;
+  });
+  return { map: tex(p.canvas), normalMap: tex(normalMap(p.height, w, h, 0.5), { srgb: false }), size: [3, 3] };
 }
 
 function zinc(S) {
   const w = S, h = S; // 4 m × 4 m; corrugations run along v (down the slope)
   const F1 = noiseField(64, 64, 4, 4, 5, 51);
-  const F2 = noiseField(64, 64, 3, 3, 4, 53);
+  const F2 = noiseField(96, 64, 12, 3, 4, 53);
   const F3 = noiseField(128, 16, 64, 2, 2, 57);
+  const F4 = noiseField(32, 32, 2, 2, 3, 59);
   const r = rng(9);
   const waves = 44;
   const p = pixels(w, h, (u, v, o) => {
@@ -131,9 +155,9 @@ function zinc(S) {
     const c = Math.cos(ph);
     let base = 0.82 + c * 0.06 + (sample(F1, u, v) - 0.5) * 0.12 + (r() - 0.5) * 0.03;
     let R = base, G = base, B = base * 1.01;
-    const ru = sample(F2, u, v) + sample(F3, u, v) * 0.35 - 0.12;
-    const rust = smooth(0.5, 0.72, ru);
-    R = lerp(R, 0.55, rust * 0.75); G = lerp(G, 0.31, rust * 0.75); B = lerp(B, 0.18, rust * 0.75);
+    const ru = sample(F2, u, v) * 0.7 + sample(F4, u, v) * 0.3 + sample(F3, u, v) * 0.2 - 0.08;
+    const rust = smooth(0.52, 0.7, ru) * 0.65;
+    R = lerp(R, 0.52, rust); G = lerp(G, 0.32, rust); B = lerp(B, 0.2, rust);
     // dirt streaks running down the slope
     const st = smooth(0.55, 0.9, sample(F3, u, v)) * 0.18;
     R *= 1 - st; G *= 1 - st; B *= 1 - st;
@@ -172,9 +196,9 @@ function asphalt(S) {
   });
   const pr = rng(31);
   const patches = [];
-  for (let k = 0; k < 4; k++) patches.push({ x: pr() * 0.9 + 0.05, y: 0.15 + pr() * 0.6, w: 0.03 + pr() * 0.08, h: 0.08 + pr() * 0.2 });
+  for (let k = 0; k < 3; k++) patches.push({ x: pr() * 0.9 + 0.05, y: 0.2 + pr() * 0.55, w: 0.015 + pr() * 0.035, h: 0.04 + pr() * 0.12 });
   const holes = [];
-  for (let k = 0; k < 5; k++) holes.push({ x: pr(), y: k < 3 ? (pr() < 0.5 ? 0.12 + pr() * 0.1 : 0.78 + pr() * 0.1) : 0.3 + pr() * 0.4, r: 0.006 + pr() * 0.012 });
+  for (let k = 0; k < 4; k++) holes.push({ x: pr(), y: k < 3 ? (pr() < 0.5 ? 0.1 + pr() * 0.1 : 0.8 + pr() * 0.1) : 0.3 + pr() * 0.4, r: 0.004 + pr() * 0.014 });
   const pp = pixels(w, h, (u, v, o) => {
     const n1 = sample(F1, u, v), n2 = sample(F2, u, v);
     let g0 = 0.3 + (n1 - 0.5) * 0.1 + (n2 - 0.5) * 0.05;
@@ -189,11 +213,10 @@ function asphalt(S) {
     // repaired patches (darker, fresher, with sealed edges)
     for (const q of patches) {
       const dx = Math.abs(u - q.x), dy = Math.abs(v - q.y);
-      if (dx < q.w && dy < q.h) {
-        const edge = Math.min(q.w - dx, q.h - dy) < 0.003;
-        const f = 0.2 + (agg - 0.5) * 0.05;
-        R = G = f; B = f * 1.02; hh += 0.2;
-        if (edge) { R = G = B = 0.14; }
+      const jag = (n2 - 0.5) * 0.012;
+      if (dx < q.w + jag && dy < q.h + jag) {
+        const f = 0.24 + (agg - 0.5) * 0.05 + (n1 - 0.5) * 0.05;
+        R = lerp(R, f, 0.75); G = lerp(G, f, 0.75); B = lerp(B, f * 1.02, 0.75); hh += 0.2;
       }
     }
     // potholes with red dust and puddle
@@ -203,8 +226,8 @@ function asphalt(S) {
       if (d < 1.25) {
         const rim = smooth(1.25, 0.9, d);
         R = lerp(R, 0.18, rim); G = lerp(G, 0.17, rim); B = lerp(B, 0.17, rim);
-        if (d < 0.85) { R = 0.42 + n1 * 0.1; G = 0.26 + n1 * 0.05; B = 0.18; hh -= 1.2; }
-        if (d < 0.45) { R = 0.2; G = 0.17; B = 0.13; }
+        if (d < 0.85) { R = 0.3 + n1 * 0.08; G = 0.22 + n1 * 0.05; B = 0.17; hh -= 1.2; }
+        if (d < 0.6) { R = 0.16; G = 0.15; B = 0.12; }
       }
     }
     const ck = cracks[o.y * w + o.x];
@@ -228,9 +251,9 @@ function laterite(S) {
   const r = rng(17);
   const pebbles = mask(w, h, (g) => {
     const rr = rng(77);
-    for (let k = 0; k < 700; k++) {
-      g.globalAlpha = 0.6 + rr() * 0.4;
-      g.beginPath(); g.ellipse(rr() * w, rr() * h, 1 + rr() * S / 220, 1 + rr() * S / 300, rr() * 3, 0, 7); g.fill();
+    for (let k = 0; k < 260; k++) {
+      g.globalAlpha = 0.35 + rr() * 0.4;
+      g.beginPath(); g.ellipse(rr() * w, rr() * h, 0.6 + rr() * S / 320, 0.6 + rr() * S / 420, rr() * 3, 0, 7); g.fill();
     }
   });
   const p = pixels(w, h, (u, v, o) => {
@@ -240,16 +263,16 @@ function laterite(S) {
     R = lerp(R, 0.72, comp); G = lerp(G, 0.5, comp); B = lerp(B, 0.36, comp);
     const damp = smooth(0.62, 0.8, n3 * 0.5 + n1 * 0.5) * 0.3;
     R *= 1 - damp; G *= 1 - damp; B *= 1 - damp;
-    const gr = smooth(0.52, 0.7, 1 - n2 + (n3 - 0.5) * 0.3);
+    const gr = smooth(0.56, 0.74, 1 - n2 + (n3 - 0.5) * 0.7) * 0.9;
     const blade = r();
-    if (gr > 0 && blade < gr * 0.85) {
+    if (gr > 0 && blade < gr * 0.8) {
       const dry = n3 > 0.55;
       const s = 0.75 + blade * 0.4;
       R = lerp(R, dry ? 0.52 * s : 0.3 * s, gr); G = lerp(G, dry ? 0.5 * s : 0.42 * s, gr); B = lerp(B, dry ? 0.25 * s : 0.15 * s, gr);
     }
     let hh = n1 * 0.6 + r() * 0.2 + gr * 0.3;
     const pb = pebbles[o.y * w + o.x];
-    if (pb > 0) { R = lerp(R, 0.74, pb); G = lerp(G, 0.62, pb); B = lerp(B, 0.52, pb); hh += pb * 0.8; }
+    if (pb > 0) { R = lerp(R, 0.7, pb); G = lerp(G, 0.54, pb); B = lerp(B, 0.42, pb); hh += pb * 0.8; }
     const g0 = (r() - 0.5) * 0.04;
     o.r = R + g0; o.g = G + g0; o.b = B + g0; o.h = hh;
   });
@@ -303,9 +326,9 @@ function pavers(S) {
   for (let j = 0; j < rows; j++) {
     const off = (j % 2) * pw / 2;
     for (let i = -1; i < cols; i++) {
-      const band = (Math.floor(j / 6) % 2 === 1 && (i + j) % 2 === 0);
-      const k = 0.85 + r() * 0.18;
-      const c = band ? [176 * k, 104 * k, 84 * k] : [168 * k, 164 * k, 156 * k];
+      const band = (j % 12 === 0) || r() < 0.06;
+      const k = 0.88 + r() * 0.14;
+      const c = band ? [160 * k, 112 * k, 92 * k] : [176 * k, 170 * k, 160 * k];
       g.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
       g.fillRect(i * pw + off + 1.5, j * ph + 1.5, pw - 3, ph - 3);
     }
@@ -444,16 +467,18 @@ function foliage(S) {
   }
   g.strokeStyle = '#8a8a4a'; g.lineWidth = w * 0.012;
   g.beginPath(); g.moveTo(fx, h * 0.99); g.lineTo(fx, h * 0.02); g.stroke();
-  // Broad leaves (mango/almond style) on the right half.
-  for (let i = 0; i < 260; i++) {
-    const x = w * 0.5 + w * 0.03 + r() * w * 0.44, y = h * 0.03 + r() * h * 0.94;
-    const L = w * (0.035 + r() * 0.03), a = r() * Math.PI * 2;
-    const k = 0.6 + r() * 0.45;
-    const dry = r() < 0.06;
-    g.fillStyle = dry ? `rgb(${(150 * k) | 0},${(140 * k) | 0},${(60 * k) | 0})` : `rgb(${(40 * k) | 0},${(92 * k) | 0},${(32 * k) | 0})`;
-    g.save(); g.translate(x, y); g.rotate(a);
-    g.beginPath(); g.ellipse(0, 0, L, L * 0.32, 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(160,190,90,0.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L, 0); g.stroke();
+  // Broad leaves (mango / almond style) on the right half, inside a soft oval so cards have round silhouettes.
+  const cx0 = w * 0.75, cy0 = h * 0.5, rx = w * 0.22, ry = h * 0.46;
+  for (let i = 0; i < 520; i++) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r());
+    const x = cx0 + Math.cos(a) * rx * d, y = cy0 + Math.sin(a) * ry * d;
+    const L = w * (0.022 + r() * 0.02), ang = a + (r() - 0.5) * 1.6;
+    const k = 0.55 + r() * 0.5 - d * 0.15;
+    const dry = r() < 0.025;
+    g.fillStyle = dry ? `rgb(${(130 * k) | 0},${(128 * k) | 0},${(62 * k) | 0})` : `rgb(${(38 * k) | 0},${(88 * k) | 0},${(30 * k) | 0})`;
+    g.save(); g.translate(x, y); g.rotate(ang);
+    g.beginPath(); g.ellipse(0, 0, L, L * 0.3, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(150,180,90,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L, 0); g.stroke();
     g.restore();
   }
   const t = tex(c, { repeat: false });
@@ -525,22 +550,28 @@ function weather(g, x, y, w, h, { fade = 0.15, dirt = 0.25, rust = 0, seed = 3 }
   const d = img.data;
   const F = noiseField(24, 24, 3, 3, 3, seed);
   const r = rng(seed);
-  const drips = [];
-  if (rust > 0) for (let k = 0; k < 3 + rust * 6; k++) drips.push({ x: r() * w, len: h * (0.2 + r() * 0.7), wd: 1 + r() * 3 });
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const k = (j * w + i) * 4;
-    if (d[k + 3] === 0) continue;
-    const n = sample(F, i / w, j / h);
-    const f = fade * (0.5 + n);
-    let R = d[k], G = d[k + 1], B = d[k + 2];
-    const lum = (R + G + B) / 3;
-    R = lerp(R, lum * 0.6 + 120, f); G = lerp(G, lum * 0.6 + 116, f); B = lerp(B, lum * 0.6 + 108, f);
-    const dd = (smooth(0.5, 0.9, n) * dirt + (r() < 0.02 ? 0.25 : 0)) * 0.6;
-    R *= 1 - dd; G *= 1 - dd; B *= 1 - dd * 1.1;
-    for (const q of drips) {
-      if (Math.abs(i - q.x) < q.wd && j < q.len) { const t = (1 - j / q.len) * 0.55 * rust; R = lerp(R, 120, t); G = lerp(G, 62, t); B = lerp(B, 30, t); }
+  // rust drips: per column, the drip length (0 = none)
+  const drip = new Float32Array(w);
+  if (rust > 0) for (let k = 0; k < 3 + rust * 6; k++) {
+    const cx = r() * w, len = h * (0.2 + r() * 0.7), wd = 1 + r() * 3;
+    for (let i = Math.max(0, Math.floor(cx - wd)); i < Math.min(w, Math.ceil(cx + wd)); i++) drip[i] = Math.max(drip[i], len);
+  }
+  const rt = 0.55 * rust;
+  for (let j = 0; j < h; j++) {
+    const v = j / h;
+    for (let i = 0; i < w; i++) {
+      const k = (j * w + i) * 4;
+      if (d[k + 3] === 0) continue;
+      const n = sample(F, i / w, v);
+      const f = fade * (0.5 + n);
+      let R = d[k], G = d[k + 1], B = d[k + 2];
+      const lum = (R + G + B) * 0.2;
+      R += (lum + 120 - R) * f; G += (lum + 116 - G) * f; B += (lum + 108 - B) * f;
+      const dd = (smooth(0.5, 0.9, n) * dirt + (r() < 0.02 ? 0.25 : 0)) * 0.6;
+      R *= 1 - dd; G *= 1 - dd; B *= 1 - dd * 1.1;
+      if (drip[i] > j) { const t = (1 - j / drip[i]) * rt; R += (120 - R) * t; G += (62 - G) * t; B += (30 - B) * t; }
+      d[k] = R; d[k + 1] = G; d[k + 2] = B;
     }
-    d[k] = R; d[k + 1] = G; d[k + 2] = B;
   }
   g.putImageData(img, x, y);
 }
@@ -553,36 +584,50 @@ function rrect(g, x, y, w, h, r) {
 /** Simple shelf packer. items: [name, w, h, draw(g, x, y, w, h)]. */
 function buildAtlas(size, items, scale = 1) {
   const c = makeCanvas(size, size);
-  const g = c.getContext('2d');
-  const pad = 4;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#6b6b66'; g.fillRect(0, 0, size, size);
+  const pad = Math.max(2, Math.round(size / 256));
   const list = items.map(([name, w, h, draw]) => ({ name, w: Math.round(w * scale), h: Math.round(h * scale), draw }));
-  const order = [...list].sort((a, b) => b.h - a.h);
-  let x = pad, y = pad, rowH = 0;
+  const order = [...list].sort((a, b) => b.h - a.h || b.w - a.w);
+  // skyline bottom-left packing
+  let sky = [{ x: 0, y: 0, w: size }];
   const regions = {};
   for (const it of order) {
-    if (x + it.w + pad > size) { x = pad; y += rowH + pad * 2; rowH = 0; }
-    if (y + it.h + pad > size) throw new Error('atlas overflow at ' + it.name);
-    it.x = x; it.y = y;
-    x += it.w + pad * 2; rowH = Math.max(rowH, it.h);
+    const W = it.w + pad * 2, H = it.h + pad * 2;
+    let best = null;
+    for (let i = 0; i < sky.length; i++) {
+      const x = sky[i].x;
+      if (x + W > size) break;
+      let y = 0, span = 0, j = i;
+      while (span < W && j < sky.length) { y = Math.max(y, sky[j].y); span += sky[j].w; j++; }
+      if (span < W || y + H > size) continue;
+      if (!best || y + H < best.y + best.h || (y + H === best.y + best.h && x < best.x)) best = { x, y, h: H };
+    }
+    if (!best) throw new Error('atlas overflow at ' + it.name);
+    it.x = best.x + pad; it.y = best.y + pad;
+    // raise the skyline under the item
+    const nx0 = best.x, nx1 = best.x + W, top = best.y + H;
+    const next = [];
+    for (const sg of sky) {
+      const a = sg.x, b = sg.x + sg.w;
+      if (b <= nx0 || a >= nx1) { next.push(sg); continue; }
+      if (a < nx0) next.push({ x: a, y: sg.y, w: nx0 - a });
+      if (b > nx1) next.push({ x: nx1, y: sg.y, w: b - nx1 });
+    }
+    next.push({ x: nx0, y: top, w: W });
+    next.sort((p, q) => p.x - q.x);
+    sky = [];
+    for (const sg of next) { const l = sky[sky.length - 1]; if (l && l.y === sg.y && l.x + l.w === sg.x) l.w += sg.w; else sky.push({ ...sg }); }
   }
   for (const it of list) {
     g.save();
     g.beginPath(); g.rect(it.x - 1, it.y - 1, it.w + 2, it.h + 2); g.clip();
     it.draw(g, it.x, it.y, it.w, it.h);
     g.restore();
-    // bleed the border pixels into the padding so mipmaps do not fringe
-    bleed(g, it.x, it.y, it.w, it.h, pad - 1);
-    regions[it.name] = { u0: it.x / size, v0: 1 - (it.y + it.h) / size, u1: (it.x + it.w) / size, v1: 1 - it.y / size };
+    const e = 0.75; // inset half a texel+ so bilinear filtering stays inside the region
+    regions[it.name] = { u0: (it.x + e) / size, v0: 1 - (it.y + it.h - e) / size, u1: (it.x + it.w - e) / size, v1: 1 - (it.y + e) / size };
   }
   return { canvas: c, regions };
-}
-
-function bleed(g, x, y, w, h, p) {
-  if (p <= 0) return;
-  g.drawImage(g.canvas, x, y, w, 1, x, y - p, w, p);
-  g.drawImage(g.canvas, x, y + h - 1, w, 1, x, y + h, w, p);
-  g.drawImage(g.canvas, x, y - p, 1, h + 2 * p, x - p, y - p, p, h + 2 * p);
-  g.drawImage(g.canvas, x + w - 1, y - p, 1, h + 2 * p, x + w, y - p, p, h + 2 * p);
 }
 
 // Wrapped drawing helpers (draw functions get a local box x, y, w, h).
@@ -598,7 +643,7 @@ function boardSign(bg, border, lines, opts = {}) {
 }
 
 function signsAtlas(S) {
-  const scale = S >= 1024 ? 1 : 0.5;
+  const scale = (S / 1024) * 0.88;
   const items = [
     ['church-arch', 512, 112, (g, x, y, w, h) => {
       const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#24479e'); gr.addColorStop(1, '#152c6b');
@@ -822,13 +867,14 @@ function propsAtlas(S) {
     weather(g, x, y, w, h, { fade: 0.1, dirt: 0.25, seed: base.length * 7 });
   };
   const goods = (cols, rad, n) => (g, x, y, w, h) => {
-    g.fillStyle = '#6b4a2b'; g.fillRect(x, y, w, h);
+    g.fillStyle = cols[0]; g.fillRect(x, y, w, h);
     const r = rng(n);
-    for (let i = 0; i < n; i++) {
+    const sc = w / 64;
+    for (let i = 0; i < n * 1.6; i++) {
       const c = cols[(r() * cols.length) | 0];
-      const cx = x + r() * w, cy = y + r() * h, rr = rad * (0.75 + r() * 0.5);
-      const gr = g.createRadialGradient(cx - rr * 0.3, cy - rr * 0.3, 1, cx, cy, rr);
-      gr.addColorStop(0, '#fff8'); gr.addColorStop(0.25, c); gr.addColorStop(1, '#0006');
+      const cx = x + r() * w, cy = y + r() * h, rr = rad * sc * (0.8 + r() * 0.5);
+      const gr = g.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, 0.5, cx, cy, rr);
+      gr.addColorStop(0, 'rgba(255,255,255,0.7)'); gr.addColorStop(0.3, c); gr.addColorStop(1, c);
       g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, rr, 0, 7); g.fill();
     }
   };
@@ -929,13 +975,13 @@ function propsAtlas(S) {
       g.fillStyle = '#f2c200'; g.fillRect(x, y, w, h);
       g.fillStyle = '#0d7a3a'; g.fillRect(x, y + h * 0.62, w, h * 0.12);
       g.fillStyle = '#1a1a1a'; g.fillRect(x, y + h * 0.9, w, h * 0.1);
-      paint(g, 'GOD IS IN CONTROL', x + w * 0.5, y + h * 0.82, h * 0.08, '#111', { wobble: 0.05, maxW: w * 0.8 });
       weather(g, x, y, w, h, { fade: 0.1, dirt: 0.5, rust: 0.5, seed: 17 });
     }],
     ['tyre', 64, 64, (g, x, y, w, h) => {
-      g.fillStyle = '#161616'; g.fillRect(x, y, w, h);
-      g.fillStyle = '#9a9a9a'; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.3, 0, 7); g.fill();
-      g.fillStyle = '#5a5a5a'; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.12, 0, 7); g.fill();
+      g.fillStyle = '#141414'; g.fillRect(x, y, w, h);
+      g.fillStyle = '#232323'; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.36, 0, 7); g.fill();
+      g.fillStyle = '#6d6f70'; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.26, 0, 7); g.fill();
+      g.fillStyle = '#3c3e40'; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.09, 0, 7); g.fill();
       g.strokeStyle = '#2a2a2a'; g.lineWidth = 2; for (let i = 0; i < 5; i++) { const a = i * 1.2566; g.beginPath(); g.moveTo(x + w / 2, y + h / 2); g.lineTo(x + w / 2 + Math.cos(a) * w * 0.28, y + h / 2 + Math.sin(a) * w * 0.28); g.stroke(); }
     }],
     ['plate', 64, 24, (g, x, y, w, h) => { g.fillStyle = '#eee'; g.fillRect(x, y, w, h); paint(g, 'KJA 214 BC', x + w / 2, y + h / 2, h * 0.5, '#1b4d1b', { font: FONT_SANS, weight: '800', wobble: 0, maxW: w * 0.9 }); }],
@@ -1008,9 +1054,15 @@ function propsAtlas(S) {
       for (let row = 0; row < 3; row++) for (let i = 0; i < 10; i++) { g.fillStyle = cols[(r() * 6) | 0]; g.fillRect(x + 2 + i * w / 10, y + 2 + row * h / 3, w / 10 - 3, h / 3 - 4); }
     }],
     ['flowers', 64, 64, (g, x, y, w, h) => {
-      g.fillStyle = '#2d6a2d'; g.fillRect(x, y, w, h);
-      const r = rng(11); const cols = ['#ffffff', '#ffd6e0', '#ffef9f', '#ff4d6d', '#f8f9fa'];
-      for (let i = 0; i < 40; i++) { g.fillStyle = cols[(r() * 5) | 0]; g.beginPath(); g.arc(x + r() * w, y + r() * h, 3 + r() * 4, 0, 7); g.fill(); }
+      g.fillStyle = '#29522a'; g.fillRect(x, y, w, h);
+      const r = rng(11); const cols = ['#ffffff', '#fbe3ea', '#ffd23f', '#e63946', '#ff8fab', '#f8f9fa', '#c1121f'];
+      const sc = w / 64;
+      for (let i = 0; i < 26; i++) { g.fillStyle = r() < 0.5 ? '#3f7a34' : '#24502a'; g.beginPath(); g.ellipse(x + r() * w, y + r() * h, 5 * sc, 2.2 * sc, r() * 3, 0, 7); g.fill(); }
+      for (let i = 0; i < 70; i++) {
+        const c = cols[(r() * cols.length) | 0], cx = x + r() * w, cy = y + r() * h, rr = (2.2 + r() * 2.6) * sc;
+        for (let k = 0; k < 5; k++) { const a = k * 1.2566 + r(); g.fillStyle = c; g.beginPath(); g.arc(cx + Math.cos(a) * rr * 0.6, cy + Math.sin(a) * rr * 0.6, rr * 0.55, 0, 7); g.fill(); }
+        g.fillStyle = '#f4c430'; g.beginPath(); g.arc(cx, cy, rr * 0.3, 0, 7); g.fill();
+      }
     }],
     ['drumhead', 64, 64, (g, x, y, w, h) => { g.fillStyle = '#ece8dc'; g.fillRect(x, y, w, h); g.strokeStyle = '#b8b2a0'; g.lineWidth = 3; g.beginPath(); g.arc(x + w / 2, y + h / 2, w * 0.45, 0, 7); g.stroke(); }],
     ['ankara-1', 64, 64, (g, x, y, w, h) => {
@@ -1042,6 +1094,29 @@ function propsAtlas(S) {
   ];
   const { canvas, regions } = buildAtlas(S, items, scale);
   return { map: tex(canvas, { repeat: false, aniso: 8 }), regions, canvas };
+}
+
+/** Hazy Lagos sky: pale horizon, soft blue zenith, a few fair-weather clouds. Equirect-ish (u = azimuth, v = elevation). */
+export function createSkyTexture(S = 512) {
+  const w = S * 2, h = S / 2;
+  const F = noiseField(128, 32, 8, 2, 5, 211);
+  const F2 = noiseField(256, 32, 24, 3, 3, 223);
+  const p = pixels(w, h, (u, v, o) => {
+    // v: 0 = horizon (slightly below), 1 = zenith
+    const e = Math.max(0, v);
+    const t = Math.pow(e, 0.55);
+    let R = lerp(0.86, 0.43, t), G = lerp(0.89, 0.64, t), B = lerp(0.9, 0.88, t);
+    const n = sample(F, u, v) * 0.75 + sample(F2, u, v) * 0.25;
+    const band = smooth(0.06, 0.25, e) * smooth(0.85, 0.45, e);
+    const c = smooth(0.55, 0.78, n) * band;
+    R = lerp(R, 0.97, c * 0.9); G = lerp(G, 0.97, c * 0.9); B = lerp(B, 0.98, c * 0.9);
+    const shade = smooth(0.7, 0.9, n) * band * 0.12;
+    R -= shade; G -= shade; B -= shade * 0.6;
+    o.r = R; o.g = G; o.b = B;
+  });
+  const t = tex(p.canvas, { repeat: false, aniso: 1 });
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
 }
 
 /** Projector screen with hymn lyrics (public-domain hymns). Returns {map, show(slide)} */
@@ -1081,17 +1156,18 @@ export function createLyricsScreen(S = 512) {
  * Build every texture the world needs. Async so it can yield between jobs.
  * @param {'low'|'medium'|'high'} quality
  */
-export async function createTextures(quality = 'medium') {
+export async function createTextures(quality = 'medium', onProgress = () => {}) {
   const S = quality === 'low' ? 256 : 512;
   const A = quality === 'low' ? 512 : 1024;
   const out = {};
   const jobs = [
-    ['plaster', () => plaster(S)], ['zinc', () => zinc(S)], ['asphalt', () => asphalt(S)], ['laterite', () => laterite(S)],
+    ['plaster', () => plaster(S)], ['plasterIn', () => plasterIn(S)], ['zinc', () => zinc(S)], ['asphalt', () => asphalt(S)], ['laterite', () => laterite(S)],
     ['concrete', () => concrete(S)], ['pavers', () => pavers(S)], ['tiles', () => floorTiles(S)], ['ceiling', () => ceiling(S)],
     ['carpet', () => carpet(S)], ['wood', () => wood(S)], ['fabric', () => fabric(S)], ['metal', () => metal(S)],
     ['bark', () => bark(S)], ['foliage', () => foliage(S)], ['grille', () => grille(S)],
     ['signs', () => signsAtlas(A)], ['props', () => propsAtlas(A)],
   ];
-  for (const [name, fn] of jobs) { out[name] = fn(); await tick(); }
+  out.timings = {};
+  for (const [name, fn] of jobs) { const t0 = performance.now(); out[name] = fn(); out.timings[name] = Math.round(performance.now() - t0); onProgress(Object.keys(out.timings).length / jobs.length); await tick(); }
   return out;
 }
