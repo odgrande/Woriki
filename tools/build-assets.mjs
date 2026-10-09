@@ -13,8 +13,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { prune, dedup, resample, textureCompress, meshopt, weld } from '@gltf-transform/functions';
-import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
+import { prune, dedup, resample, textureCompress, meshopt, weld, simplify } from '@gltf-transform/functions';
+import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -105,14 +105,48 @@ async function compressTextures(doc) {
   );
 }
 
+// Low-detail crowd bodies: body mesh only, no UVs/normals/textures (the game colours
+// them per vertex region and recomputes normals), welded and simplified to ~1.4k triangles.
+// Skin weights and the skeleton are kept, so the same clips and garment builder work.
+async function buildLods(io) {
+  for (const name of BODIES) {
+    const src = await repairGltf(await fetchGltf(UBC_BODY, name));
+    const doc = await io.read(src);
+    const root = doc.getRoot();
+    for (const node of root.listNodes()) {
+      const mesh = node.getMesh();
+      if (!mesh) continue;
+      if (/eye/i.test(node.getName())) { node.setMesh(null); mesh.dispose(); continue; }
+      for (const prim of mesh.listPrimitives()) {
+        for (const sem of prim.listSemantics()) if (!/^(POSITION|JOINTS_0|WEIGHTS_0)$/.test(sem)) prim.setAttribute(sem, null);
+        prim.setMaterial(null);
+      }
+    }
+    for (const m of root.listMaterials()) m.dispose();
+    for (const t of root.listTextures()) t.dispose();
+    await doc.transform(
+      weld(),
+      simplify({ simplifier: MeshoptSimplifier, ratio: 0.11, error: 0.02 }),
+      prune(),
+      meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
+    );
+    const tris = root.listMeshes().reduce((t, m) => t + m.listPrimitives().reduce((a, p) => a + (p.getIndices()?.getCount() || 0) / 3, 0), 0);
+    const out = join(OUT, `${name.replace('Superhero_', '').replace('_FullBody', '').toLowerCase()}_low.glb`);
+    await io.write(out, doc);
+    console.log('wrote', out.replace(ROOT + '/', ''), `(${tris} tris)`);
+  }
+}
+
 async function main() {
   await MeshoptEncoder.ready;
   await MeshoptDecoder.ready;
+  await MeshoptSimplifier.ready;
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({
     'meshopt.encoder': MeshoptEncoder,
     'meshopt.decoder': MeshoptDecoder,
   });
   await mkdir(OUT, { recursive: true });
+  if (process.argv.includes('--lod-only')) { await buildLods(io); return; }
   await fetchTo(`${UBC}/License_Standard.txt`, join(CACHE, 'ubc', 'License_Standard.txt'));
 
   for (const name of [...BODIES, ...HAIR]) {
@@ -152,11 +186,13 @@ async function main() {
     console.log('wrote', out.replace(ROOT + '/', ''), `(${found.size} clips)`);
   }
 
+  await buildLods(io);
+
   await writeFile(join(OUT, 'LICENSE.txt'), [
     'Character models, hair and animations in this folder are CC0 1.0 (public domain) by Quaternius.',
     'https://quaternius.com — Universal Base Characters [Standard] and Universal Animation Library 1 & 2 [Standard].',
     'https://creativecommons.org/publicdomain/zero/1.0/',
-    'Processed (texture resize/WebP, meshopt compression, clip selection) by tools/build-assets.mjs.',
+    'Processed (texture resize/WebP, meshopt compression, clip selection, simplified *_low.glb crowd bodies) by tools/build-assets.mjs.',
     '',
   ].join('\n'));
 }
