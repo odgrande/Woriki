@@ -1219,61 +1219,89 @@ function toast(text) {
 
 const GAME_URL = location.origin + location.pathname;
 
+const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
+
 function shareLine() {
   if (S.over) return `EFCC came for Pastor ${S.name} on day ${S.day} 😭`;
-  if (isPastor()) return `I became ${title()} in ${S.day} days 🙌`;
-  return `I'm now a ${STAGES[S.stage]} after ${S.day} days 🙏`;
+  if (isPastor()) return `I became ${title()} in ${days(S.day)} 🙌`;
+  return `I'm now a ${STAGES[S.stage]} after ${days(S.day)} 🙏`;
 }
 
 function drawShareCard() {
   const c = $('share-canvas');
   const x = c.getContext('2d');
   const W = c.width, H = c.height;
-  const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#c4e0f5');
-  g.addColorStop(1, '#eef4ec');
-  x.fillStyle = g;
+  const ink = '#000000';
+  x.fillStyle = '#fffdf7';
   x.fillRect(0, 0, W, H);
+  // faint grid paper
+  x.strokeStyle = 'rgba(0,0,0,0.05)';
+  x.lineWidth = 2;
+  for (let g = 0; g <= W; g += 60) { x.beginPath(); x.moveTo(g, 0); x.lineTo(g, H); x.stroke(); x.beginPath(); x.moveTo(0, g); x.lineTo(W, g); x.stroke(); }
 
+  const card = (l, t, w, h, fill, shadow = 10, r = 24) => {
+    x.fillStyle = ink;
+    roundRect(x, l + shadow, t + shadow, w, h, r);
+    x.fill();
+    x.fillStyle = fill;
+    roundRect(x, l, t, w, h, r);
+    x.fill();
+    x.lineWidth = 5;
+    x.strokeStyle = ink;
+    x.stroke();
+  };
+
+  // logo + name
+  card(90, 70, 96, 96, '#86efac', 6, 18);
   x.textAlign = 'center';
-  x.fillStyle = '#1f2937';
-  x.font = 'bold 64px system-ui, sans-serif';
-  x.fillText('⛪ Pastor Life', W / 2, 120);
+  x.font = '56px system-ui, sans-serif';
+  x.fillText('⛪', 138, 138);
+  x.textAlign = 'left';
+  x.fillStyle = ink;
+  x.font = 'bold 60px "Space Grotesk", system-ui, sans-serif';
+  x.fillText('Pastor Life', 214, 138);
 
-  x.fillStyle = '#1a9b61';
-  x.font = 'bold 54px system-ui, sans-serif';
-  wrapText(x, shareLine(), W / 2, 240, W - 140, 66);
+  // headline on a tilted pink highlight
+  x.save();
+  x.translate(W / 2, 300);
+  x.rotate(-0.025);
+  card(-460, -80, 920, 170, '#ff9ebb', 8, 20);
+  x.restore();
+  x.fillStyle = ink;
+  x.textAlign = 'center';
+  x.font = 'bold 54px "Space Grotesk", system-ui, sans-serif';
+  wrapText(x, shareLine(), W / 2, 296, W - 260, 62);
 
-  x.fillStyle = '#6b7280';
-  x.font = '40px system-ui, sans-serif';
-  wrapText(x, `${title()} ${S.name} · ${S.church}`, W / 2, 400, W - 140, 50);
+  x.fillStyle = '#3f3f46';
+  x.font = '600 36px Inter, system-ui, sans-serif';
+  wrapText(x, `${title()} ${S.name} · ${S.church}`, W / 2, 470, W - 180, 46);
 
   const rows = isPastor()
-    ? [['👥 Members', num(S.members)], [venue().emoji + ' Venue', venue().name], ['🙏 Faith', Math.round(S.faith) + '/100'], ['🍇 Character', Math.round(S.character) + '/100']]
-    : [['🙏 Faith', Math.round(S.faith) + '/100'], ['📖 Word', Math.round(S.word) + '/100'], ['🍇 Character', Math.round(S.character) + '/100'], ['💧 Repentances', String(S.repentances)]];
-  let y = 580;
-  for (const [k, v] of rows) {
-    x.fillStyle = '#ffffff';
-    roundRect(x, 110, y - 58, W - 220, 84, 18);
-    x.fill();
+    ? [['👥 Members', num(S.members), '#bfdbfe'], [venue().emoji + ' Venue', venue().name, '#fde047'], ['🙏 Faith', Math.round(S.faith) + '/100', '#c4b5fd'], ['🍇 Character', Math.round(S.character) + '/100', '#86efac']]
+    : [['🙏 Faith', Math.round(S.faith) + '/100', '#c4b5fd'], ['📖 Word', Math.round(S.word) + '/100', '#bfdbfe'], ['🍇 Character', Math.round(S.character) + '/100', '#86efac'], ['💧 Repentances', String(S.repentances), '#fde047']];
+  const cw = 420, ch = 130, gx = 40;
+  rows.forEach(([k, v, col], i) => {
+    const l = W / 2 - cw - gx / 2 + (i % 2) * (cw + gx);
+    const t = 560 + Math.floor(i / 2) * (ch + 36);
+    card(l, t, cw, ch, col, 7, 18);
     x.textAlign = 'left';
-    x.fillStyle = '#6b7280';
-    x.font = '38px system-ui, sans-serif';
-    x.fillText(k, 140, y);
-    x.textAlign = 'right';
-    x.fillStyle = '#1f2937';
-    x.font = 'bold 40px system-ui, sans-serif';
-    x.fillText(v, W - 140, y);
-    y += 104;
-  }
+    x.fillStyle = '#18181b';
+    x.font = '600 30px Inter, system-ui, sans-serif';
+    x.fillText(k, l + 26, t + 50);
+    x.font = 'bold 42px "Space Grotesk", system-ui, sans-serif';
+    x.fillText(v, l + 26, t + 102);
+  });
 
+  // footer call to action
+  card(90, H - 170, W - 180, 110, ink, 0, 18);
+  x.fillStyle = '#ffffff';
   x.textAlign = 'center';
-  x.fillStyle = '#1a9b61';
-  x.font = 'bold 38px system-ui, sans-serif';
-  x.fillText('Start your faith journey. Play free 👇', W / 2, H - 80);
-  x.fillStyle = '#6b7280';
-  x.font = '30px system-ui, sans-serif';
-  x.fillText(GAME_URL.replace(/^https?:\/\//, ''), W / 2, H - 36);
+  x.font = 'bold 36px "Space Grotesk", system-ui, sans-serif';
+  x.fillText('Start your faith journey. Play free →', W / 2, H - 120);
+  x.fillStyle = '#fde047';
+  x.font = '600 26px Inter, system-ui, sans-serif';
+  const url = GAME_URL.replace(/^https?:\/\//, '');
+  x.fillText(url.length > 52 ? url.slice(0, 51) + '…' : url, W / 2, H - 80);
 }
 
 function wrapText(x, text, cx, y, maxW, lh) {

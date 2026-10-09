@@ -20,7 +20,7 @@ A free browser game for Nigerian Christians. It's a virtual walk of faith: every
   - **Your purchases:** speakers, keyboard and drums, livestream camera, and a generator, bus, Jeep, jet and mission school outside
   - Drag the scene to rotate it
 
-**UI** follows the Woriki design system: Inter font, Brand Green for main actions, Professional Blue for navigation, Gold for achievements, 6/12/20px and pill corner radii, a 4–64px spacing scale, Lucide icons, bottom navigation on phones and a sidebar on desktop, and WCAG 2.2 AA (focus rings, labelled controls, 44px touch targets).
+**UI** is neo-brutalist, after the SpendsIn template: cream grid paper, 2px black borders, hard offset shadows, pastel blocks (green, yellow, pink, blue), tilted badges, Space Grotesk headings and Inter body text, and Lucide icons. Effects: a progressive blur over the top of the 3D scene, an alpha mask fading the edges of the scrolling action list, gradient borders on dark surfaces, CSS glass on the stats bar, and the `animationIn` intro (switched off when the device asks for reduced motion). It keeps WCAG AA contrast, focus rings and 44px touch targets. Phones get a bottom navigation bar and desktops a sidebar.
 
 Scripture is quoted from the King James Version, which is public domain. All people and churches are fictional.
 

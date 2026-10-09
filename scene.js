@@ -601,7 +601,8 @@
       const s = signature(st);
       if (s !== sig) { sig = s; rebuild(st); }
     },
-    setMode() { requestAnimationFrame(layout); },
+    // Re-measure once the intro animation has settled.
+    setMode() { requestAnimationFrame(layout); setTimeout(layout, 1000); },
     layout,
   };
 
