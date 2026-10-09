@@ -10,7 +10,7 @@
   <meta property="og:description" content="Get baptized, pass Bible school, get ordained, and grow your church to branches abroad. Can you stay faithful?">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,7 +19,7 @@
   <!-- Start screen -->
   <section id="start" class="screen">
     <div class="brand">
-      <div class="logo">⛪</div>
+      <div class="logo-mark"><i data-lucide="church" aria-hidden="true"></i></div>
       <h1>Pastor Life</h1>
       <p class="tagline">Live your faith story.</p>
     </div>
@@ -34,7 +34,7 @@
         <select id="in-ctype"></select>
       </label>
       <button id="btn-start" class="btn primary big">New life</button>
-      <button id="btn-continue" class="btn ghost big hidden">Continue</button>
+      <button id="btn-continue" class="btn outline big hidden">Continue saved life</button>
       <p class="disclaimer">A virtual walk of faith. All people and churches are fictional. Scripture from the King James Version.</p>
     </div>
   </section>
@@ -53,45 +53,69 @@
 
   <!-- Game -->
   <section id="game" class="screen hidden">
-    <header class="hud">
+    <header class="hud" aria-label="Your status">
       <div class="hud-top">
         <div class="who">
           <div class="church-name" id="hud-church"></div>
-          <div class="pastor-title" id="hud-title"></div>
+          <div class="badges"><span class="pastor-title" id="hud-title"></span><span class="badge-repent hidden" id="hud-repent"><i data-lucide="droplet" aria-hidden="true"></i>Needs repentance</span></div>
         </div>
-        <div class="day-pill" id="hud-day"></div>
+        <div class="day-pill"><i data-lucide="calendar-days" aria-hidden="true"></i><span id="hud-day"></span></div>
       </div>
-      <div class="energy">
-        <span>⚡</span>
-        <div class="bar"><div id="hud-energy-bar"></div></div>
+      <div class="energy" title="Energy">
+        <i data-lucide="zap" aria-hidden="true"></i>
+        <div class="meter" role="progressbar" aria-label="Energy" aria-valuemin="0" aria-valuemax="100" id="hud-energy-meter"><div id="hud-energy-bar"></div></div>
         <span id="hud-energy"></span>
       </div>
       <div class="stats">
-        <div class="stat"><span class="k">💰 Funds</span><span class="v" id="hud-funds"></span></div>
-        <div class="stat"><span class="k">🙏 Faith</span><span class="v" id="hud-faith"></span></div>
-        <div class="stat"><span class="k">🍇 Character</span><span class="v" id="hud-character"></span></div>
-        <div class="stat"><span class="k" id="hud-word-k">📖 Word</span><span class="v" id="hud-word"></span></div>
-        <div class="stat"><span class="k" id="hud-members-k">⛪ Services</span><span class="v" id="hud-members"></span></div>
-        <div class="stat"><span class="k" id="hud-venue-k">💼 Job</span><span class="v" id="hud-venue"></span></div>
+        <div class="stat">
+          <span class="k"><i data-lucide="wallet" aria-hidden="true"></i>Funds</span>
+          <span class="v" id="hud-funds"></span>
+        </div>
+        <div class="stat">
+          <span class="k"><i data-lucide="heart-handshake" aria-hidden="true"></i>Faith</span>
+          <span class="v" id="hud-faith"></span>
+          <div class="meter sm"><div id="meter-faith"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k"><i data-lucide="shield-check" aria-hidden="true"></i>Character</span>
+          <span class="v" id="hud-character"></span>
+          <div class="meter sm"><div id="meter-character"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="book-open" aria-hidden="true"></i>Word</span>
+          <span class="k when-pastor"><i data-lucide="megaphone" aria-hidden="true"></i>Fame</span>
+          <span class="v" id="hud-word"></span>
+          <div class="meter sm"><div id="meter-word"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="calendar-check" aria-hidden="true"></i>Services</span>
+          <span class="k when-pastor"><i data-lucide="users" aria-hidden="true"></i>Members</span>
+          <span class="v" id="hud-members"></span>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="briefcase" aria-hidden="true"></i>Job</span>
+          <span class="k when-pastor"><i data-lucide="building-2" aria-hidden="true"></i>Venue</span>
+          <span class="v" id="hud-venue"></span>
+        </div>
       </div>
     </header>
 
+    <nav class="nav" aria-label="Main">
+      <div class="nav-brand"><span class="logo-mark sm"><i data-lucide="church" aria-hidden="true"></i></span>Pastor Life</div>
+      <button class="nav-item active" data-tab="ministry" aria-current="page"><i data-lucide="sparkles" aria-hidden="true"></i><span>Ministry</span></button>
+      <button class="nav-item hidden" id="tab-btn-build" data-tab="build"><i data-lucide="church" aria-hidden="true"></i><span>Church</span></button>
+      <button class="nav-item nav-end" id="btn-endday"><i data-lucide="moon" aria-hidden="true"></i><span>End day</span></button>
+      <button class="nav-item" data-tab="log"><i data-lucide="notebook-pen" aria-hidden="true"></i><span>Diary</span></button>
+      <button class="nav-item" id="btn-share"><i data-lucide="share-2" aria-hidden="true"></i><span>Share</span></button>
+    </nav>
+
     <div class="panel">
-      <p class="verse" id="verse"></p>
-      <nav class="tabs">
-        <button class="tab active" data-tab="ministry">Ministry</button>
-        <button class="tab hidden" id="tab-btn-build" data-tab="build">Church</button>
-        <button class="tab" data-tab="log">Diary</button>
-      </nav>
+      <p class="verse"><i data-lucide="quote" aria-hidden="true"></i><span id="verse"></span></p>
       <main>
         <div id="tab-ministry" class="tab-body"></div>
         <div id="tab-build" class="tab-body hidden"></div>
         <div id="tab-log" class="tab-body hidden"><ul id="log"></ul></div>
       </main>
-      <footer class="bottom-bar">
-        <button id="btn-share" class="btn ghost">📤 Share</button>
-        <button id="btn-endday" class="btn primary">🌙 End day</button>
-      </footer>
     </div>
   </section>
 
@@ -111,18 +135,19 @@
       <h3>Share your testimony</h3>
       <canvas id="share-canvas" width="1080" height="1080"></canvas>
       <div class="choices">
-        <button id="btn-share-native" class="btn primary">Share image</button>
+        <button id="btn-share-native" class="btn primary"><i data-lucide="share-2" aria-hidden="true"></i>Share image</button>
         <a id="btn-share-wa" class="btn wa" target="_blank" rel="noopener">WhatsApp</a>
-        <a id="btn-share-x" class="btn ghost" target="_blank" rel="noopener">Post on X</a>
-        <button id="btn-share-dl" class="btn ghost">Download</button>
+        <a id="btn-share-x" class="btn outline" target="_blank" rel="noopener">Post on X</a>
+        <button id="btn-share-dl" class="btn outline"><i data-lucide="download" aria-hidden="true"></i>Download</button>
         <button id="btn-share-close" class="btn ghost">Close</button>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="vendor/three.min.js"></script>
+  <script src="vendor/lucide.min.js"></script>
   <script src="scene.js"></script>
   <script src="game.js"></script>
 </body>

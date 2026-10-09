@@ -547,9 +547,18 @@
     const panel = document.querySelector('#game:not(.hidden) .panel');
     const card = document.querySelector('.screen:not(.hidden) .start-card');
     const head = document.querySelector('.screen:not(.hidden) .brand');
+    const nav = document.querySelector('#game:not(.hidden) .nav');
     if (hud && panel) {
       const hr = hud.getBoundingClientRect(), pr = panel.getBoundingClientRect();
-      if (pr.left > W * 0.35) { right = pr.left; top = 0; } else { top = hr.bottom; bottom = pr.top; }
+      if (pr.left > W * 0.5) {
+        // desktop: sidebar on the left, panel on the right, HUD on top
+        right = pr.left;
+        left = nav ? nav.getBoundingClientRect().right : 0;
+        top = hr.bottom;
+      } else {
+        top = hr.bottom;
+        bottom = pr.top;
+      }
     } else if (card) {
       const cr = card.getBoundingClientRect();
       top = head ? head.getBoundingClientRect().bottom : 0;

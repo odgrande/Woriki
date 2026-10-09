@@ -991,35 +991,47 @@ function afterChange() {
 function render() {
   if (!S) return;
   $('hud-church').textContent = S.church;
-  $('hud-title').textContent = `${title()} ${S.name}${S.convicted ? ' · 💧 needs repentance' : ''}`;
+  $('hud-title').textContent = `${title()} ${S.name}`;
+  $('hud-repent').classList.toggle('hidden', !S.convicted);
   $('hud-day').textContent = `Day ${S.day} · ${weekday()}`;
   $('hud-energy').textContent = S.energy;
   $('hud-energy-bar').style.width = S.energy + '%';
   setStat('hud-funds', naira(S.funds), isPastor() && S.funds < rent());
   setStat('hud-faith', Math.round(S.faith), S.faith < 25);
   setStat('hud-character', Math.round(S.character), S.character < 30);
+  $('game').classList.toggle('is-pastor', isPastor());
+  setMeter('meter-faith', S.faith, S.faith < 25);
+  setMeter('meter-character', S.character, S.character < 30);
   if (isPastor()) {
-    $('hud-word-k').textContent = '📣 Fame';
     setStat('hud-word', Math.round(S.fame), false);
-    $('hud-members-k').textContent = '👥 Members';
+    setMeter('meter-word', S.fame, false);
     setStat('hud-members', `${num(S.members)}/${num(venue().cap)}`, false);
-    $('hud-venue-k').textContent = '🏠 Venue';
-    setStat('hud-venue', venue().emoji + ' ' + venue().name, false);
+    setStat('hud-venue', venue().name, false);
   } else {
-    $('hud-word-k').textContent = '📖 Word';
     setStat('hud-word', Math.round(S.word), false);
-    $('hud-members-k').textContent = '⛪ Services';
+    setMeter('meter-word', S.word, false);
     setStat('hud-members', S.services, false);
-    $('hud-venue-k').textContent = '💼 Job';
     setStat('hud-venue', S.job, false);
   }
+  $('hud-energy-meter').setAttribute('aria-valuenow', S.energy);
   $('verse').textContent = `“${verseOfDay()[1]}” — ${verseOfDay()[0]}`;
   $('tab-btn-build').classList.toggle('hidden', !isPastor());
   $('btn-endday').disabled = S.over;
   renderMinistry();
   if (isPastor()) renderBuild();
   renderLog();
+  icons();
   if (window.World) World.update(S);
+}
+
+function icons() {
+  if (window.lucide) lucide.createIcons({ attrs: { 'aria-hidden': 'true' } });
+}
+
+function setMeter(id, value, low) {
+  const el = $(id);
+  el.style.width = clamp(value, 0, 100) + '%';
+  el.parentElement.classList.toggle('low', !!low);
 }
 
 function setStat(id, text, low) {
@@ -1056,13 +1068,15 @@ function renderJourney(root) {
   const ready = m.go && m.reqs.every((r) => r[1]);
   const h = document.createElement('div');
   h.className = 'journey-title';
-  h.textContent = `${m.emoji} Next step: ${m.label}`;
+  h.innerHTML = '<i data-lucide="flag"></i><span></span>';
+  h.querySelector('span').textContent = `Next step: ${m.label}`;
   card.appendChild(h);
   const ul = document.createElement('ul');
   for (const [text, ok] of m.reqs) {
     const li = document.createElement('li');
     if (ok) li.className = 'ok';
-    li.textContent = `${ok ? '✅' : '⬜'} ${text}`;
+    li.innerHTML = `<i data-lucide="${ok ? 'circle-check' : 'circle'}"></i><span></span>`;
+    li.querySelector('span').textContent = text;
     ul.appendChild(li);
   }
   card.appendChild(ul);
@@ -1188,6 +1202,8 @@ function showModal(emoji, t, text, choices) {
     box.appendChild(b);
   }
   $('modal').classList.remove('hidden');
+  const first = box.querySelector('button');
+  if (first) first.focus({ preventScroll: true });
 }
 
 let toastTimer = null;
@@ -1323,7 +1339,11 @@ function showScreen(id) {
 }
 
 function switchTab(name) {
-  for (const t of document.querySelectorAll('.tab')) t.classList.toggle('active', t.dataset.tab === name);
+  for (const t of document.querySelectorAll('.nav-item[data-tab]')) {
+    const on = t.dataset.tab === name;
+    t.classList.toggle('active', on);
+    if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+  }
   for (const n of ['ministry', 'build', 'log']) $('tab-' + n).classList.toggle('hidden', n !== name);
 }
 
@@ -1371,7 +1391,8 @@ function init() {
   $('btn-share').addEventListener('click', openShare);
   $('btn-share-dl').addEventListener('click', downloadCard);
   $('btn-share-close').addEventListener('click', () => $('share').classList.add('hidden'));
-  for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  for (const tab of document.querySelectorAll('.nav-item[data-tab]')) tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  icons();
 }
 
 init();

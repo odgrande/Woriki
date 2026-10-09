@@ -20,11 +20,13 @@ A free browser game for Nigerian Christians. It's a virtual walk of faith: every
   - **Your purchases:** speakers, keyboard and drums, livestream camera, and a generator, bus, Jeep, jet and mission school outside
   - Drag the scene to rotate it
 
+**UI** follows the Woriki design system: Inter font, Brand Green for main actions, Professional Blue for navigation, Gold for achievements, 6/12/20px and pill corner radii, a 4–64px spacing scale, Lucide icons, bottom navigation on phones and a sidebar on desktop, and WCAG 2.2 AA (focus rings, labelled controls, 44px touch targets).
+
 Scripture is quoted from the King James Version, which is public domain. All people and churches are fictional.
 
 ## Run it
 
-The game is plain HTML, CSS and JavaScript with no build step. The 3D scene uses [Three.js](https://threejs.org) r128 (MIT licence), which is included in `vendor/` so the game doesn't depend on a CDN. Open `index.html`, or serve the folder:
+The game is plain HTML, CSS and JavaScript with no build step. The 3D scene uses [Three.js](https://threejs.org) r128 (MIT licence) and the icons use [Lucide](https://lucide.dev) 0.460 (ISC licence). Both are included in `vendor/` so the game doesn't depend on a CDN. Open `index.html`, or serve the folder:
 
 ```
 npx serve .
