@@ -1019,6 +1019,7 @@ function render() {
   renderMinistry();
   if (isPastor()) renderBuild();
   renderLog();
+  if (window.World) World.update(S);
 }
 
 function setStat(id, text, low) {
@@ -1213,21 +1214,21 @@ function drawShareCard() {
   const x = c.getContext('2d');
   const W = c.width, H = c.height;
   const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#3f2a6b');
-  g.addColorStop(1, '#1b0f2e');
+  g.addColorStop(0, '#c4e0f5');
+  g.addColorStop(1, '#eef4ec');
   x.fillStyle = g;
   x.fillRect(0, 0, W, H);
 
   x.textAlign = 'center';
-  x.fillStyle = '#f4c542';
+  x.fillStyle = '#1f2937';
   x.font = 'bold 64px system-ui, sans-serif';
-  x.fillText('⛪ PASTOR LIFE', W / 2, 120);
+  x.fillText('⛪ Pastor Life', W / 2, 120);
 
-  x.fillStyle = '#ffffff';
+  x.fillStyle = '#1a9b61';
   x.font = 'bold 54px system-ui, sans-serif';
   wrapText(x, shareLine(), W / 2, 240, W - 140, 66);
 
-  x.fillStyle = '#bfb0dc';
+  x.fillStyle = '#6b7280';
   x.font = '40px system-ui, sans-serif';
   wrapText(x, `${title()} ${S.name} · ${S.church}`, W / 2, 400, W - 140, 50);
 
@@ -1236,25 +1237,25 @@ function drawShareCard() {
     : [['🙏 Faith', Math.round(S.faith) + '/100'], ['📖 Word', Math.round(S.word) + '/100'], ['🍇 Character', Math.round(S.character) + '/100'], ['💧 Repentances', String(S.repentances)]];
   let y = 580;
   for (const [k, v] of rows) {
-    x.fillStyle = 'rgba(255,255,255,0.08)';
+    x.fillStyle = '#ffffff';
     roundRect(x, 110, y - 58, W - 220, 84, 18);
     x.fill();
     x.textAlign = 'left';
-    x.fillStyle = '#bfb0dc';
+    x.fillStyle = '#6b7280';
     x.font = '38px system-ui, sans-serif';
     x.fillText(k, 140, y);
     x.textAlign = 'right';
-    x.fillStyle = '#ffffff';
+    x.fillStyle = '#1f2937';
     x.font = 'bold 40px system-ui, sans-serif';
     x.fillText(v, W - 140, y);
     y += 104;
   }
 
   x.textAlign = 'center';
-  x.fillStyle = '#f4c542';
+  x.fillStyle = '#1a9b61';
   x.font = 'bold 38px system-ui, sans-serif';
   x.fillText('Start your faith journey. Play free 👇', W / 2, H - 80);
-  x.fillStyle = '#bfb0dc';
+  x.fillStyle = '#6b7280';
   x.font = '30px system-ui, sans-serif';
   x.fillText(GAME_URL.replace(/^https?:\/\//, ''), W / 2, H - 36);
 }
@@ -1318,6 +1319,7 @@ function downloadCard() {
 
 function showScreen(id) {
   for (const s of ['start', 'reveal', 'game']) $(s).classList.toggle('hidden', s !== id);
+  if (window.World) World.setMode(id);
 }
 
 function switchTab(name) {

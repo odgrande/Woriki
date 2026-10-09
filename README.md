@@ -14,12 +14,17 @@ A free browser game for Nigerian Christians. It's a virtual walk of faith: every
 - **Shortcuts (distractions):** selling "anointing oil", "special seed" offerings, poaching members, buying a Jeep or private jet, taking a politician's money. They pay fast, but they drain Character. That leads to a **scandal** (confess, deny, or blame the enemy) and eventually the **EFCC ending**.
 - **Grace:** if your faith runs dry, a brother visits and restores you. The only way to "lose" is a pastor whose Character hits zero.
 - **Share card:** a testimony image for WhatsApp, X and TikTok.
+- **3D world:** a low-poly "dollhouse" view, like Lagos Life. Before ordination you see your own room (a bookshelf appears in Bible school, a certificate when you graduate). As a pastor you see your church, cut away so you can look inside, and it changes as you grow:
+  - **Venues:** living room → shop → classroom → warehouse → auditorium → cathedral → Camp Ground
+  - **Inside:** members fill the seats, the choir wears your tradition's robes (white for Aladura), and the pastor stands at the pulpit
+  - **Your purchases:** speakers, keyboard and drums, livestream camera, and a generator, bus, Jeep, jet and mission school outside
+  - Drag the scene to rotate it
 
 Scripture is quoted from the King James Version, which is public domain. All people and churches are fictional.
 
 ## Run it
 
-The game is plain HTML, CSS and JavaScript with no build step. Open `index.html`, or serve the folder:
+The game is plain HTML, CSS and JavaScript with no build step. The 3D scene uses [Three.js](https://threejs.org) r128 (MIT licence), which is included in `vendor/` so the game doesn't depend on a CDN. Open `index.html`, or serve the folder:
 
 ```
 npx serve .

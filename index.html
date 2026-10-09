@@ -3,20 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#2a1446">
+  <meta name="theme-color" content="#cfe6f7">
   <title>Pastor Life</title>
   <meta name="description" content="A virtual Christian journey: from new convert to Bible school to pastor. Grow your church from a living room to a Camp Ground.">
   <meta property="og:title" content="Pastor Life">
   <meta property="og:description" content="Get baptized, pass Bible school, get ordained, and grow your church to branches abroad. Can you stay faithful?">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <canvas id="world" aria-label="3D view of your room or church"></canvas>
+
   <!-- Start screen -->
   <section id="start" class="screen">
-    <div class="start-card">
+    <div class="brand">
       <div class="logo">⛪</div>
       <h1>Pastor Life</h1>
-      <p class="tagline">From new convert to Bible school to pastor. Grow your church from a living room to a Camp Ground, and <b>stay faithful</b> on the way.</p>
+      <p class="tagline">Live your faith story.</p>
+    </div>
+    <div class="start-card">
       <label>Your name
         <input id="in-name" maxlength="20" placeholder="e.g. Tunde" autocomplete="off">
       </label>
@@ -26,19 +33,21 @@
       <label>Church tradition
         <select id="in-ctype"></select>
       </label>
-      <button id="btn-start" class="btn primary big">Receive your calling 🙌</button>
-      <button id="btn-continue" class="btn ghost hidden">Continue saved ministry</button>
+      <button id="btn-start" class="btn primary big">New life</button>
+      <button id="btn-continue" class="btn ghost big hidden">Continue</button>
       <p class="disclaimer">A virtual walk of faith. All people and churches are fictional. Scripture from the King James Version.</p>
     </div>
   </section>
 
   <!-- Calling reveal -->
   <section id="reveal" class="screen hidden">
-    <div class="start-card">
+    <div class="brand">
       <div class="logo" id="reveal-emoji">🎲</div>
       <h2 id="reveal-title">Rolling...</h2>
+    </div>
+    <div class="start-card">
       <p id="reveal-text"></p>
-      <button id="btn-begin" class="btn primary big hidden">Begin ministry</button>
+      <button id="btn-begin" class="btn primary big hidden">Begin</button>
     </div>
   </section>
 
@@ -46,14 +55,14 @@
   <section id="game" class="screen hidden">
     <header class="hud">
       <div class="hud-top">
-        <div>
+        <div class="who">
           <div class="church-name" id="hud-church"></div>
           <div class="pastor-title" id="hud-title"></div>
         </div>
         <div class="day-pill" id="hud-day"></div>
       </div>
       <div class="energy">
-        <span>⚡ Energy</span>
+        <span>⚡</span>
         <div class="bar"><div id="hud-energy-bar"></div></div>
         <span id="hud-energy"></span>
       </div>
@@ -65,25 +74,25 @@
         <div class="stat"><span class="k" id="hud-members-k">⛪ Services</span><span class="v" id="hud-members"></span></div>
         <div class="stat"><span class="k" id="hud-venue-k">💼 Job</span><span class="v" id="hud-venue"></span></div>
       </div>
-      <p class="verse" id="verse"></p>
     </header>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="ministry">Ministry</button>
-      <button class="tab hidden" id="tab-btn-build" data-tab="build">Church</button>
-      <button class="tab" data-tab="log">Diary</button>
-    </nav>
-
-    <main>
-      <div id="tab-ministry" class="tab-body"></div>
-      <div id="tab-build" class="tab-body hidden"></div>
-      <div id="tab-log" class="tab-body hidden"><ul id="log"></ul></div>
-    </main>
-
-    <footer class="bottom-bar">
-      <button id="btn-share" class="btn ghost">📤 Share</button>
-      <button id="btn-endday" class="btn primary">🌙 End day</button>
-    </footer>
+    <div class="panel">
+      <p class="verse" id="verse"></p>
+      <nav class="tabs">
+        <button class="tab active" data-tab="ministry">Ministry</button>
+        <button class="tab hidden" id="tab-btn-build" data-tab="build">Church</button>
+        <button class="tab" data-tab="log">Diary</button>
+      </nav>
+      <main>
+        <div id="tab-ministry" class="tab-body"></div>
+        <div id="tab-build" class="tab-body hidden"></div>
+        <div id="tab-log" class="tab-body hidden"><ul id="log"></ul></div>
+      </main>
+      <footer class="bottom-bar">
+        <button id="btn-share" class="btn ghost">📤 Share</button>
+        <button id="btn-endday" class="btn primary">🌙 End day</button>
+      </footer>
+    </div>
   </section>
 
   <!-- Modal for events / endings -->
@@ -113,6 +122,8 @@
 
   <div id="toast" class="toast hidden"></div>
 
+  <script src="vendor/three.min.js"></script>
+  <script src="scene.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
