@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fffdf7">
+  <title>Amen City</title>
+  <meta name="description" content="A virtual church world. Worship, pray, serve as an usher, security, choir or media, or answer the call to ministry.">
+  <meta property="og:title" content="Amen City">
+  <meta property="og:description" content="Everyone has a place in God's house. Pick your role, pray for others, and stay faithful while the devil is busy.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="paper-grid" aria-hidden="true"></div>
+  <canvas id="world" aria-label="3D view of your room or church"></canvas>
+  <!-- progressive blur over the top of the 3D scene -->
+  <div class="gradient-blur" aria-hidden="true"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+
+  <!-- Start screen -->
+  <section id="start" class="screen">
+    <div class="brand intro">
+      <div class="logo-mark"><i data-lucide="church" aria-hidden="true"></i></div>
+      <h1>Amen City</h1>
+      <p class="tagline">Your place in God's house. <span class="mark">Pick your role.</span></p>
+    </div>
+    <div class="start-card intro-2">
+      <label>Your name
+        <input id="in-name" maxlength="20" placeholder="e.g. Tunde" autocomplete="off">
+      </label>
+      <label>Your church
+        <input id="in-church" maxlength="36" placeholder="e.g. Grace Assembly" autocomplete="off">
+      </label>
+      <fieldset class="roles">
+        <legend>Who are you in church?</legend>
+        <div id="role-picker" class="role-grid"></div>
+      </fieldset>
+      <label>Church tradition
+        <select id="in-ctype"></select>
+      </label>
+      <button id="btn-start" class="btn primary big">New life</button>
+      <button id="btn-continue" class="btn outline big hidden">Continue saved life</button>
+      <p class="disclaimer">A virtual church world. All people and churches are fictional. Scripture from the King James Version.</p>
+    </div>
+  </section>
+
+  <!-- Calling reveal -->
+  <section id="reveal" class="screen hidden">
+    <div class="brand intro">
+      <div class="logo" id="reveal-emoji">🎲</div>
+      <h2 id="reveal-title">Rolling...</h2>
+    </div>
+    <div class="start-card intro-2">
+      <p id="reveal-text"></p>
+      <button id="btn-begin" class="btn primary big hidden">Begin</button>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="game" class="screen hidden">
+    <header class="hud glass intro" aria-label="Your status">
+      <div class="hud-top">
+        <div class="who">
+          <div class="church-name" id="hud-church"></div>
+          <div class="badges"><span class="pastor-title" id="hud-title"></span><span class="badge-repent hidden" id="hud-repent"><i data-lucide="droplet" aria-hidden="true"></i>Needs repentance</span></div>
+        </div>
+        <div class="hud-right">
+          <div class="day-pill"><i data-lucide="calendar-days" aria-hidden="true"></i><span id="hud-day"></span></div>
+          <div class="hud-chips">
+            <span class="chip points" title="Points"><span aria-hidden="true">⭐</span><span id="hud-points"></span></span>
+            <span class="chip mood" id="hud-mood" title="Mood"></span>
+            <button class="icon-btn" id="btn-share" aria-label="Share"><i data-lucide="share-2" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      </div>
+      <div class="energy" title="Energy">
+        <i data-lucide="zap" aria-hidden="true"></i>
+        <div class="meter" role="progressbar" aria-label="Energy" aria-valuemin="0" aria-valuemax="100" id="hud-energy-meter"><div id="hud-energy-bar"></div></div>
+        <span id="hud-energy"></span>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="k"><i data-lucide="wallet" aria-hidden="true"></i>Funds</span>
+          <span class="v" id="hud-funds"></span>
+        </div>
+        <div class="stat">
+          <span class="k"><i data-lucide="heart-handshake" aria-hidden="true"></i>Faith</span>
+          <span class="v" id="hud-faith"></span>
+          <div class="meter sm"><div id="meter-faith"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k"><i data-lucide="shield-check" aria-hidden="true"></i>Character</span>
+          <span class="v" id="hud-character"></span>
+          <div class="meter sm"><div id="meter-character"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="book-open" aria-hidden="true"></i>Word</span>
+          <span class="k when-pastor"><i data-lucide="megaphone" aria-hidden="true"></i>Fame</span>
+          <span class="v" id="hud-word"></span>
+          <div class="meter sm"><div id="meter-word"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="utensils" aria-hidden="true"></i>Food</span>
+          <span class="k when-pastor"><i data-lucide="users" aria-hidden="true"></i>Members</span>
+          <span class="v" id="hud-members"></span>
+          <div class="meter sm when-pre"><div id="meter-food"></div></div>
+        </div>
+        <div class="stat">
+          <span class="k when-pre"><i data-lucide="briefcase" aria-hidden="true"></i>Job</span>
+          <span class="k when-pastor"><i data-lucide="building-2" aria-hidden="true"></i>Venue</span>
+          <span class="v" id="hud-venue"></span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="nav intro-3" aria-label="Main">
+      <div class="nav-brand"><span class="logo-mark sm"><i data-lucide="church" aria-hidden="true"></i></span>Amen City</div>
+      <button class="nav-item active" data-tab="ministry" aria-current="page"><i data-lucide="sun" aria-hidden="true"></i><span>Today</span></button>
+      <button class="nav-item" data-tab="prayer"><i data-lucide="hand-heart" aria-hidden="true"></i><span>Prayer</span></button>
+      <button class="nav-item nav-end border-gradient" id="btn-endday"><i data-lucide="moon" aria-hidden="true"></i><span>End day</span></button>
+      <button class="nav-item" id="tab-btn-build" data-tab="build"><i data-lucide="shopping-bag" aria-hidden="true"></i><span>Shop</span></button>
+      <button class="nav-item" data-tab="log"><i data-lucide="notebook-pen" aria-hidden="true"></i><span>Diary</span></button>
+    </nav>
+
+    <!-- 3D controls: view toggle, keyboard help, and touch pad for phones -->
+    <div class="world-tools">
+      <button class="tool-btn" id="btn-view" aria-label="Show home"><i data-lucide="repeat" aria-hidden="true"></i><span>Home</span></button>
+      <button class="tool-btn" id="btn-controls" aria-label="Show controls"><i data-lucide="keyboard" aria-hidden="true"></i><span>Controls</span></button>
+    </div>
+    <div class="touch-pad" aria-label="Move your character">
+      <div class="dpad">
+        <button data-move="forward" aria-label="Move forward"><i data-lucide="chevron-up" aria-hidden="true"></i></button>
+        <button data-move="left" aria-label="Move left"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
+        <button data-move="right" aria-label="Move right"><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+        <button data-move="back" aria-label="Move back"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+      </div>
+      <div class="pad-actions">
+        <button data-act="jump" aria-label="Jump"><i data-lucide="arrow-big-up" aria-hidden="true"></i><span>Jump</span></button>
+        <button data-act="sit" aria-label="Sit or stand"><i data-lucide="armchair" aria-hidden="true"></i><span>Sit</span></button>
+        <button data-act="wave" aria-label="Wave"><span aria-hidden="true">👋</span><span>Wave</span></button>
+        <button data-act="kneel" aria-label="Kneel and pray"><span aria-hidden="true">🙏</span><span>Pray</span></button>
+      </div>
+    </div>
+
+    <div class="panel intro-2">
+      <p class="verse"><i data-lucide="quote" aria-hidden="true"></i><span id="verse"></span></p>
+      <main>
+        <div id="tab-ministry" class="tab-body"></div>
+        <div id="tab-prayer" class="tab-body hidden"></div>
+        <div id="tab-build" class="tab-body hidden"></div>
+        <div id="tab-log" class="tab-body hidden"><ul id="log"></ul></div>
+      </main>
+    </div>
+  </section>
+
+  <!-- Modal for events / endings -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-emoji" id="modal-emoji"></div>
+      <h3 id="modal-title"></h3>
+      <p id="modal-text"></p>
+      <div id="modal-choices" class="choices"></div>
+    </div>
+  </div>
+
+  <!-- Share sheet -->
+  <div id="share" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3>Share your testimony</h3>
+      <canvas id="share-canvas" width="1080" height="1080"></canvas>
+      <div class="choices">
+        <button id="btn-share-native" class="btn primary"><i data-lucide="share-2" aria-hidden="true"></i>Share image</button>
+        <a id="btn-share-wa" class="btn wa" target="_blank" rel="noopener">WhatsApp</a>
+        <a id="btn-share-x" class="btn outline" target="_blank" rel="noopener">Post on X</a>
+        <button id="btn-share-dl" class="btn outline"><i data-lucide="download" aria-hidden="true"></i>Download</button>
+        <button id="btn-share-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls / shortcuts -->
+  <div id="controls" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="controls-title">
+    <div class="modal-card controls-card">
+      <h3 id="controls-title">Controls</h3>
+      <table class="keys">
+        <tr><td><kbd>W</kbd> <kbd>↑</kbd></td><td>Walk forward</td></tr>
+        <tr><td><kbd>S</kbd> <kbd>↓</kbd></td><td>Walk backward</td></tr>
+        <tr><td><kbd>A</kbd> <kbd>←</kbd></td><td>Walk left</td></tr>
+        <tr><td><kbd>D</kbd> <kbd>→</kbd></td><td>Walk right</td></tr>
+        <tr><td><kbd>Shift</kbd></td><td>Run (hold while walking)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Jump</td></tr>
+        <tr><td><kbd>C</kbd></td><td>Sit / stand up</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Kneel and pray</td></tr>
+        <tr><td><kbd>E</kbd></td><td>Wave</td></tr>
+        <tr><td><kbd>Q</kbd> <kbd>R</kbd></td><td>Turn the camera</td></tr>
+        <tr><td><kbd>V</kbd></td><td>Switch between home and church</td></tr>
+        <tr><td><kbd>N</kbd></td><td>End the day</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Show this list</td></tr>
+      </table>
+      <p class="note">On a phone, use the arrow pad and buttons on the screen. You can also drag the scene to turn the camera.</p>
+      <div class="choices"><button class="btn primary" id="btn-controls-close">Got it</button></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast border-gradient hidden" role="status" aria-live="polite"></div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="scene.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "amen-city",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Amen City: a 3D church community game set in real Lagos. Runs in the browser.",
+  "scripts": {
+    "dev": "concurrently -k -n web,server \"vite\" \"node server/index.js\"",
+    "web": "vite",
+    "server": "node server/index.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets": "node tools/build-assets.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/extensions": "4.5.0",
+    "@gltf-transform/functions": "4.5.0",
+    "concurrently": "10.0.5",
+    "meshoptimizer": "1.2.0",
+    "obscenity": "0.4.6",
+    "sharp": "0.35.4",
+    "vite": "8.3.1",
+    "vitest": "5.0.1",
+    "ws": "8.21.3"
+  }
+}
