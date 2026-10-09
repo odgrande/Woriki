@@ -1,32 +1,69 @@
-# Pastor Life ⛪
+# Amen City ⛪
 
-A free browser game for Nigerian Christians. It's a virtual walk of faith: everything that happens in real church life happens here, but virtually.
+A free browser game for Nigerian Christians: a virtual church world set in real Lagos. Everyone has a place in God's house. Everything that happens in real church life happens here, virtually, and the devil is busy.
 
-**The journey:** New Convert → Baptism → Church Worker → Bible School (3 semesters of Bible-quiz exams) → Ordination → plant a church in your living room → grow it to a Camp Ground with branches in Abuja, Accra, London, Houston and Toronto.
+## Pick who you are
+
+| Role | Ranks | Daily duties |
+|---|---|---|
+| 🙏 Worshipper | First-timer → Member → Pillar of the Church | Invite people to church, house fellowship |
+| 🕊️ Prayer Warrior | Intercessor → Prayer Warrior → Prayer Coordinator | Intercession sessions, the prayer line |
+| 🛡️ Security | Security Volunteer → Gate Supervisor → Chief Security Officer | Gate and car park duty, night patrol |
+| 🧤 Usher | Usher → Senior Usher → Head Usher | Seat people, welcome first-timers |
+| 🎶 Choir | Chorister → Lead Vocalist → Choir Director | Rehearsals, ministering in song |
+| 🎥 Media & Sound | Media Volunteer → Sound Engineer → Head of Media | Mixer and livestream, sermon clips |
+| 🍲 Hospitality | Kitchen Volunteer → Head Cook → Head of Hospitality | Cooking for programmes, cleaning the church |
+| 🧒 Children's Teacher | Assistant Teacher → Sunday School Teacher → Coordinator | Teaching Sunday school, preparing lessons |
+| 👀 Visitor | Visitor → Regular Visitor → Member | Asking questions, follow-up visits |
+| 📖 Minister Path | New Convert → … → Bible School → Ordained Pastor → General Overseer | Bible school exams (real Bible quizzes), then planting and growing your own church |
+
+You can change roles any time; your rank starts over. Promotions need experience, faith and character.
 
 ## How it plays
 
-- **Church tradition:** pick Pentecostal, Mission (Anglican/Methodist), Baptist or White Garment (Aladura). Each one strengthens different things, such as vigils, liturgy, Bible study or prayer.
-- **Your walk with God:** attend Sunday service, midweek Bible study or the Friday night vigil. Pray, read the Bible (there's a verse of the day), serve in your department, help people in need, and go to work to pay your way.
-- **Bible school:** attend lectures and pass the exams. The questions are real Bible questions.
-- **Temptations, as in real life:** gossip, anger in traffic, inflated receipts, a found wallet, leaked exam questions. Choosing wrong is a *fall*. You can always **Confess & Repent** (1 John 1:9), but the damage to your Character stays.
-- **Pastoral ministry:** services, vigils, crusades, outreach, choir, equipment, venues and branches abroad. There are also events like rent increases, members relocating abroad, a rival church across the road, weddings, testimonies, harvest, and an assistant pastor breaking away.
-- **Shortcuts (distractions):** selling "anointing oil", "special seed" offerings, poaching members, buying a Jeep or private jet, taking a politician's money. They pay fast, but they drain Character. That leads to a **scandal** (confess, deny, or blame the enemy) and eventually the **EFCC ending**.
-- **Grace:** if your faith runs dry, a brother visits and restores you. The only way to "lose" is a pastor whose Character hits zero.
-- **Share card:** a testimony image for WhatsApp, X and TikTok.
-- **3D world:** a low-poly "dollhouse" view, like Lagos Life. Before ordination you see your own room (a bookshelf appears in Bible school, a certificate when you graduate). As a pastor you see your church, cut away so you can look inside, and it changes as you grow:
-  - **Venues:** living room → shop → classroom → warehouse → auditorium → cathedral → Camp Ground
-  - **Inside:** members fill the seats, the choir wears your tradition's robes (white for Aladura), and the pastor stands at the pulpit
-  - **Your purchases:** speakers, keyboard and drums, livestream camera, and a generator, bus, Jeep, jet and mission school outside
-  - Drag the scene to rotate it
+- **Free will:** nobody forces you to church. Sunday service, midweek Bible study and Friday vigil are there, but you can sleep in, watch football at the viewing centre, or go to an owambe. Skipping costs faith and your **Sunday streak**; showing up earns streak bonuses.
+- **⭐ Points and ₦ naira:** points come from showing up, serving, praying and evangelism. Naira comes from your job and missions stipends. Spend them in the **Shop** (study Bible, prayer mat, tambourine, Sunday best, bicycle, smartphone, aso-ebi). Every item does something.
+- **Needs and mood, like Lagos Life:** you get hungry (eat at the buka or cook at home), energy runs out, and your mood (Joyful → Miserable) follows your faith, hunger and conscience.
+- **Prayer tab:** pray in the prayer room, go up Prayer Mountain on Saturdays, and pray for requests on the prayer wall (examples for now; real people's requests once multiplayer is live). Post your own requests and mark them answered as testimonies.
+- **Evangelism missions in real Lagos:** the harder the mission, the more it needs and the more it pays.
+  1. Tracts at Oshodi bus stop
+  2. Preaching at Balogun Market
+  3. LUTH and Kirikiri prison visits
+  4. Makoko waterfront outreach
+  5. A village crusade past Epe
+- **The devil is busy:** most nights bring a temptation, and every role has its own (the usher and the offering bag, security offered a bribe, the choir solo given to someone else, the hospitality "extra meat"). There's also a "Distractions 😈" list: sports betting, the beer parlour, "Yahoo" money. Falls can be confessed and forgiven (1 John 1:9), but the damage to Character stays. Repeated fraud ends with EFCC.
+- **Real Lagos:** your home and church are in a real area (Yaba, Surulere, Ikeja, Ajegunle, Festac…). Events happen at Ojuelegba, Tarkwa Bay, Festac and other real places. Churches and people are fictional.
+- **3D world with your own character:** a low-poly dollhouse view of your home or the church, with you at your post (security at the gate booth, usher in the aisle, media at the sound desk, prayer warrior kneeling at the altar, worshippers in the front seat).
 
-**UI** is neo-brutalist, after the SpendsIn template: cream grid paper, 2px black borders, hard offset shadows, pastel blocks (green, yellow, pink, blue), tilted badges, Space Grotesk headings and Inter body text, and Lucide icons. Effects: a progressive blur over the top of the 3D scene, an alpha mask fading the edges of the scrolling action list, gradient borders on dark surfaces, CSS glass on the stats bar, and the `animationIn` intro (switched off when the device asks for reduced motion). It keeps WCAG AA contrast, focus rings and 44px touch targets. Phones get a bottom navigation bar and desktops a sidebar.
+## Controls
 
-Scripture is quoted from the King James Version, which is public domain. All people and churches are fictional.
+| Key | Action |
+|---|---|
+| `W` `A` `S` `D` or arrows | Walk |
+| `Shift` | Run |
+| `Space` | Jump |
+| `C` | Sit / stand |
+| `P` | Kneel and pray |
+| `E` | Wave |
+| `Q` / `R` | Turn the camera |
+| `V` | Switch between home and church |
+| `N` | End the day |
+| `?` | Show the controls list |
+
+On phones there's an on-screen arrow pad with Jump, Sit, Wave and Pray buttons, and you can drag the scene to turn the camera.
+
+## Design
+
+Neo-brutalist UI after the SpendsIn template:
+- **Look:** cream grid paper, 2px black borders, hard offset shadows, pastel blocks, Space Grotesk and Inter, Lucide icons.
+- **Effects:** progressive top blur, alpha-masked lists, gradient borders, CSS glass and the `animationIn` intro.
+- **Accessibility:** WCAG AA contrast, focus rings and large touch targets.
+
+Scripture is quoted from the King James Version, which is public domain.
 
 ## Run it
 
-The game is plain HTML, CSS and JavaScript with no build step. The 3D scene uses [Three.js](https://threejs.org) r128 (MIT licence) and the icons use [Lucide](https://lucide.dev) 0.460 (ISC licence). Both are included in `vendor/` so the game doesn't depend on a CDN. Open `index.html`, or serve the folder:
+The game is plain HTML, CSS and JavaScript with no build step. [Three.js](https://threejs.org) r128 (MIT) and [Lucide](https://lucide.dev) 0.460 (ISC) are included in `vendor/`. Open `index.html`, or serve the folder:
 
 ```
 npx serve .
@@ -36,24 +73,23 @@ To deploy for free, push the repo to Cloudflare Pages or Vercel as a static site
 
 ## Roadmap
 
-### Phase 1: single player (this version)
-- [x] The full journey, temptations, scandal and endings
-- [x] Church types, branches abroad, share card
-- [x] Progress saved on the device (localStorage)
+**Next: more of the Lagos Life blueprint**
+- A map of Lagos places with transport choices (danfo, okada, keke, BRT) that cost time and naira
+- Real-time days, so Sunday service is on a real Sunday at 9am WAT
+- A daily verse hunt with prizes, the faith version of the gem hunt
 
-### Phase 2: multiplayer, like Lagos Life (Supabase free tier)
-- Player accounts by phone number or a nickname only, so we collect as little data as possible
-- A **shared world**: every pastor's church is real. Other players can visit, attend Sunday service or a vigil there, become members, and serve as workers (choir, ushers, evangelism).
-- Players choose which church to attend, so the membership count is made of real people
-- Live counter ("12,430 believers online"), leaderboards by church size and by Character
-- Church chat or prayer wall (moderated)
+**Multiplayer (Supabase free tier)**
+- Nickname logins with minimal personal data
+- See other real players with @names in the church; church chat
+- A real Prayer Wall: people post requests and others pray ("214 people prayed for you")
+- Live Sunday service and Friday vigil with everyone in the same auditorium; "12,430 believers online"
 
-### Phase 3: making money (Paystack or Flutterwave)
-- Small purchases from ₦200 to ₦1,000: energy refills, cosmetics (choir robes, church decor, building skins), extra save slots. **Faith and Character can never be bought.**
-- In-game billboards and sponsorships from Christian businesses (bookshops, gospel artists, events)
-- Gospel creator and streamer partnerships
+**Money (Paystack / Flutterwave)**
+- Small purchases from ₦200 to ₦1,000: cosmetics, outfits, energy. **Faith and character can never be bought**
+- Christian businesses advertising at the church gate
+- Real churches paying for their own virtual branch where their members gather
 
-### Rules to stay out of trouble
-- In-game money can **never** be withdrawn as real cash. Otherwise it becomes gambling.
-- Collect the minimum personal data, because Nigeria's data protection law (NDPA) applies.
-- Keep everyone fictional: no real pastors, churches or ministries.
+**Rules to stay out of trouble**
+- In-game money can never be withdrawn as real cash
+- Collect minimal personal data (Nigeria's data protection law, NDPA)
+- Real places are fine; real churches, pastors and people stay fictional

@@ -27,6 +27,7 @@
   --shadow: 4px 4px 0 0 var(--ink);
   --shadow-lg: 6px 6px 0 0 var(--ink);
   --nav-h: 72px;
+  --sheet: 40vh;
   --head: "Space Grotesk", "Inter", system-ui, sans-serif;
 }
 
@@ -204,7 +205,7 @@ input:focus, select:focus { outline: none; background: var(--white); box-shadow:
 .nav-item:disabled { opacity: .5; cursor: not-allowed; }
 
 .panel {
-  position: absolute; left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); height: 44vh; z-index: 6;
+  position: absolute; left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); height: var(--sheet); z-index: 6;
   background: var(--paper); border-top: var(--b); border-radius: var(--r-lg) var(--r-lg) 0 0;
   display: flex; flex-direction: column; overflow: hidden;
 }
@@ -302,8 +303,108 @@ input:focus, select:focus { outline: none; background: var(--white); box-shadow:
 #share-canvas { width: 100%; height: auto; border-radius: var(--r-md); border: var(--b); box-shadow: var(--shadow-sm); }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(var(--nav-h) + 44vh + 14px); transform: translateX(-50%); z-index: 30;
+  position: fixed; left: 50%; bottom: calc(var(--nav-h) + var(--sheet) + 14px); transform: translateX(-50%); z-index: 30;
   background: var(--ink-2); color: var(--white); padding: 10px 16px; border-radius: var(--r-md);
   font-size: 14px; font-weight: 600; max-width: calc(100% - 32px); text-align: center; box-shadow: 3px 3px 0 0 var(--yellow);
 }
 @media (min-width: 1024px) { .toast { bottom: 24px; left: calc(50% - 90px); } }
+
+/* ---------- Amen City additions ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.note { font-size: 12px; color: var(--zinc-500); font-weight: 500; margin: 4px 2px 8px; }
+
+/* role picker on the start screen */
+.roles { border: 0; padding: 0; margin: 0 0 6px; }
+.roles legend { font-size: 13px; font-weight: 700; margin-bottom: 6px; padding: 0; }
+.role-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.role-option {
+  position: relative; display: grid; grid-template-columns: 26px 1fr; grid-template-rows: auto auto; column-gap: 6px;
+  margin: 0; padding: 8px; background: var(--white); border: var(--b); border-radius: var(--r-sm); cursor: pointer;
+  font-weight: 500; transition: transform .12s, box-shadow .12s;
+}
+.role-option input { position: absolute; opacity: 0; pointer-events: none; }
+.role-option .re { grid-row: span 2; font-size: 20px; line-height: 1.2; }
+.role-option .rn { font-weight: 700; font-size: 13px; color: var(--ink); }
+.role-option .rb { font-size: 11px; color: var(--zinc-500); line-height: 1.3; }
+.role-option:hover { transform: translate(-1px, -1px); box-shadow: var(--shadow-sm); }
+.role-option:has(input:checked) { background: var(--yellow); box-shadow: var(--shadow-sm); }
+.role-option:has(input:focus-visible) { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+
+/* HUD chips */
+.hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.hud-chips { display: flex; align-items: center; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 1.5px solid var(--ink); border-radius: var(--r-pill); padding: 1px 8px; font-size: 12px; font-weight: 700; background: var(--white); white-space: nowrap; }
+.chip.points { background: var(--yellow); }
+.chip.mood[data-mood="miserable"] { background: var(--pink); }
+.chip.mood[data-mood="joyful"] { background: var(--green); }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1.5px solid var(--ink); border-radius: var(--r-sm); background: var(--white); cursor: pointer; box-shadow: 1px 1px 0 var(--ink); }
+.icon-btn svg.lucide { width: 15px; height: 15px; }
+.btn.sm { min-height: 36px; padding: 6px 12px; font-size: 13px; box-shadow: var(--shadow-sm); }
+
+/* prayer tab */
+.prayer-hero { background: var(--purple); border: var(--b); border-radius: var(--r-md); box-shadow: var(--shadow); padding: 14px; margin: 4px 0 6px; }
+.prayer-count { display: flex; align-items: baseline; gap: 8px; }
+.prayer-count strong { font-family: var(--head); font-size: 34px; line-height: 1; }
+.prayer-count span { font-weight: 600; font-size: 13px; }
+.prayer-verse { margin: 8px 0 0; font-size: 12px; font-style: italic; font-weight: 500; }
+.req-form { display: flex; gap: 8px; align-items: stretch; margin-bottom: 10px; }
+.req-form textarea { flex: 1; font: inherit; font-size: 15px; padding: 10px; border: var(--b); border-radius: var(--r-sm); background: var(--white); resize: vertical; min-height: 46px; }
+.req-form .btn { box-shadow: var(--shadow-sm); }
+.req { background: var(--white); border: var(--b); border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 8px; box-shadow: var(--shadow-sm); }
+.req p { margin: 0 0 4px; font-weight: 600; }
+.req-meta { font-size: 12px; color: var(--zinc-500); margin-bottom: 8px; }
+.req.answered { background: var(--green); }
+.req.answered .req-meta { color: var(--ink-2); margin-bottom: 0; }
+
+/* shop wallet */
+.wallet { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 6px; }
+.wallet > div { background: var(--white); border: var(--b); border-radius: var(--r-md); box-shadow: var(--shadow-sm); padding: 10px 12px; }
+.wallet > div:last-child { background: var(--yellow); }
+.wallet span { display: block; font-size: 12px; font-weight: 600; color: var(--zinc-600); }
+.wallet strong { font-family: var(--head); font-size: 22px; }
+
+/* 3D tools and touch pad, floating over the scene */
+.world-tools { position: absolute; z-index: 7; right: 10px; bottom: calc(var(--nav-h) + var(--sheet) + 10px); display: flex; flex-direction: column; gap: 8px; }
+.tool-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: var(--b); border-radius: var(--r-md); background: var(--white); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); }
+.tool-btn svg.lucide { width: 16px; height: 16px; }
+.touch-pad { position: absolute; z-index: 7; left: 10px; bottom: calc(var(--nav-h) + var(--sheet) + 10px); display: flex; align-items: flex-end; gap: 10px; }
+.dpad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); gap: 2px; }
+.dpad button, .pad-actions button { border: var(--b); background: rgba(255, 253, 247, .9); border-radius: var(--r-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; font: inherit; touch-action: none; user-select: none; -webkit-user-select: none; }
+.dpad button:active, .dpad button.on, .pad-actions button:active { background: var(--yellow); }
+.dpad [data-move="forward"] { grid-column: 2; grid-row: 1; }
+.dpad [data-move="left"] { grid-column: 1; grid-row: 2; }
+.dpad [data-move="right"] { grid-column: 3; grid-row: 2; }
+.dpad [data-move="back"] { grid-column: 2; grid-row: 3; }
+.pad-actions { display: grid; grid-template-columns: repeat(2, 54px); gap: 4px; }
+.pad-actions button { flex-direction: column; height: 40px; font-size: 10px; font-weight: 700; gap: 0; }
+.pad-actions button svg.lucide { width: 16px; height: 16px; }
+@media (hover: hover) and (pointer: fine) { .touch-pad { display: none; } }
+@media (min-width: 1024px) {
+  .world-tools { right: calc(404px + 32px); bottom: 16px; flex-direction: row; }
+  .touch-pad { left: calc(224px + 32px); bottom: 16px; }
+}
+
+/* controls list */
+.controls-card { text-align: left; }
+.controls-card h3 { text-align: center; }
+.keys { width: 100%; border-collapse: collapse; font-size: 14px; }
+.keys td { padding: 6px 4px; border-bottom: 1.5px dashed var(--zinc-300); font-weight: 600; }
+.keys td:first-child { white-space: nowrap; width: 40%; }
+kbd { display: inline-block; min-width: 26px; padding: 2px 6px; border: var(--b); border-radius: 6px; background: var(--white); box-shadow: 2px 2px 0 var(--ink); font: 700 12px/1.4 var(--head); text-align: center; }
+
+/* Phones: compact HUD so the 3D scene has room */
+@media (max-width: 767px) {
+  .hud { padding: 8px 10px; }
+  .church-name { font-size: 15px; }
+  .energy { margin: 6px 0; }
+  .stats { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .stat { padding: 3px 4px; text-align: center; }
+  .stat .k { justify-content: center; font-size: 0; }
+  .stat .k svg.lucide { width: 14px; height: 14px; }
+  .stat .v { font-size: 11px; }
+  .stat .meter.sm { height: 4px; margin-top: 2px; }
+  .dpad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); }
+  .pad-actions { grid-template-columns: repeat(2, 46px); }
+  .pad-actions button { height: 34px; font-size: 9px; }
+  .tool-btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+}

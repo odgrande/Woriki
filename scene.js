@@ -3,11 +3,12 @@
 /* =========================================================================
    3D world: a low-poly "dollhouse" view of your room (before ordination)
    or your church (after). Built from primitives so it stays light on
-   cheap phones. Exposes window.World = { update(state), setMode(id), layout() }.
+   cheap phones. Your own character can walk, run, jump, sit, kneel and wave.
+   Exposes window.World = { update(state), setMode(id), layout(), setMove(dir, on), act(name), turn(d) }.
    ========================================================================= */
 
 (function () {
-  const NOOP = { update() {}, setMode() {}, layout() {} };
+  const NOOP = { update() {}, setMode() {}, layout() {}, setMove() {}, act() {}, turn() {} };
   const canvas = document.getElementById('world');
   if (!window.THREE || !canvas) { window.World = NOOP; return; }
 
@@ -133,6 +134,9 @@
     p.add(m);
     return m;
   }
+
+  // Raised surfaces the player stands on: {x0, x1, z0, z1, y}.
+  let floors = [];
 
   /* ---------------- people ---------------- */
 
@@ -319,10 +323,10 @@
       box(p, 0.9, 0.65, 0.05, '#c9a227', 2.0, FY + 1.4, -s.d / 2 + 0.22);
       box(p, 0.78, 0.53, 0.06, '#fffaf0', 2.0, FY + 1.46, -s.d / 2 + 0.22);
     }
-    if (st) figure(p, 0.2, 0.9, '#2563eb', 0.5);
+    floors.push({ x0: -s.w / 2, x1: s.w / 2, z0: -s.d / 2, z1: s.d / 2, y: FY });
     // compound outside
     box(p, 2.4, 0.06, 1.4, '#c9c3b5', 1.5, 0, s.d / 2 + 1.2);
-    return { w: s.w, d: s.d, h: s.h };
+    return { w: s.w, d: s.d, h: s.h, spawn: { x: 0.2, z: 0.9, ry: 0.5 } };
   }
 
   /* ---- your church ---- */
@@ -338,7 +342,7 @@
 
   const ROBES = { pentecostal: '#7b1e3a', mission: '#5b2a86', baptist: '#1d3557', aladura: '#ffffff' };
 
-  function buildChurch(p, st) {
+  function buildChurch(p, st, opts = {}) {
     const s = SPECS[Math.min(st.venue, SPECS.length - 1)];
     const { w, d } = s;
     const h = s.h || 4;
@@ -352,12 +356,15 @@
     const backZ = -d / 2 + 0.2;
     const house = s.kind === 'house';
     const py = house ? FY : FY + 0.3;
+    floors.push({ x0: -w / 2, x1: w / 2, z0: -d / 2, z1: d / 2, y: FY });
+    const platW = w * (s.open ? 0.5 : 0.7);
+    if (!house) floors.push({ x0: -platW / 2, x1: platW / 2, z0: backZ, z1: backZ + pd, y: FY + 0.3 });
     if (!house) box(p, w * (s.open ? 0.5 : 0.7), 0.3, pd, s.kind === 'cathedral' || s.kind === 'auditorium' ? '#7a1f2b' : '#b07a4a', 0, FY, backZ + pd / 2);
     // pulpit
     const pz = backZ + pd * 0.55;
     box(p, 0.75, 1.05, 0.5, house ? '#c49a6c' : '#7a4a26', 0, py, pz);
     box(p, 0.8, 0.06, 0.55, '#5a3420', 0, py + 1.05, pz);
-    figure(p, 0, pz - 0.45, '#1d2b53', 0, py);
+    if (!opts.own) figure(p, 0, pz - 0.45, '#1d2b53', 0, py);
 
     // back wall: cross, banner or blackboard, windows
     if (!s.open) {
@@ -462,7 +469,9 @@
     const n = Math.min(chairs.length, Math.max(Math.min(st.members || 0, chairs.length), Math.round(chairs.length * fill)));
     // Fill the front rows first, centre seats first within a row.
     const order = chairs.slice().sort((a, b) => (a.z - b.z) || (Math.abs(a.x) - Math.abs(b.x)));
-    for (let i = 0; i < n; i++) spots.push({ x: order[i].x, y: FY + 0.45, z: order[i].z });
+    // Worshippers and visitors get the first front seat; everyone else fills the rest.
+    const mySeat = ['worshipper', 'visitor'].includes(opts.role) ? order[0] : null;
+    for (let i = mySeat ? 1 : 0; i < n; i++) spots.push({ x: order[i].x, y: FY + 0.45, z: order[i].z });
     seatedPeople(p, spots, palette);
 
     if (!s.open && s.kind !== 'cathedral' && s.kind !== 'auditorium') {
@@ -477,7 +486,58 @@
     if (owned.jeep) jeep(p, -w / 4, d / 2 + 2.2);
     if (owned.school) schoolBlock(p, -w / 2 - 3.5, -d / 4);
     if (owned.jet) jet(p, ox + 4, -d / 2 - 2);
-    return { w, d, h };
+
+    // Your post in the church
+    let spawn = { x: 0, z: startZ + 1, ry: Math.PI };
+    switch (opts.role) {
+      case 'pastor': spawn = { x: 0, z: pz - 0.45, ry: 0 }; break;
+      case 'worshipper': case 'visitor': spawn = { x: mySeat.x, z: mySeat.z, ry: Math.PI, mode: 'sit' }; break;
+      case 'usher': spawn = { x: 0, z: startZ + 1.6, ry: 0 }; break;
+      case 'choir': spawn = { x: cx0 + 1.7, z: backZ + 0.9, ry: Math.PI / 2 - 0.4 }; break;
+      case 'prayer': spawn = { x: 0.9, z: backZ + pd + 0.5, ry: Math.PI, mode: 'kneel' }; break;
+      case 'security': {
+        const gx = w / 2 + 1.7, gz = d / 2 + 1.3;
+        box(p, 1.1, 2.0, 1.1, '#e5e7eb', gx + 1.2, 0, gz);
+        box(p, 1.3, 0.12, 1.3, '#1f2937', gx + 1.2, 2.0, gz);
+        box(p, 0.7, 0.5, 0.05, '#9fd3ef', gx + 1.2, 1.1, gz + 0.56);
+        box(p, 2.6, 0.1, 0.1, '#e63946', gx - 1.4, 0.95, gz);
+        box(p, 0.15, 1.0, 0.15, '#1f2937', gx - 0.05, 0, gz);
+        spawn = { x: gx, z: gz + 1.0, ry: 0 };
+        break;
+      }
+      case 'media': {
+        const mx = w / 4 + 0.5, mz = Math.min(endZ + 0.4, d / 2 - 0.5);
+        box(p, 1.8, 0.8, 0.6, '#1f2937', mx, FY, mz);
+        box(p, 0.5, 0.04, 0.35, '#475569', mx - 0.4, FY + 0.8, mz);
+        box(p, 0.5, 0.35, 0.03, '#0f172a', mx - 0.4, FY + 0.82, mz - 0.15);
+        box(p, 0.6, 0.06, 0.4, '#334155', mx + 0.4, FY + 0.8, mz);
+        spawn = { x: mx, z: mz + 0.7, ry: Math.PI };
+        break;
+      }
+      case 'hospitality': {
+        const kx = -w / 2 - 2.6, kz = d / 4;
+        box(p, 2.6, 1.7, 2.2, '#f5e6c8', kx, 0, kz);
+        box(p, 2.9, 0.15, 2.5, '#b5482f', kx, 1.7, kz);
+        cyl(p, 0.35, 0.3, 0.45, '#9ca3af', kx + 0.6, 0, kz + 1.6);
+        cyl(p, 0.3, 0.25, 0.4, '#6b7280', kx - 0.4, 0, kz + 1.6);
+        box(p, 0.8, 0.2, 0.5, '#4b5563', kx + 0.6, 0.45, kz + 1.6);
+        spawn = { x: kx + 0.1, z: kz + 2.3, ry: Math.PI };
+        break;
+      }
+      case 'children': {
+        const tx = w / 2 + 3, tz = d / 4 - 0.5;
+        for (const [dx, dz] of [[-1.3, -1.1], [1.3, -1.1], [-1.3, 1.1], [1.3, 1.1]]) box(p, 0.08, 2.1, 0.08, '#d1d5db', tx + dx, 0, tz + dz);
+        box(p, 3, 0.08, 2.6, '#fde047', tx, 2.1, tz);
+        for (let i = 0; i < 6; i++) {
+          const kid = figure(p, tx - 0.9 + (i % 3) * 0.9, tz + (i < 3 ? -0.3 : 0.5), pickc(CLOTH, i + 2), Math.PI, 0);
+          kid.scale.set(0.62, 0.62, 0.62);
+        }
+        spawn = { x: tx, z: tz - 1.0, ry: 0 };
+        break;
+      }
+      default: break;
+    }
+    return { w, d, h, spawn };
   }
 
   /* ---------------- scene management ---------------- */
@@ -497,11 +557,19 @@
   function rebuild(st) {
     if (world) { scene.remove(world); dispose(world); }
     world = new THREE.Group();
-    const pastor = st && st.stage >= 5;
-    const dims = pastor ? buildChurch(world, st) : buildHome(world, st);
-    const extra = pastor && ((st.owned || {}).jet || (st.owned || {}).school) ? 6 : pastor && Object.keys(st.owned || {}).length ? 3 : 1.5;
+    floors = [];
+    const own = st && st.stage >= 5 && st.role === 'minister';
+    const attend = st && !own && st.view === 'church';
+    let dims;
+    if (own) dims = buildChurch(world, st, { own: true, role: 'pastor' });
+    else if (attend) dims = buildChurch(world, ATTENDED(st), { role: st.role === 'minister' ? 'worshipper' : st.role });
+    else dims = buildHome(world, st);
+    const owned = own ? (st.owned || {}) : {};
+    const outside = attend && ['security', 'hospitality', 'children'].includes(st.role);
+    const extra = owned.jet || owned.school ? 6 : Object.keys(owned).length || outside || attend ? 3.5 : 1.5;
     size = Math.max(dims.w, dims.d) + extra;
     const R = size * 0.78 + 3;
+    groundR = R - 0.8;
     const ground = new THREE.Mesh(cylGeo(R, R + 0.4, 56), mat('#c6d6a8'));
     ground.scale.set(1, 0.8, 1);
     ground.position.y = -0.4;
@@ -520,15 +588,213 @@
     sc.updateProjectionMatrix();
     sun.position.set(size * 0.6, size * 1.6, size * 0.9);
     sun.target.position.set(0, 0, 0);
+    placeAvatar(st, dims.spawn);
+    if (avatar && avatar.visible) target.set(me.x, me.y + 0.6, me.z);
+  }
+
+  // The church you attend (for every role except a pastor in their own church).
+  function ATTENDED(st) {
+    return { venue: 3, members: 380, choir: 3, ctype: st.ctype, church: st.church, owned: { pa: 1, keyboard: 1, generator: 1, livestream: 1 } };
   }
 
   function signature(st) {
     if (!st) return 'start';
-    if (st.stage < 5) return `home|${st.stage >= 3}|${st.stage >= 4}`;
+    const own = st.stage >= 5 && st.role === 'minister';
+    if (!own && st.view === 'church') return `attend|${st.role}|${st.ctype}|${st.church}`;
+    if (!own) return `home|${st.stage >= 3}|${st.stage >= 4}|${st.role}`;
     const cap = [20, 50, 150, 500, 2500, 9000, 30000][Math.min(st.venue, 6)];
     const bucket = st.members < 40 ? st.members : Math.round((st.members / cap) * 40);
     return ['church', st.venue, st.ctype, st.choir, Object.keys(st.owned || {}).sort().join(','), bucket, st.church].join('|');
   }
+
+  /* ---------------- your character ---------------- */
+
+  const ROLE_CLOTH = {
+    security: '#1f2937', usher: '#f8fafc', media: '#2563eb', hospitality: '#f97316', children: '#22c55e',
+    prayer: '#ffffff', worshipper: '#e4572e', visitor: '#64748b', minister: '#1d3557',
+  };
+  let avatar = null;
+  let avatarKey = '';
+  let groundR = 8;
+  const me = { x: 0, z: 0, y: 0, vy: 0, ry: 0, mode: 'stand', wave: 0, phase: 0 };
+  const input = { forward: false, back: false, left: false, right: false, run: false };
+  let spawnKey = '';
+
+  function limb(parent, w, h, d, color, x, y) {
+    const pivot = new THREE.Group();
+    pivot.position.set(x, y, 0);
+    box(pivot, w, h, d, color, 0, -h, 0);
+    parent.add(pivot);
+    return pivot;
+  }
+
+  function nameTag(text) {
+    const cv = document.createElement('canvas');
+    cv.width = 256;
+    cv.height = 64;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#000';
+    c.fillRect(6, 10, 244, 48);
+    c.fillStyle = '#fde047';
+    c.fillRect(0, 4, 244, 48);
+    c.strokeStyle = '#000';
+    c.lineWidth = 4;
+    c.strokeRect(2, 6, 240, 44);
+    c.fillStyle = '#000';
+    c.font = 'bold 28px system-ui, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(text.slice(0, 14), 122, 30);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+    sp.scale.set(1.3, 0.33, 1);
+    sp.renderOrder = 10;
+    return sp;
+  }
+
+  function makeAvatar(st) {
+    const robe = st.role === 'choir' ? (ROBES[st.ctype] || '#7b1e3a') : null;
+    const cloth = robe || (st.stage >= 5 && st.role === 'minister' ? '#1d2b53' : ROLE_CLOTH[st.role] || '#e4572e');
+    const g = new THREE.Group();
+    const body = new THREE.Group();
+    g.add(body);
+    const legL = limb(body, 0.13, 0.5, 0.15, '#2b2b35', -0.09, 0.52);
+    const legR = limb(body, 0.13, 0.5, 0.15, '#2b2b35', 0.09, 0.52);
+    box(body, 0.4, 0.56, 0.24, cloth, 0, 0.5, 0);
+    if (st.role === 'security') box(body, 0.42, 0.3, 0.26, '#facc15', 0, 0.72, 0);
+    if (st.role === 'hospitality') box(body, 0.3, 0.4, 0.02, '#ffffff', 0, 0.55, 0.13);
+    const armL = limb(body, 0.1, 0.5, 0.12, cloth, -0.26, 1.04);
+    const armR = limb(body, 0.1, 0.5, 0.12, cloth, 0.26, 1.04);
+    ball(body, 0.16, '#6b4226', 0, 1.25, 0);
+    const hair = ball(body, 0.165, '#1b1b1b', 0, 1.3, -0.01);
+    hair.scale.set(0.165, 0.11, 0.165);
+    box(body, 0.05, 0.05, 0.05, '#4a2c1d', 0, 1.22, 0.15);
+    const tag = nameTag(st.name || 'You');
+    tag.position.set(0, 1.85, 0);
+    g.add(tag);
+    const ring = new THREE.Mesh(cylGeo(0.42, 0.42, 24), new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.85 }));
+    ring.scale.set(1, 0.02, 1);
+    ring.position.y = 0.02;
+    g.add(ring);
+    g.userData = { body, legL, legR, armL, armR, ring };
+    return g;
+  }
+
+  function placeAvatar(st, spawn) {
+    if (!st) { if (avatar) avatar.visible = false; return; }
+    const key = [st.role, st.ctype, st.stage >= 5, st.name].join('|');
+    if (key !== avatarKey) {
+      if (avatar) { scene.remove(avatar); avatar.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); }
+      avatar = makeAvatar(st);
+      scene.add(avatar);
+      avatarKey = key;
+    }
+    avatar.visible = true;
+    // Keep your position across small rebuilds; respawn at your post when the place changes.
+    const sk = sig.split('|').slice(0, 3).join('|');
+    if (sk !== spawnKey && spawn) {
+      spawnKey = sk;
+      me.x = spawn.x; me.z = spawn.z; me.ry = spawn.ry || 0; me.mode = spawn.mode || 'stand';
+      me.vy = 0; me.y = floorAt(me.x, me.z);
+    }
+  }
+
+  function floorAt(x, z) {
+    let y = 0;
+    for (const f of floors) if (x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1) y = Math.max(y, f.y);
+    return y;
+  }
+
+  function act(name) {
+    if (!avatar || !avatar.visible) return;
+    if (name === 'jump' && me.y <= floorAt(me.x, me.z) + 0.001) { me.mode = 'stand'; me.vy = 4.6; }
+    if (name === 'sit') me.mode = me.mode === 'sit' ? 'stand' : 'sit';
+    if (name === 'kneel') me.mode = me.mode === 'kneel' ? 'stand' : 'kneel';
+    if (name === 'wave') me.wave = 2;
+  }
+
+  function stepAvatar(dt, t) {
+    if (!avatar || !avatar.visible) return;
+    const u = avatar.userData;
+    // Camera-relative movement
+    let mx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    let mz = (input.back ? 1 : 0) - (input.forward ? 1 : 0);
+    const moving = mx !== 0 || mz !== 0;
+    if (moving) {
+      if (me.mode !== 'stand') me.mode = 'stand';
+      const len = Math.hypot(mx, mz);
+      mx /= len; mz /= len;
+      const c = Math.cos(theta), s2 = Math.sin(theta);
+      // forward on screen = away from the camera
+      const wx = mx * c + mz * s2;
+      const wz = -mx * s2 + mz * c;
+      const speed = input.run ? 5 : 2.6;
+      let nx = me.x + wx * speed * dt, nz = me.z + wz * speed * dt;
+      const r = Math.hypot(nx, nz);
+      if (r > groundR) { nx *= groundR / r; nz *= groundR / r; }
+      // Step up onto platforms up to 0.35 high; anything higher blocks you.
+      if (floorAt(nx, nz) - me.y <= 0.35) { me.x = nx; me.z = nz; }
+      me.ry = Math.atan2(wx, wz);
+      me.phase += dt * speed * 3.2;
+    }
+    // Gravity and jumping
+    const ground = floorAt(me.x, me.z);
+    me.vy -= 12 * dt;
+    me.y += me.vy * dt;
+    if (me.y <= ground) { me.y = ground; me.vy = 0; }
+    const airborne = me.y > ground + 0.01;
+    // Pose
+    const swing = moving && !airborne ? Math.sin(me.phase) * 0.7 : 0;
+    let legX = swing, armX = -swing, armZr = 0, armZl = 0, drop = 0;
+    if (airborne) { legX = 0.4; armX = -2.6; }
+    if (me.mode === 'sit') { legX = -1.45; armX = -0.4; drop = -0.24; }
+    if (me.mode === 'kneel') { legX = 1.5; armX = -1.1; drop = -0.24; }
+    u.legL.rotation.x = legX;
+    u.legR.rotation.x = me.mode === 'stand' ? -legX : legX;
+    u.armL.rotation.x = armX;
+    u.armR.rotation.x = me.mode === 'stand' && !airborne ? -armX : armX;
+    if (me.wave > 0) {
+      me.wave -= dt;
+      u.armR.rotation.x = 0;
+      armZr = 2.7 + Math.sin(t / 90) * 0.35;
+    }
+    u.armR.rotation.z = armZr;
+    u.armL.rotation.z = armZl;
+    u.body.position.y = drop;
+    u.ring.position.y = ground - me.y + 0.02;
+    avatar.position.set(me.x, me.y, me.z);
+    avatar.rotation.y = me.ry;
+    // Follow camera: stay close to your character
+    target.x += (me.x - target.x) * 0.08;
+    target.y += (me.y + 0.6 - target.y) * 0.08;
+    target.z += (me.z - target.z) * 0.08;
+  }
+
+  const KEYS = {
+    KeyW: 'forward', ArrowUp: 'forward', KeyS: 'back', ArrowDown: 'back',
+    KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
+  };
+  const typing = () => {
+    const el = document.activeElement;
+    return el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
+  };
+  const blocked = () => typing() || document.querySelector('.modal:not(.hidden)') || document.querySelector('#game.hidden');
+  window.addEventListener('keydown', (e) => {
+    if (blocked() || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (KEYS[e.code]) { input[KEYS[e.code]] = true; e.preventDefault(); }
+    if (e.key === 'Shift') input.run = true;
+    if (e.repeat) return;
+    if (e.code === 'Space') { act('jump'); e.preventDefault(); }
+    if (e.code === 'KeyC') act('sit');
+    if (e.code === 'KeyP') act('kneel');
+    if (e.code === 'KeyE') act('wave');
+    if (e.code === 'KeyQ') userTheta += 0.35;
+    if (e.code === 'KeyR') userTheta -= 0.35;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (KEYS[e.code]) input[KEYS[e.code]] = false;
+    if (e.key === 'Shift') input.run = false;
+  });
+  window.addEventListener('blur', () => { for (const k in input) input[k] = false; });
 
   /* ---------------- camera, layout, input ---------------- */
 
@@ -588,9 +854,12 @@
   function frame(t) {
     requestAnimationFrame(frame);
     if (document.hidden || t - last < 33) return;
+    const dt = Math.min(0.05, (t - last) / 1000);
     last = t;
     theta = 0.7 + userTheta + Math.sin(t / 7000) * 0.1;
-    const dist = size * 1.55 + 5;
+    stepAvatar(dt, t);
+    const following = avatar && avatar.visible;
+    const dist = following ? Math.min(15, Math.max(9, size * 0.8 + 4)) : size * 1.55 + 5;
     camera.position.set(target.x + Math.sin(theta) * dist * 0.78, target.y + dist * 0.82, target.z + Math.cos(theta) * dist * 0.78);
     camera.lookAt(target);
     renderer.render(scene, camera);
@@ -604,6 +873,9 @@
     // Re-measure once the intro animation has settled.
     setMode() { requestAnimationFrame(layout); setTimeout(layout, 1000); },
     layout,
+    setMove(dir, on) { if (dir in input) input[dir] = on; },
+    act,
+    turn(d) { userTheta += d; },
   };
 
   rebuild(null);

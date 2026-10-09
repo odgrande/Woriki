@@ -1,15 +1,17 @@
 'use strict';
 
 /* =========================================================================
-   Pastor Life — a virtual Christian journey
-   New convert → baptism → worker → Bible school → ordination → shepherd.
+   Amen City — a virtual church world
+   Everyone has a place: worshipper, prayer warrior, security, usher, choir,
+   media, hospitality, children's teacher, visitor, or the minister path
+   (Bible school → ordination → shepherd your own church).
    Real-life temptations (quick money, vanity, compromise) are in the game
    as distractions, with real-life consequences.
    Scripture quotations are from the King James Version (public domain).
    All people and churches in the game are fictional.
    ========================================================================= */
 
-const SAVE_KEY = 'pastorlife.v2';
+const SAVE_KEY = 'amencity.v1';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WIN_MEMBERS = 25000;
 
@@ -41,6 +43,12 @@ const V_FRUIT = ['Galatians 5:22-23', 'But the fruit of the Spirit is love, joy,
 const V_GROWTH = ['Acts 2:47', 'And the Lord added to the church daily such as should be saved.'];
 const V_MONEY = ['1 Timothy 6:10', 'For the love of money is the root of all evil: which while some coveted after, they have erred from the faith, and pierced themselves through with many sorrows.'];
 const V_REAP = ['Galatians 6:7', 'Be not deceived; God is not mocked: for whatsoever a man soweth, that shall he also reap.'];
+
+const V_PRAYER = ['James 5:16', 'Confess your faults one to another, and pray one for another, that ye may be healed. The effectual fervent prayer of a righteous man availeth much.'];
+const V_REQUEST = ['Philippians 4:6', 'Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.'];
+const V_DOOR = ['Psalm 84:10', 'For a day in thy courts is better than a thousand. I had rather be a doorkeeper in the house of my God, than to dwell in the tents of wickedness.'];
+const V_HEARTILY = ['Colossians 3:23', 'And whatsoever ye do, do it heartily, as to the Lord, and not unto men;'];
+const V_GLAD = ['Psalm 122:1', 'I was glad when they said unto me, Let us go into the house of the LORD.'];
 
 const verseText = (v) => `"${v[1]}"\n— ${v[0]} (KJV)`;
 
@@ -104,6 +112,75 @@ const CHURCH_TYPES = {
   aladura:     { emoji: '🤍', name: 'White Garment (Aladura)', perk: 'Powerful prayer life', bonus: { prayer: 1.6, vigil: 1.25 } },
 };
 const bonus = (tag) => (CHURCH_TYPES[S.ctype] && CHURCH_TYPES[S.ctype].bonus[tag]) || 1;
+
+/* ---------------- Lagos ---------------- */
+// Real Lagos areas and public places. Churches and people stay fictional.
+const LAGOS_AREAS = ['Yaba', 'Surulere', 'Ikeja', 'Ajegunle', 'Festac', 'Ikorodu', 'Mushin', 'Agege', 'Ojota', 'Lekki', 'Ketu', 'Oshodi'];
+
+/* ---------------- evangelism missions ---------------- */
+// Harder missions need more faith and character, cost more energy, and pay more.
+// The naira is a stipend from the church's missions board; ⭐ come too.
+const MISSIONS = [
+  { id: 'm_tracts',   emoji: '📄', name: 'Share Tracts at Oshodi Bus Stop', level: 1, energy: 20, faith: 0,  character: 0,  cost: 0,    pay: 500,   points: 5,  souls: [0, 2],
+    desc: 'Easy. Hand out tracts to people waiting for danfo under the bridge.',
+    hard: ['An agbero shouted "Commot for road!" but you kept smiling.', 'Rain started and everybody ran.'] },
+  { id: 'm_market',   emoji: '🛒', name: 'Preach at Balogun Market', level: 2, energy: 35, faith: 35, character: 40, cost: 0,    pay: 1500,  points: 10, souls: [1, 4],
+    desc: 'Medium. Lagos Island at its busiest. Some traders will argue with you.',
+    hard: ['A trader asked you to buy something before she would listen.', 'Two men argued with you about religion for an hour.'] },
+  { id: 'm_hospital', emoji: '🏥', name: 'Visit LUTH & Kirikiri Prison', level: 3, energy: 45, faith: 45, character: 55, cost: 1000, pay: 3500,  points: 18, souls: [1, 5],
+    desc: 'Hard. Pray with patients at LUTH, Idi-Araba, and inmates at Kirikiri. Bring provisions (₦1,000).',
+    hard: ['A patient you prayed with last week passed away. You comforted the family.', 'The prison officer delayed you for hours at the gate.'] },
+  { id: 'm_slum',     emoji: '🛶', name: 'Makoko Waterfront Outreach', level: 4, energy: 60, faith: 55, character: 60, cost: 2000, pay: 8000,  points: 30, souls: [3, 10],
+    desc: 'Very hard. Canoe through the Makoko waterfront community with food and the Gospel. Boat and food: ₦2,000.',
+    hard: ['Area boys demanded "settlement" before you could enter.', 'The canoe nearly capsized. Everyone prayed loudly.', 'A child there had a high fever. You took him to the clinic.'] },
+  { id: 'm_village',  emoji: '🛖', name: 'Village Crusade in Epe', level: 5, energy: 85, faith: 70, character: 70, cost: 5000, pay: 18000, points: 50, souls: [8, 25],
+    desc: 'Hardest. Weekend mission to a village past Epe. Transport and supplies: ₦5,000.',
+    hard: ['The Lekki–Epe road was so bad the bus got stuck twice.', 'A local strongman threatened the team, then came forward at the altar call.', 'No light, no network, mosquitoes everywhere.'] },
+];
+
+/* ---------------- roles ---------------- */
+// Every role has three ranks, its own duties (ACTIONS with `role`) and its own events.
+const ROLES = {
+  worshipper:  { emoji: '🙏', name: 'Worshipper', blurb: 'Come to church, worship, give, fellowship.', ranks: ['First-timer', 'Member', 'Pillar of the Church'] },
+  prayer:      { emoji: '🕊️', name: 'Prayer Warrior', blurb: 'Live in the prayer room and pray for others.', ranks: ['Intercessor', 'Prayer Warrior', 'Prayer Coordinator'] },
+  security:    { emoji: '🛡️', name: 'Security', blurb: 'Gate, car park and safety of God\'s house.', ranks: ['Security Volunteer', 'Gate Supervisor', 'Chief Security Officer'], verse: V_DOOR },
+  usher:       { emoji: '🧤', name: 'Usher', blurb: 'Seat people, welcome visitors, carry the offering.', ranks: ['Usher', 'Senior Usher', 'Head Usher'] },
+  choir:       { emoji: '🎶', name: 'Choir', blurb: 'Rehearse, minister in song, lead worship.', ranks: ['Chorister', 'Lead Vocalist', 'Choir Director'] },
+  media:       { emoji: '🎥', name: 'Media & Sound', blurb: 'Mixer, projector, livestream. NEPA wahala included.', ranks: ['Media Volunteer', 'Sound Engineer', 'Head of Media'] },
+  hospitality: { emoji: '🍲', name: 'Hospitality', blurb: 'Church kitchen and keeping God\'s house clean.', ranks: ['Kitchen Volunteer', 'Head Cook', 'Head of Hospitality'] },
+  children:    { emoji: '🧒', name: 'Children\'s Teacher', blurb: 'Sunday school and the Christmas drama.', ranks: ['Assistant Teacher', 'Sunday School Teacher', 'Children\'s Church Coordinator'] },
+  minister:    { emoji: '📖', name: 'Minister Path', blurb: 'Bible school, ordination, then your own church.', ranks: [] },
+  visitor:     { emoji: '👀', name: 'Visitor', blurb: 'Just looking. No pressure.', ranks: ['Visitor', 'Regular Visitor', 'Member'] },
+};
+const RANK_XP = [0, 120, 450];
+const isMinister = () => S.role === 'minister';
+
+// Points (⭐) are earned by showing up, serving and praying. Naira is earned at work.
+const SHOP = [
+  { id: 'bible',      emoji: '📕', name: 'Study Bible',            naira: 4000,  desc: '+2 extra word every time you read.' },
+  { id: 'mat',        emoji: '🧎', name: 'Prayer Mat',             points: 80,   desc: '+2 extra faith every time you pray.' },
+  { id: 'tambourine', emoji: '🪘', name: 'Tambourine',             points: 60,   desc: 'Vigils hit different. +2 faith at vigils.' },
+  { id: 'outfit',     emoji: '👔', name: 'Sunday Best (Ankara)',   naira: 12000, desc: 'Look sharp. +5⭐ every Sunday you attend.' },
+  { id: 'bike',       emoji: '🚲', name: 'Bicycle',                naira: 45000, desc: 'Less trekking. Start each day with +10 energy.' },
+  { id: 'phone',      emoji: '📱', name: 'Smartphone + Bible app', naira: 60000, desc: 'Reading the Bible costs 5 less energy.' },
+  { id: 'gele',       emoji: '👑', name: 'Thanksgiving Aso-ebi',   points: 300,  desc: 'For the church anniversary. Pure vibes.' },
+];
+
+// Practice requests for the prayer room. With multiplayer these become real people's requests.
+const SAMPLE_REQUESTS = [
+  ['Chioma', 'My mum has surgery on Tuesday. Please pray for the doctors and for her healing.'],
+  ['Emeka', 'Job interview on Thursday. I have been jobless for 2 years.'],
+  ['Blessing', 'Safe delivery of my baby next month.'],
+  ['Tunde', 'My JAMB result comes out this week.'],
+  ['Halima', 'Peace in my home. My husband and I keep fighting.'],
+  ['Kunle', 'My shop was robbed. Pray for provision and for the thieves to change.'],
+  ['Ada', 'Visa interview on Monday. I want to study abroad.'],
+  ['Femi', 'Deliverance from alcohol. I want to stop.'],
+  ['Grace', 'My brother has been sick for months. The hospital cannot find the problem.'],
+  ['Ibrahim', 'I just gave my life to Christ. Pray that I stay strong.'],
+  ['Nkechi', 'My business is struggling. I have staff to pay this month.'],
+  ['Segun', 'Travelling to the east by road this weekend. Journey mercies.'],
+];
 
 const STAGES = ['New Convert', 'Member', 'Worker', 'Bible School Student', 'Bible School Graduate', 'Pastor'];
 
@@ -173,11 +250,14 @@ const STARTS = {
 
 let S = null;
 
-function newState(name, church, ctype) {
+function newState(name, church, ctype, role) {
   const startId = Math.random() < 0.5 ? 'home' : 'convert';
   const st = STARTS[startId];
   return {
-    name, church, ctype, start: startId,
+    name, church, ctype, role, start: startId,
+    area: pick(LAGOS_AREAS), hunger: 80, rank: 0, xp: 0, points: 10, streak: 0, missedSundays: 0, items: {},
+    prayed: 0, requests: [], testimonies: 0, frauds: 0, souls: 0,
+    view: role === 'minister' ? 'home' : 'church',
     day: 1, energy: 100,
     funds: st.funds, salary: st.salary, job: st.job,
     faith: st.faith, word: st.word, character: st.character, fame: 0,
@@ -235,10 +315,20 @@ const has = (id) => !!S.owned[id];
 const verseOfDay = () => VERSES[(S.day - 1) % VERSES.length];
 
 function title() {
+  if (!isMinister()) return ROLES[S.role].ranks[S.rank];
   if (!isPastor()) return STAGES[S.stage];
   let t = TITLES[0][1];
   for (const [min, name] of TITLES) if (S.members >= min) t = name;
   return t;
+}
+
+// Mood, like Lagos Life: driven by faith, hunger and unconfessed sin.
+function mood() {
+  const score = S.faith * 0.5 + S.hunger * 0.4 - (S.convicted ? 25 : 0) + (S.character - 50) * 0.2;
+  if (score >= 60) return ['😊', 'Joyful'];
+  if (score >= 42) return ['🙂', 'Peaceful'];
+  if (score >= 25) return ['😐', 'Okay'];
+  return ['😣', 'Miserable'];
 }
 
 function quality() {
@@ -265,13 +355,20 @@ function log(text) {
   if (S.log.length > 60) S.log.length = 60;
 }
 
+// Rewards for good things: experience in your role and ⭐ points.
+function reward(xp, points) {
+  S.xp += xp;
+  S.points += points;
+  return ` +${points}⭐`;
+}
+
 // A fall can always be repented of, but its character cost stays.
 function fall(sin, characterCost = 8) {
   S.convicted = true;
   S.falls += 1;
   grow('character', -characterCost);
   grow('faith', -5);
-  return `You fell into ${sin}. You feel convicted. "Confess & Repent" is on your Ministry tab.`;
+  return `You fell into ${sin}. You feel convicted. "Confess & Repent" is on your Today tab.`;
 }
 
 /* ---------------- actions ---------------- */
@@ -287,7 +384,7 @@ const ACTIONS = [
     run() {
       S.services += 1;
       grow('faith', 10 * bonus('service')); grow('word', 3); grow('character', 2);
-      return 'You worshipped with the brethren. +10 faith, +3 word.';
+      return 'You worshipped with the brethren. +10 faith, +3 word.' + reward(4, 5 + (S.items.outfit ? 5 : 0));
     },
   },
   {
@@ -298,7 +395,7 @@ const ACTIONS = [
     run() {
       S.services += 1;
       grow('word', 7 * bonus('study')); grow('faith', 4);
-      return 'Great study on the book of Acts. +7 word, +4 faith.';
+      return 'Great study on the book of Acts. +7 word, +4 faith.' + reward(3, 3);
     },
   },
   {
@@ -308,26 +405,27 @@ const ACTIONS = [
     desc: () => weekday() === 'Fri' ? 'Pray through the night with the church.' : 'Held on Friday nights.',
     run() {
       S.services += 1;
-      const f = Math.round(12 * bonus('vigil'));
+      const f = Math.round(12 * bonus('vigil')) + (S.items.tambourine ? 2 : 0);
       grow('faith', f); grow('character', 1);
-      return `You prayed through the night till 5am. +${f} faith.`;
+      return `You prayed through the night till 5am. +${f} faith.` + reward(4, 4);
     },
   },
   {
     id: 'pray', emoji: '🙏', name: 'Pray', energy: 10, once: true,
     desc: () => 'Quiet time with the Lord.',
     run() {
-      const f = Math.round(5 * bonus('prayer'));
+      const f = Math.round(5 * bonus('prayer')) + (S.items.mat ? 2 : 0);
       grow('faith', f);
-      return `You spent time in prayer. +${f} faith.`;
+      return `You spent time in prayer. +${f} faith.` + reward(1, 1);
     },
   },
   {
     id: 'read', emoji: '📖', name: 'Read the Bible', energy: 15, once: true,
+    energyFn: () => S.items.phone ? 10 : 15,
     desc: () => `Today: ${verseOfDay()[0]}`,
     run() {
-      grow('word', 5 * bonus('study')); grow('faith', 2);
-      return `You meditated on ${verseOfDay()[0]}. +5 word.`;
+      grow('word', 5 * bonus('study') + (S.items.bible ? 2 : 0)); grow('faith', 2);
+      return `You meditated on ${verseOfDay()[0]}. +5 word.` + reward(1, 1);
     },
   },
   {
@@ -359,22 +457,22 @@ const ACTIONS = [
     desc: () => 'A widow next door needs food money.',
     run() {
       grow('character', 6); grow('faith', 2);
-      return 'You gave cheerfully. +6 character.';
+      return 'You gave cheerfully. +6 character.' + reward(2, 3);
     },
   },
   {
     id: 'witness', emoji: '💬', name: 'Share the Gospel', energy: 20,
-    when: () => S.stage >= 2 && !isPastor(),
+    when: () => (isMinister() ? S.stage >= 2 : S.stage >= 1) && !isPastor(),
     desc: () => 'Tell a colleague about Jesus.',
     run() {
       grow('faith', 3); grow('character', 2);
-      if (chance(0.35)) return 'Your colleague gave their life to Christ! 🎉 +3 faith.';
+      if (chance(0.35)) return 'Your colleague gave their life to Christ! 🎉 +3 faith.' + reward(4, 8);
       return 'They listened politely and promised to think about it. +3 faith.';
     },
   },
   {
     id: 'serve', emoji: '🧹', name: 'Serve in Department', energy: 20, once: true,
-    when: () => S.stage >= 2 && !isPastor(),
+    when: () => isMinister() && S.stage >= 2 && !isPastor(),
     desc: () => { const d = DEPARTMENTS.find((x) => x.id === S.dept); return d ? `${d.emoji} ${d.name} duty.` : 'Serve in church.'; },
     run() {
       grow('character', 5); grow('faith', 3);
@@ -398,6 +496,330 @@ const ACTIONS = [
     avail: () => S.word >= examNeed(),
     desc: () => S.word >= examNeed() ? '5 Bible questions. Score 4 or more to pass.' : `Study more: needs ${examNeed()} word.`,
     run() { startExam(); return null; },
+  },
+  // ---- food ----
+  {
+    id: 'buka', emoji: '🍛', name: 'Eat at the Buka', energy: 5,
+    cost: () => 800,
+    avail: () => S.hunger < 95,
+    desc: () => 'Amala, ewedu and two pieces of meat. ₦800.',
+    run() {
+      S.hunger = clamp(S.hunger + 45, 0, 100);
+      return 'Belle full. You feel strong again.';
+    },
+  },
+  {
+    id: 'cook', emoji: '🍳', name: 'Cook at Home', energy: 15,
+    cost: () => 400,
+    avail: () => S.hunger < 95,
+    desc: () => 'Rice and stew. Cheaper, but takes time. ₦400.',
+    run() {
+      S.hunger = clamp(S.hunger + 35, 0, 100);
+      return 'Home-cooked rice and stew. Mama would be proud.';
+    },
+  },
+  // ---- prayer room (everyone) ----
+  {
+    id: 'prayroom', emoji: '🕯️', name: 'Pray in the Prayer Room', energy: 20, once: true,
+    desc: () => 'Quiet hour at the altar, open 24/7.',
+    run() {
+      const f = Math.round(8 * bonus('prayer')) + (S.items.mat ? 2 : 0);
+      grow('faith', f);
+      return `An hour alone with God. +${f} faith.` + reward(S.role === 'prayer' ? 4 : 2, 3);
+    },
+  },
+  {
+    id: 'prayfor', emoji: '🤲', name: 'Pray for a Request', energy: 8, limit: 5,
+    desc: () => `Pray for someone on the prayer wall (${5 - (S.doneToday.prayfor || 0)} left today).`,
+    run() { prayForRequest(); return null; },
+  },
+  {
+    id: 'mountain', emoji: '⛰️', name: 'Go Up Prayer Mountain (Ikorodu)', energy: 60, once: true,
+    cost: () => 1500,
+    avail: () => weekday() === 'Sat',
+    desc: () => weekday() === 'Sat' ? 'Bus fare ₦1,500. A whole day of prayer.' : 'Saturdays only.',
+    run() {
+      grow('faith', 18); grow('character', 3);
+      return 'You spent the day on Prayer Mountain. Your spirit feels renewed. +18 faith.' + reward(6, 12);
+    },
+  },
+  // ---- evangelism missions ----
+  ...MISSIONS.map((m) => ({
+    id: m.id, emoji: m.emoji, name: m.name, energy: m.energy, once: true, mission: m,
+    when: () => !isPastor() && (S.stage >= 1 || S.role === 'minister'),
+    cost: m.cost ? () => m.cost : undefined,
+    avail: () => S.faith >= m.faith && S.character >= m.character && (m.level < 5 || ['Sat', 'Sun'].includes(weekday())),
+    desc: () => {
+      const stars = '🔥'.repeat(m.level);
+      if (S.faith < m.faith || S.character < m.character) return `${stars} Needs faith ${m.faith}+ and character ${m.character}+.`;
+      if (m.level === 5 && !['Sat', 'Sun'].includes(weekday())) return `${stars} Weekends only.`;
+      return `${stars} ${m.desc} Pays ${naira(m.pay)} + ${m.points}⭐.`;
+    },
+    run() {
+      // Better prepared evangelists (faith + word) win more souls.
+      const prep = 0.6 + (S.faith + S.word) / 250;
+      const souls = Math.max(0, Math.round(rand(m.souls[0], m.souls[1]) * prep));
+      S.souls += souls;
+      S.funds += m.pay;
+      grow('faith', 2 + m.level); grow('character', 1 + m.level);
+      const trial = chance(0.25 + m.level * 0.1) ? ' ' + pick(m.hard) : '';
+      return `${m.name}: ${souls ? `${souls} ${souls === 1 ? 'person' : 'people'} gave their lives to Christ! 🎉` : 'No one responded today, but seeds were sown.'}${trial} Missions stipend ${naira(m.pay)}.` + reward(3 + m.level * 3, m.points);
+    },
+  })),
+  // ---- role duties ----
+  {
+    id: 'gate', emoji: '🚧', name: 'Gate & Car Park Duty', energy: 30, once: true, role: 'security',
+    when: () => S.role === 'security',
+    avail: () => ['Sun', 'Wed', 'Fri'].includes(weekday()),
+    desc: () => 'Direct cars and watch the gate. (Service days)',
+    run() {
+      grow('character', 2); grow('faith', 2);
+      return 'You parked 60 cars without one scratch. The Head of Security nodded at you.' + reward(10, 6);
+    },
+  },
+  {
+    id: 'patrol', emoji: '🔦', name: 'Night Patrol', energy: 30, once: true, role: 'security',
+    when: () => S.role === 'security',
+    avail: () => ['Fri', 'Sat'].includes(weekday()),
+    desc: () => 'Guard the premises during vigil and on Saturday night.',
+    run() {
+      grow('character', 2);
+      return 'Quiet night. You prayed while you patrolled.' + reward(8, 5);
+    },
+  },
+  {
+    id: 'seat', emoji: '🪑', name: 'Usher at Service', energy: 30, once: true, role: 'usher',
+    when: () => S.role === 'usher',
+    avail: () => ['Sun', 'Wed', 'Fri'].includes(weekday()),
+    desc: () => 'Seat people and keep the aisles clear. (Service days)',
+    run() {
+      grow('character', 2); grow('faith', 2);
+      return 'You seated 200 people and found a front seat for a pregnant woman.' + reward(10, 6);
+    },
+  },
+  {
+    id: 'welcome', emoji: '👋', name: 'Welcome First-timers', energy: 15, once: true, role: 'usher',
+    when: () => S.role === 'usher',
+    avail: () => isSunday(),
+    desc: () => 'Smile, take their details, hand out welcome packs.',
+    run() {
+      grow('character', 3);
+      return 'Three first-timers said they will come back next week.' + reward(6, 4);
+    },
+  },
+  {
+    id: 'rehearse', emoji: '🎼', name: 'Choir Rehearsal', energy: 25, once: true, role: 'choir',
+    when: () => S.role === 'choir',
+    avail: () => ['Tue', 'Thu', 'Sat'].includes(weekday()),
+    desc: () => 'Practise Sunday\'s songs. (Tue, Thu, Sat)',
+    run() {
+      grow('faith', 3);
+      return 'You finally got the alto line right.' + reward(8, 4);
+    },
+  },
+  {
+    id: 'ministersong', emoji: '🎤', name: 'Minister in Song', energy: 30, once: true, role: 'choir',
+    when: () => S.role === 'choir',
+    avail: () => isSunday(),
+    desc: () => 'Lead the congregation in worship.',
+    run() {
+      grow('faith', 5);
+      return 'The whole church was on its feet. Some people were in tears.' + reward(12, 8);
+    },
+  },
+  {
+    id: 'sound', emoji: '🎚️', name: 'Run Sound & Projection', energy: 30, once: true, role: 'media',
+    when: () => S.role === 'media',
+    avail: () => ['Sun', 'Wed', 'Fri'].includes(weekday()),
+    desc: () => 'Mixer, lyrics on screen, livestream. (Service days)',
+    run() {
+      grow('character', 2);
+      return 'No feedback, lyrics on time, livestream steady. Nobody noticed you, which means you did it right.' + reward(10, 6);
+    },
+  },
+  {
+    id: 'clips', emoji: '✂️', name: 'Edit Sermon Clips', energy: 20, once: true, role: 'media',
+    when: () => S.role === 'media',
+    avail: () => !isSunday(),
+    desc: () => 'Post short clips on the church\'s pages.',
+    run() {
+      grow('word', 3);
+      return 'Your clip of last Sunday\'s sermon got 4,000 views.' + reward(6, 4);
+    },
+  },
+  {
+    id: 'cook', emoji: '🍲', name: 'Cook for the Programme', energy: 35, once: true, role: 'hospitality',
+    when: () => S.role === 'hospitality',
+    avail: () => ['Sun', 'Fri'].includes(weekday()),
+    desc: () => 'Jollof for workers and visitors. (Sun, Fri)',
+    run() {
+      grow('character', 3);
+      return 'Jollof finished. Everybody chopped. Nobody complained.' + reward(10, 6);
+    },
+  },
+  {
+    id: 'clean', emoji: '🧹', name: 'Clean the Church', energy: 25, once: true, role: 'hospitality',
+    when: () => S.role === 'hospitality',
+    avail: () => weekday() === 'Sat',
+    desc: () => 'Saturday sanitation, getting ready for Sunday.',
+    run() {
+      grow('character', 3);
+      return 'The auditorium is shining for Sunday.' + reward(8, 5);
+    },
+  },
+  {
+    id: 'teach', emoji: '🧒', name: 'Teach Sunday School', energy: 30, once: true, role: 'children',
+    when: () => S.role === 'children',
+    avail: () => isSunday(),
+    desc: () => 'Bible story, songs and a memory verse.',
+    run() {
+      grow('character', 3); grow('word', 2);
+      return 'The kids acted out David and Goliath. Little Ayo played Goliath and refused to fall down.' + reward(12, 7);
+    },
+  },
+  {
+    id: 'lesson', emoji: '✏️', name: 'Prepare Next Lesson', energy: 15, once: true, role: 'children',
+    when: () => S.role === 'children',
+    avail: () => !isSunday(),
+    desc: () => 'Plan Sunday\'s Bible story and craft.',
+    run() {
+      grow('word', 4);
+      return 'Lesson ready: Noah\'s ark with paper animals.' + reward(6, 3);
+    },
+  },
+  {
+    id: 'intercede', emoji: '🔥', name: 'Intercession Session', energy: 30, once: true, role: 'prayer',
+    when: () => S.role === 'prayer',
+    desc: () => 'Stand in the gap for the church and the nation.',
+    run() {
+      grow('faith', 7 * bonus('prayer'));
+      return 'You prayed for the church, the pastor, the sick and Nigeria.' + reward(10, 6);
+    },
+  },
+  {
+    id: 'prayerline', emoji: '☎️', name: 'Answer the Prayer Line', energy: 20, once: true, role: 'prayer',
+    when: () => S.role === 'prayer',
+    avail: () => !isSunday(),
+    desc: () => 'People call in with needs. Listen and pray with them.',
+    run() {
+      grow('character', 3); grow('faith', 2);
+      return 'A woman called crying about her son. You prayed with her for 20 minutes.' + reward(8, 5);
+    },
+  },
+  {
+    id: 'invite', emoji: '💌', name: 'Invite Someone to Church', energy: 15, once: true, role: 'worshipper',
+    when: () => S.role === 'worshipper',
+    desc: () => 'Your neighbour, a colleague, your barber.',
+    run() {
+      grow('character', 2);
+      return 'Your barber said he will come on Sunday. We shall see.' + reward(6, 4);
+    },
+  },
+  {
+    id: 'fellowship', emoji: '🏠', name: 'House Fellowship', energy: 25, once: true, role: 'worshipper',
+    when: () => S.role === 'worshipper',
+    avail: () => ['Tue', 'Thu'].includes(weekday()),
+    desc: () => 'Bible study and gist in a member\'s living room. (Tue, Thu)',
+    run() {
+      grow('faith', 4); grow('word', 3);
+      return 'Good word, good small chops, good people.' + reward(8, 5);
+    },
+  },
+  {
+    id: 'explore', emoji: '🔎', name: 'Ask Questions About the Faith', energy: 15, once: true, role: 'visitor',
+    when: () => S.role === 'visitor',
+    desc: () => 'Chat with a member after service or online.',
+    run() {
+      grow('word', 3); grow('faith', 2);
+      return 'You asked why Christians pray in Jesus\' name. The answer made sense.' + reward(8, 4);
+    },
+  },
+  {
+    id: 'followup', emoji: '🚪', name: 'Receive a Follow-up Visit', energy: 10, once: true, role: 'visitor',
+    when: () => S.role === 'visitor',
+    avail: () => weekday() === 'Tue',
+    desc: () => 'Someone from the church comes to check on you. (Tue)',
+    run() {
+      grow('faith', 4);
+      return 'Sister Funke visited with biscuits and a smile. You feel welcome.' + reward(6, 3);
+    },
+  },
+  {
+    id: 'changerole', emoji: '🔄', name: 'Change Role', energy: 0,
+    when: () => !isPastor(),
+    desc: () => 'Serve somewhere else. Your rank starts over.',
+    run() { chooseRole(); return null; },
+  },
+  // ---- distractions: the devil is busy ----
+  {
+    id: 'viewing', emoji: '⚽', name: 'Football at the Viewing Centre', energy: 0, once: true, shady: true,
+    when: () => !isPastor(),
+    avail: () => isSunday() && !S.doneToday.sunday,
+    cost: () => 500,
+    desc: () => 'Big match this morning. Church can wait... abi?',
+    run() {
+      S.doneToday.sunday = true;
+      S.skippedSunday = true;
+      grow('faith', -6);
+      S.energy = Math.min(100, S.energy + 15);
+      return 'Your team won 2-1! But you missed church. -6 faith, +15 energy.';
+    },
+  },
+  {
+    id: 'sleepin', emoji: '🛌', name: 'Sleep In on Sunday', energy: 0, once: true, shady: true,
+    when: () => !isPastor(),
+    avail: () => isSunday() && !S.doneToday.sunday,
+    desc: () => 'Your bed is calling you. Just this once.',
+    run() {
+      S.doneToday.sunday = true;
+      S.skippedSunday = true;
+      S.energy = Math.min(100, S.energy + 25);
+      grow('faith', -4);
+      return 'You slept till 1pm. +25 energy, but you missed church. -4 faith.';
+    },
+  },
+  {
+    id: 'bet', emoji: '🎰', name: 'Bet on Football', energy: 5, shady: true,
+    cost: () => 1000,
+    desc: () => 'Stake ₦1,000. "Sure banker" from your guy.',
+    run() {
+      const won = chance(0.3);
+      if (won) S.funds += 3500;
+      return (won ? 'You won ₦3,500! The devil smiles. ' : 'You lost ₦1,000. "Next one go enter." ') + fall('gambling', 4);
+    },
+  },
+  {
+    id: 'owambe', emoji: '🎉', name: 'Owambe Instead of Vigil', energy: 0, once: true, shady: true,
+    when: () => !isPastor(),
+    avail: () => weekday() === 'Fri' && !S.doneToday.mvigil,
+    desc: () => 'Owambe in Surulere: jollof, small chops, DJ. Vigil will still be there next week.',
+    run() {
+      S.doneToday.mvigil = true;
+      S.energy = Math.min(100, S.energy + 20);
+      grow('faith', -5);
+      S.points += 2;
+      return 'You danced till 2am. +20 energy, +2⭐, but -5 faith.';
+    },
+  },
+  {
+    id: 'beer', emoji: '🍺', name: 'Gist at the Beer Parlour', energy: 10, once: true, shady: true,
+    cost: () => 1500,
+    desc: () => 'Pepper soup, cold drink, plenty gist about people.',
+    run() {
+      grow('faith', -3);
+      return 'Good pepper soup. Plenty gossip. ' + fall('gossip and drunkenness', 4);
+    },
+  },
+  {
+    id: 'yahoo', emoji: '💻', name: 'Join the "Yahoo" Boys', energy: 30, once: true, shady: true,
+    when: () => !isPastor(),
+    desc: () => 'Your old friend says one "client" pays more than a year of work.',
+    run() {
+      const m = S.salary * rand(8, 15);
+      S.funds += m;
+      S.frauds += 1;
+      return `You got ${naira(m)} from a "client" abroad. ` + fall('fraud', 15);
+    },
   },
   // ---- pastoral ministry ----
   {
@@ -509,10 +931,13 @@ const ACTIONS = [
 
 const actionName = (a) => typeof a.name === 'function' ? a.name() : a.name;
 
+const energyOf = (a) => a.energyFn ? a.energyFn() : a.energy;
+
 function canDo(a) {
   if (S.over) return false;
-  if (S.energy < a.energy) return false;
+  if (S.energy < energyOf(a)) return false;
   if (a.once && S.doneToday[a.id]) return false;
+  if (a.limit && (S.doneToday[a.id] || 0) >= a.limit) return false;
   if (a.avail && !a.avail()) return false;
   if (a.cost && S.funds < a.cost()) return false;
   return true;
@@ -521,9 +946,10 @@ function canDo(a) {
 function doAction(id) {
   const a = ACTIONS.find((x) => x.id === id);
   if (!a || (a.when && !a.when()) || !canDo(a)) return;
-  S.energy -= a.energy;
+  S.energy -= energyOf(a);
   if (a.cost) S.funds -= a.cost();
   if (a.once) S.doneToday[a.id] = true;
+  if (a.limit) S.doneToday[a.id] = (S.doneToday[a.id] || 0) + 1;
   const msg = a.run();
   if (msg) { log(msg); toast(msg); }
   afterChange();
@@ -536,16 +962,52 @@ const examNeed = () => 25 + S.semester * 15; // 40, 55, 70
 const BIBLE_SCHOOL_FEE = 60000;
 
 function milestone() {
+  return isMinister() ? ministerMilestone() : roleMilestone();
+}
+
+// Non-minister roles: baptism (except visitors), then two promotions.
+function roleMilestone() {
+  const r = ROLES[S.role];
+  if (S.role !== 'visitor' && S.stage === 0) return baptismMilestone();
+  if (S.rank >= 2) return null;
+  const next = S.rank + 1;
+  const need = RANK_XP[next];
+  const reqs = [[`Experience ${Math.min(S.xp, need)}/${need}`, S.xp >= need]];
+  if (next === 1) reqs.push(['Faith 40+', S.faith >= 40], ['Character 50+', S.character >= 50]);
+  else reqs.push(['Faith 60+', S.faith >= 60], ['Character 70+', S.character >= 70], ['No unconfessed sin', !S.convicted]);
+  return {
+    label: `Become ${r.ranks[next]}`, emoji: r.emoji, reqs,
+    go: () => {
+      S.rank = next;
+      S.points += 25 * next;
+      if (S.role === 'visitor' && next === 2) {
+        S.role = 'worshipper';
+        S.rank = 1;
+        showModal('🎉', 'Welcome to the family!', `You are now a member of ${S.church}. You can serve in any department with "Change Role".\n\n${verseText(V_GLAD)}`, [{ label: 'Halleluyah! 🙌' }]);
+      } else {
+        showModal(r.emoji, 'Promoted!', `You are now ${r.ranks[next]}. +${25 * next}⭐\n\n${verseText(r.verse || V_HEARTILY)}`, [{ label: 'To God be the glory' }]);
+      }
+      log(`Promoted to ${title()}.`);
+    },
+  };
+}
+
+function baptismMilestone() {
+  return {
+    label: 'Get baptized', emoji: '💧',
+    reqs: [['Attend 2 services or vigils', S.services >= 2], ['Faith 30+', S.faith >= 30]],
+    go: () => {
+      S.stage = 1;
+      S.points += 20;
+      showModal('💧', 'Baptized!', `You went down into the water and came up a new creation. The whole church rejoiced! +20⭐\n\n${verseText(V_BAPTISM)}`, [{ label: 'Halleluyah! 🙌' }]);
+      log('You were baptized! 💧');
+    },
+  };
+}
+
+function ministerMilestone() {
   switch (S.stage) {
-    case 0: return {
-      label: 'Get baptized', emoji: '💧',
-      reqs: [['Attend 2 services or vigils', S.services >= 2], ['Faith 30+', S.faith >= 30]],
-      go: () => {
-        S.stage = 1;
-        showModal('💧', 'Baptized!', `You went down into the water and came up a new creation. The whole church rejoiced!\n\n${verseText(V_BAPTISM)}`, [{ label: 'Halleluyah! 🙌' }]);
-        log('You were baptized! 💧');
-      },
-    };
+    case 0: return baptismMilestone();
     case 1: return {
       label: 'Join a department', emoji: '🧤',
       reqs: [['Attend 6 services or vigils', S.services >= 6], ['Faith 45+', S.faith >= 45], ['Character 50+', S.character >= 50]],
@@ -629,6 +1091,78 @@ function finishExam(score) {
   afterChange();
 }
 
+/* ---------------- prayer wall ---------------- */
+
+function prayForRequest() {
+  const [who, text] = SAMPLE_REQUESTS[(S.prayed + S.day) % SAMPLE_REQUESTS.length];
+  showModal('🤲', `${who}'s request`, `"${text}"\n\n${verseText(V_PRAYER)}`, [
+    { label: '🙏 Pray for them', fn: () => {
+      S.prayed += 1;
+      grow('faith', 2); grow('character', 1);
+      const msg = `You prayed for ${who}.` + reward(S.role === 'prayer' ? 3 : 1, 2);
+      log(msg); toast(msg); afterChange();
+    } },
+  ]);
+}
+
+function postRequest() {
+  const el = $('req-text');
+  const text = el.value.trim().slice(0, 200);
+  if (!text) return;
+  S.requests.unshift({ id: Date.now(), text, day: S.day, answered: false });
+  if (S.requests.length > 20) S.requests.length = 20;
+  el.value = '';
+  log('You posted a prayer request.');
+  toast('Request posted. Keep trusting God. 🙏');
+  afterChange();
+}
+
+function markAnswered(id) {
+  const r = S.requests.find((x) => x.id === id);
+  if (!r || r.answered) return;
+  r.answered = true;
+  S.testimonies += 1;
+  grow('faith', 6);
+  S.points += 15;
+  log(`Testimony! God answered: "${r.text}"`);
+  showModal('🎉', 'Testimony!', `"${r.text}"\n\nGod answered your prayer. Share your testimony and encourage someone. +15⭐`, [
+    { label: '📤 Share testimony', fn: openShare },
+    { label: 'Thank You, Jesus 🙌' },
+  ]);
+  afterChange();
+}
+
+/* ---------------- shop ---------------- */
+
+function buyItem(id) {
+  const it = SHOP.find((x) => x.id === id);
+  if (!it || S.items[id] || S.over) return;
+  if (it.naira && S.funds < it.naira) return;
+  if (it.points && S.points < it.points) return;
+  if (it.naira) S.funds -= it.naira;
+  if (it.points) S.points -= it.points;
+  S.items[id] = true;
+  log(`Bought ${it.name} ${it.emoji}`);
+  toast(`${it.emoji} ${it.name} is yours!`);
+  afterChange();
+}
+
+/* ---------------- roles ---------------- */
+
+function chooseRole() {
+  const ids = Object.keys(ROLES).filter((id) => id !== S.role);
+  showModal('🔄', 'Where will you serve?', 'Your rank in the new role starts from the beginning.', ids.map((id) => ({
+    label: `${ROLES[id].emoji} ${ROLES[id].name}`,
+    fn: () => {
+      S.role = id;
+      S.rank = 0;
+      S.xp = 0;
+      log(`You now serve as: ${ROLES[id].name}.`);
+      afterChange();
+    },
+  })).concat([{ label: 'Stay where I am' }]));
+}
+
 /* ---------------- build / upgrades ---------------- */
 
 function choirCost() { return 20000 * Math.pow(S.choir + 1, 2); }
@@ -683,7 +1217,12 @@ function openBranch(id) {
 
 // Character hitting zero is the one way to lose: for a pastor, EFCC; before that, church discipline.
 function checkCollapse() {
-  if (S.over || S.character > 0) return false;
+  if (S.over) return false;
+  if (S.frauds >= 3 && chance(0.5)) {
+    gameOver('🚓', 'EFCC dey come!', `EFCC traced the "client" money to ${S.name}'s account. Arrested on day ${S.day}.\n\n${verseText(V_REAP)}`);
+    return true;
+  }
+  if (S.character > 0) return false;
   if (isPastor()) {
     gameOver('🚓', 'EFCC dey come!', `After ${S.day} days, EFCC invited Pastor ${S.name} "for questioning" over the oil, the seeds and the money. ${S.church} is in the newspapers for the wrong reasons.\n\n${verseText(V_REAP)}`);
   } else {
@@ -758,12 +1297,32 @@ function endDay() {
     grow('fame', -0.5);
   }
 
+  // Free will: skipping church has consequences, showing up builds a streak.
+  if (wasSunday && !isPastor()) {
+    if (S.doneToday.sunday && !S.skippedSunday) {
+      S.streak += 1;
+      const b = Math.min(5 * S.streak, 30);
+      S.points += b;
+      report.push(`Sunday streak: ${S.streak} week${S.streak === 1 ? '' : 's'}! +${b}⭐`);
+    } else {
+      S.streak = 0;
+      S.missedSundays += 1;
+      grow('faith', -6);
+      if (S.role !== 'visitor' && S.role !== 'worshipper' && S.role !== 'minister') S.xp = Math.max(0, S.xp - 5);
+      report.push(S.role === 'visitor' ? 'You did not go to church today.' : `You missed Sunday service. Your ${isMinister() || S.role === 'worshipper' ? 'cell leader' : 'Head of Department'} called to ask if you are okay. -6 faith.`);
+    }
+  }
+  S.skippedSunday = false;
+
   grow('faith', -1.5);
   grow('word', -0.5);
   if (S.convicted) grow('character', -1);
+  S.hunger = clamp(S.hunger - 30, 0, 100);
 
   S.day += 1;
-  S.energy = 100;
+  S.energy = S.hunger < 25 ? 70 : 100;
+  if (S.items.bike) S.energy = Math.min(100, S.energy + 10);
+  if (S.hunger < 25) report.push('You went to bed hungry. Less energy today. Eat something!');
   S.doneToday = {};
 
   if (report.length) log(report.join(' '));
@@ -789,10 +1348,12 @@ function endDay() {
 
   if (isPastor() && S.character < 30 && S.fame > 25 && chance(0.15)) return runEvent(EVENTS.find((e) => e.id === 'expose'));
   if (isPastor() && S.day % 30 === 0) return runEvent(EVENTS.find((e) => e.id === 'harvest'));
-  if (chance(0.5)) {
-    const pool = EVENTS.filter((e) => !e.special && (!e.cond || e.cond()));
-    if (pool.length) runEvent(pick(pool));
-  }
+  // The devil is busy: a temptation most nights, otherwise a life event.
+  const ok = (e) => !e.special && (!e.cond || e.cond());
+  const tempts = EVENTS.filter((e) => e.tempt && ok(e));
+  const life = EVENTS.filter((e) => !e.tempt && ok(e));
+  if (tempts.length && chance(0.45)) runEvent(pick(tempts));
+  else if (life.length && chance(0.45)) runEvent(pick(life));
 }
 
 /* ---------------- events ---------------- */
@@ -800,7 +1361,7 @@ function endDay() {
 const EVENTS = [
   // ---- temptations ----
   {
-    id: 'gossip', emoji: '🗣️', title: 'Gossip after service',
+    id: 'gossip', tempt: true, emoji: '🗣️', title: 'Gossip after service',
     text: () => 'Some sisters are whispering about the choir leader\'s marriage. "Did you hear...?"',
     choices: [
       { label: 'Join the gist', fn: () => fall('gossip') },
@@ -808,15 +1369,15 @@ const EVENTS = [
     ],
   },
   {
-    id: 'traffic', emoji: '🚌', title: 'Danfo driver wahala',
-    text: () => 'A danfo driver hit your side mirror, then insulted you loudly in traffic.',
+    id: 'traffic', tempt: true, emoji: '🚌', title: 'Danfo wahala at Ojuelegba',
+    text: () => 'A danfo driver hit your side mirror at Ojuelegba, then insulted you loudly in traffic.',
     choices: [
       { label: 'Give it back to him!', fn: () => fall('anger') },
       { label: 'Forgive and let it go', fn: () => { grow('character', 5); return `You forgave him. +5 character.\n${V_FORGIVE[0]}`; } },
     ],
   },
   {
-    id: 'receipts', emoji: '🧾', title: 'Inflate the receipt?',
+    id: 'receipts', tempt: true, emoji: '🧾', title: 'Inflate the receipt?',
     cond: () => !isPastor(),
     text: () => `Your boss wants you to inflate a supplier receipt. "Na small thing. I'll add ${naira(S.salary * 3)} for you."`,
     choices: [
@@ -825,7 +1386,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'wallet', emoji: '👛', title: 'Found a wallet',
+    id: 'wallet', tempt: true, emoji: '👛', title: 'Found a wallet',
     text: () => 'You found a wallet with ₦50,000 and an ID card at the bus stop.',
     choices: [
       { label: 'Keep it', fn: () => { S.funds += 50000; return fall('stealing'); } },
@@ -833,7 +1394,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'leak', emoji: '📄', title: 'Exam questions leaked',
+    id: 'leak', tempt: true, emoji: '📄', title: 'Exam questions leaked',
     cond: () => S.stage === 3,
     text: () => 'A classmate whispers: "I have the exam questions. Want them?"',
     choices: [
@@ -842,7 +1403,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'pride', emoji: '🏆', title: 'Praise from everyone',
+    id: 'pride', tempt: true, emoji: '🏆', title: 'Praise from everyone',
     cond: () => isPastor() && S.members >= 100,
     text: () => 'After a powerful service, people are calling you "the greatest man of God in this city".',
     choices: [
@@ -851,7 +1412,7 @@ const EVENTS = [
     ],
   },
   {
-    id: 'deacon', emoji: '💼', title: 'Rich member, one request',
+    id: 'deacon', tempt: true, emoji: '💼', title: 'Rich member, one request',
     cond: () => isPastor() && S.members >= 30,
     text: () => `Chief Okafor will donate ${naira(S.members * 2000)}... if you make him a Deacon. He hasn't attended service in months.`,
     choices: [
@@ -860,12 +1421,134 @@ const EVENTS = [
     ],
   },
   {
-    id: 'politician', emoji: '🎩', title: 'A politician\'s offer',
+    id: 'politician', tempt: true, emoji: '🎩', title: 'A politician\'s offer',
     cond: () => isPastor() && S.members >= 150,
     text: () => `Honourable "Dividends" offers ${naira(S.members * 3000)} if you tell your members to vote for him.`,
     choices: [
       { label: 'Accept the money', fn: () => { S.funds += S.members * 3000; grow('fame', 5); return fall('selling the pulpit'); } },
       { label: 'Pray for him, decline the money', fn: () => { grow('character', 6); return 'You prayed for him and kept the pulpit pure. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'yahooinvite', tempt: true, emoji: '💻', title: 'Easy money?',
+    cond: () => !isPastor(),
+    text: () => 'Your secondary school friend from Festac just bought a Benz. "Guy, come join us. Na just chatting with oyinbo people online."',
+    choices: [
+      { label: 'Join him', fn: () => { const m = S.salary * 10; S.funds += m; S.frauds += 1; return `First "client" paid ${naira(m)}. ` + fall('fraud', 15); } },
+      { label: 'No. I will work honestly', fn: () => { grow('character', 6); return 'He laughed at you. You slept peacefully. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'flirt', tempt: true, emoji: '📩', title: '"Good morning dear"',
+    text: () => 'A married colleague keeps sending you late-night "Good morning dear 😘" messages.',
+    choices: [
+      { label: 'Reply with heart emojis', fn: () => fall('flirting with a married person', 8) },
+      { label: 'Set boundaries politely', fn: () => { grow('character', 5); return 'You told them clearly to stop. +5 character.'; } },
+    ],
+  },
+  {
+    id: 'beach', tempt: true, emoji: '🏖️', title: 'Beach party, Sunday morning',
+    cond: () => weekday() === 'Sun' && !isPastor(),
+    text: () => 'Your friends call: "Boat ride to Tarkwa Bay beach today! Skip church jare, God understands."',
+    choices: [
+      { label: 'Go to the beach', fn: () => { S.doneToday.sunday = true; S.skippedSunday = true; grow('faith', -6); S.points += 3; return 'Suya, music and sun. +3⭐, but you missed church. -6 faith.'; } },
+      { label: 'Go to church, beach later', fn: () => { grow('character', 3); return 'You chose God first. +3 character.'; } },
+    ],
+  },
+  {
+    id: 'derica', tempt: true, emoji: '⚖️', title: 'The small paint bucket',
+    cond: () => S.job === 'Market trader',
+    text: () => 'Your neighbour at the market uses a smaller "derica" to measure rice. "Everybody dey do am. You go make more money."',
+    choices: [
+      { label: 'Use the small bucket', fn: () => { S.funds += S.salary * 2; return fall('cheating customers', 7); } },
+      { label: 'Keep honest measures', fn: () => { grow('character', 5); return 'Your customers trust you. One brought her sister to buy from you. +5 character.'; } },
+    ],
+  },
+  {
+    id: 'bribepark', tempt: true, emoji: '🚗', title: 'Park in the pastor\'s spot',
+    cond: () => S.role === 'security',
+    text: () => 'A big man in a Range Rover offers you ₦5,000 to let him park in the space reserved for the elderly.',
+    choices: [
+      { label: 'Collect the money', fn: () => { S.funds += 5000; return fall('taking a bribe', 8); } },
+      { label: 'Politely direct him elsewhere', fn: () => { grow('character', 6); S.xp += 4; return 'He grumbled, but the Chief Security Officer saw it. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'lostchild', emoji: '🧒', title: 'Lost child at the gate',
+    cond: () => S.role === 'security',
+    text: () => 'A crying 4-year-old is wandering near the gate during service.',
+    choices: [{ label: 'Calm her and find her mum', fn: () => { grow('character', 5); return 'You found her mother inside. She hugged you and cried.' + reward(6, 8); } }],
+  },
+  {
+    id: 'offeringbag', tempt: true, emoji: '👜', title: 'The offering bag',
+    cond: () => S.role === 'usher',
+    text: () => 'After service you are alone with the offering bag before counting. Nobody would notice ₦2,000 missing.',
+    choices: [
+      { label: 'Take ₦2,000 "for transport"', fn: () => { S.funds += 2000; return fall('stealing from God\'s house', 12); } },
+      { label: 'Hand it over sealed', fn: () => { grow('character', 6); S.xp += 4; return 'The Head Usher trusts you more than ever. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'frontseat', emoji: '💺', title: '"I must sit in front"',
+    cond: () => S.role === 'usher',
+    text: () => 'A latecomer insists on the reserved front row because she "gave the biggest offering last week".',
+    choices: [
+      { label: 'Find her a good seat kindly', fn: () => { grow('character', 3); return 'She calmed down and even smiled at the end.' + reward(4, 3); } },
+      { label: 'Give her the reserved seat', fn: () => { grow('character', -2); return 'The visiting elderly couple had to stand. -2 character.'; } },
+    ],
+  },
+  {
+    id: 'solo', tempt: true, emoji: '🎤', title: 'They gave the solo to her',
+    cond: () => S.role === 'choir',
+    text: () => 'The Choir Director gave the Sunday solo to the new chorister instead of you.',
+    choices: [
+      { label: 'Gossip about her voice', fn: () => fall('envy', 7) },
+      { label: 'Support her and sing your part', fn: () => { grow('character', 6); return 'She nailed it, and thanked you after. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'nepa', emoji: '⚡', title: 'NEPA took light mid-service',
+    cond: () => S.role === 'media',
+    text: () => 'Power went off during the sermon and the livestream dropped.',
+    choices: [
+      { label: 'Switch to the generator fast', fn: () => { grow('character', 3); return 'Back live in 40 seconds. The pastor gave you a thumbs up.' + reward(6, 5); } },
+      { label: 'Wait for NEPA', fn: () => { S.xp = Math.max(0, S.xp - 3); return 'NEPA did not come back. 300 people online left.'; } },
+    ],
+  },
+  {
+    id: 'editmistake', tempt: true, emoji: '🎞️', title: '"Cut that part"',
+    cond: () => S.role === 'media',
+    text: () => 'A deacon asks you to edit the video so it looks like he gave a big offering he never gave.',
+    choices: [
+      { label: 'Edit it for him', fn: () => fall('deception', 7) },
+      { label: 'Refuse respectfully', fn: () => { grow('character', 6); return 'He was annoyed, but you kept your integrity. +6 character.'; } },
+    ],
+  },
+  {
+    id: 'meat', tempt: true, emoji: '🍗', title: 'Extra meat',
+    cond: () => S.role === 'hospitality',
+    text: () => 'There is extra chicken after the programme. Another volunteer is wrapping some to take home.',
+    choices: [
+      { label: 'Wrap some too', fn: () => { S.hunger = clamp(S.hunger + 30, 0, 100); return 'Your belle is happy. ' + fall('taking what was not yours', 5); } },
+      { label: 'Ask the HOD what to do with it', fn: () => { grow('character', 4); S.hunger = clamp(S.hunger + 20, 0, 100); return 'The HOD shared it among all the volunteers. You got some too!'; } },
+    ],
+  },
+  {
+    id: 'naughty', emoji: '🙃', title: 'Naughty child',
+    cond: () => S.role === 'children',
+    text: () => 'A boy keeps disrupting the class and threw crayons at a girl.',
+    choices: [
+      { label: 'Talk to him gently', fn: () => { grow('character', 4); return 'He told you his parents fight at home. You prayed with him.' + reward(6, 5); } },
+      { label: 'Shout at him', fn: () => fall('anger', 5) },
+    ],
+  },
+  {
+    id: 'cursereq', tempt: true, emoji: '🗡️', title: '"Pray my enemy should die"',
+    cond: () => S.role === 'prayer',
+    text: () => 'Someone on the prayer line asks you to pray that their business rival "falls down and dies".',
+    choices: [
+      { label: 'Pray "fire" on the enemy', fn: () => fall('cursing', 6) },
+      { label: 'Pray for both of them', fn: () => { grow('character', 5); grow('faith', 3); return 'You prayed for peace and blessing for both. +5 character.'; } },
     ],
   },
   // ---- blessings & life ----
@@ -990,10 +1673,14 @@ function afterChange() {
 
 function render() {
   if (!S) return;
-  $('hud-church').textContent = S.church;
+  $('hud-church').textContent = `${S.church} · ${S.area}`;
   $('hud-title').textContent = `${title()} ${S.name}`;
   $('hud-repent').classList.toggle('hidden', !S.convicted);
   $('hud-day').textContent = `Day ${S.day} · ${weekday()}`;
+  $('hud-points').textContent = S.points;
+  const [me, mt] = mood();
+  $('hud-mood').textContent = `${me} ${mt}`;
+  $('hud-mood').dataset.mood = mt.toLowerCase();
   $('hud-energy').textContent = S.energy;
   $('hud-energy-bar').style.width = S.energy + '%';
   setStat('hud-funds', naira(S.funds), isPastor() && S.funds < rent());
@@ -1010,15 +1697,18 @@ function render() {
   } else {
     setStat('hud-word', Math.round(S.word), false);
     setMeter('meter-word', S.word, false);
-    setStat('hud-members', S.services, false);
+    setStat('hud-members', S.hunger < 25 ? 'Hungry' : Math.round(S.hunger), S.hunger < 25);
+    setMeter('meter-food', S.hunger, S.hunger < 25);
     setStat('hud-venue', S.job, false);
   }
   $('hud-energy-meter').setAttribute('aria-valuenow', S.energy);
   $('verse').textContent = `“${verseOfDay()[1]}” — ${verseOfDay()[0]}`;
-  $('tab-btn-build').classList.toggle('hidden', !isPastor());
   $('btn-endday').disabled = S.over;
+  $('btn-view').setAttribute('aria-label', S.view === 'home' ? 'Show church' : 'Show home');
+  $('btn-view').querySelector('span').textContent = S.view === 'home' ? 'Church' : 'Home';
   renderMinistry();
-  if (isPastor()) renderBuild();
+  renderPrayer();
+  renderBuild();
   renderLog();
   icons();
   if (window.World) World.update(S);
@@ -1096,21 +1786,26 @@ function renderMinistry() {
   root.innerHTML = '';
   renderJourney(root);
   const visible = ACTIONS.filter((a) => !a.when || a.when());
+  const duties = ACTIONS.filter((a) => a.role && a.role === S.role).map((a) => a.id);
   const groups = isPastor()
     ? [['Shepherd the flock', ['service', 'evangelism', 'vigil', 'counsel', 'charity', 'crusade']],
-       ['Your walk with God', ['repent', 'pray', 'read', 'work']],
-       ['Shortcuts (temptation)', ['oil', 'seed', 'poach']]]
+       ['Your walk with God', ['repent', 'pray', 'read']],
+       ['Daily life', ['work', 'buka', 'cook']],
+       ['Distractions 😈 the devil is busy', ['oil', 'seed', 'poach', 'bet', 'beer']]]
     : [['Your walk with God', ['repent', 'sunday', 'biblestudy', 'mvigil', 'pray', 'read', 'witness', 'serve', 'help']],
+       [`Your duty · ${ROLES[S.role].emoji} ${ROLES[S.role].name}`, [...duties, 'changerole']],
+       ['Evangelism missions 📢 harder = more pay', MISSIONS.map((m) => m.id)],
        ['Bible School', ['lecture', 'exam']],
-       ['Daily life', ['work']]];
+       ['Daily life', ['work', 'buka', 'cook']],
+       ['Distractions 😈 the devil is busy', ['viewing', 'sleepin', 'owambe', 'bet', 'beer', 'yahoo']]];
   for (const [label, ids] of groups) {
     const list = ids.map((id) => visible.find((a) => a.id === id)).filter(Boolean);
     if (!list.length) continue;
     root.appendChild(sectionTitle(label));
     for (const a of list) {
-      const parts = [`⚡${a.energy}`];
+      const parts = [`⚡${energyOf(a)}`];
       if (a.cost && a.cost() > 0) parts.push(naira(a.cost()));
-      if (a.once && S.doneToday[a.id]) parts.push('done today');
+      if ((a.once && S.doneToday[a.id]) || (a.limit && (S.doneToday[a.id] || 0) >= a.limit)) parts.push('done today');
       const cls = a.id === 'repent' ? 'repent' : a.shady ? 'shady' : '';
       root.appendChild(actionButton({
         emoji: a.emoji, name: actionName(a), desc: a.desc(), cost: parts.join('<br>'),
@@ -1120,9 +1815,82 @@ function renderMinistry() {
   }
 }
 
+function renderPrayer() {
+  const root = $('tab-prayer');
+  root.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'prayer-hero';
+  intro.innerHTML = '<div class="prayer-count"><strong></strong><span>requests you have prayed for</span></div><p class="prayer-verse"></p>';
+  intro.querySelector('strong').textContent = S.prayed;
+  intro.querySelector('.prayer-verse').textContent = `"${V_REQUEST[1]}" — ${V_REQUEST[0]}`;
+  root.appendChild(intro);
+
+  root.appendChild(sectionTitle('Prayer room'));
+  for (const id of ['prayroom', 'prayfor', 'mountain']) {
+    const a = ACTIONS.find((x) => x.id === id);
+    const parts = [`⚡${energyOf(a)}`];
+    if (a.cost) parts.push(naira(a.cost()));
+    root.appendChild(actionButton({ emoji: a.emoji, name: actionName(a), desc: a.desc(), cost: parts.join('<br>'), disabled: !canDo(a), onClick: () => doAction(a.id) }));
+  }
+  const note = document.createElement('p');
+  note.className = 'note';
+  note.textContent = 'The requests on the wall are examples for now. When multiplayer launches, they will be real requests from real people, and others will pray for yours.';
+  root.appendChild(note);
+
+  root.appendChild(sectionTitle('Your prayer requests'));
+  const form = document.createElement('div');
+  form.className = 'req-form';
+  form.innerHTML = '<label for="req-text" class="sr-only">Your prayer request</label><textarea id="req-text" maxlength="200" rows="2" placeholder="What should we pray about?"></textarea><button class="btn primary" id="req-post"><i data-lucide="send"></i>Post</button>';
+  form.querySelector('#req-post').addEventListener('click', postRequest);
+  root.appendChild(form);
+  if (!S.requests.length) {
+    const empty = document.createElement('p');
+    empty.className = 'note';
+    empty.textContent = 'No requests yet. Philippians 4:6 says: in everything, let your requests be made known unto God.';
+    root.appendChild(empty);
+  }
+  for (const r of S.requests) {
+    const card = document.createElement('div');
+    card.className = 'req' + (r.answered ? ' answered' : '');
+    const t = document.createElement('p');
+    t.textContent = r.text;
+    const meta = document.createElement('div');
+    meta.className = 'req-meta';
+    meta.textContent = r.answered ? `🎉 Answered · posted day ${r.day}` : `Posted day ${r.day}`;
+    card.append(t, meta);
+    if (!r.answered) {
+      const b = document.createElement('button');
+      b.className = 'btn secondary sm';
+      b.textContent = 'God answered! 🙌';
+      b.addEventListener('click', () => markAnswered(r.id));
+      card.appendChild(b);
+    }
+    root.appendChild(card);
+  }
+}
+
 function renderBuild() {
   const root = $('tab-build');
   root.innerHTML = '';
+
+  const wallet = document.createElement('div');
+  wallet.className = 'wallet';
+  wallet.innerHTML = '<div><span>Naira</span><strong id="w-naira"></strong></div><div><span>Points</span><strong id="w-points"></strong></div>';
+  wallet.querySelector('#w-naira').textContent = naira(S.funds);
+  wallet.querySelector('#w-points').textContent = `${S.points}⭐`;
+  root.appendChild(wallet);
+
+  root.appendChild(sectionTitle('Shop'));
+  for (const it of SHOP) {
+    const owned = !!S.items[it.id];
+    const price = it.naira ? naira(it.naira) : `${it.points}⭐`;
+    const afford = it.naira ? S.funds >= it.naira : S.points >= it.points;
+    root.appendChild(actionButton({
+      emoji: it.emoji, name: it.name, desc: it.desc, cost: owned ? '✅' : price,
+      disabled: S.over || owned || !afford, onClick: () => buyItem(it.id), cls: owned ? 'owned' : '',
+    }));
+  }
+  if (!isPastor()) return;
 
   root.appendChild(sectionTitle('Venue'));
   const next = VENUES[S.venue + 1];
@@ -1224,7 +1992,7 @@ const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
 function shareLine() {
   if (S.over) return `EFCC came for Pastor ${S.name} on day ${S.day} 😭`;
   if (isPastor()) return `I became ${title()} in ${days(S.day)} 🙌`;
-  return `I'm now a ${STAGES[S.stage]} after ${days(S.day)} 🙏`;
+  return `I'm now ${title()} at ${S.church} after ${days(S.day)} 🙏`;
 }
 
 function drawShareCard() {
@@ -1259,7 +2027,7 @@ function drawShareCard() {
   x.textAlign = 'left';
   x.fillStyle = ink;
   x.font = 'bold 60px "Space Grotesk", system-ui, sans-serif';
-  x.fillText('Pastor Life', 214, 138);
+  x.fillText('Amen City', 214, 138);
 
   // headline on a tilted pink highlight
   x.save();
@@ -1278,7 +2046,7 @@ function drawShareCard() {
 
   const rows = isPastor()
     ? [['👥 Members', num(S.members), '#bfdbfe'], [venue().emoji + ' Venue', venue().name, '#fde047'], ['🙏 Faith', Math.round(S.faith) + '/100', '#c4b5fd'], ['🍇 Character', Math.round(S.character) + '/100', '#86efac']]
-    : [['🙏 Faith', Math.round(S.faith) + '/100', '#c4b5fd'], ['📖 Word', Math.round(S.word) + '/100', '#bfdbfe'], ['🍇 Character', Math.round(S.character) + '/100', '#86efac'], ['💧 Repentances', String(S.repentances), '#fde047']];
+    : [['🙏 Faith', Math.round(S.faith) + '/100', '#c4b5fd'], ['🙌 Souls won', String(S.souls), '#bfdbfe'], ['🍇 Character', Math.round(S.character) + '/100', '#86efac'], ['⭐ Points', String(S.points), '#fde047']];
   const cw = 420, ch = 130, gx = 40;
   rows.forEach(([k, v, col], i) => {
     const l = W / 2 - cw - gx / 2 + (i % 2) * (cw + gx);
@@ -1332,12 +2100,12 @@ function roundRect(x, l, t, w, h, r) {
 
 function openShare() {
   drawShareCard();
-  const text = `${shareLine()} in Pastor Life ⛪ Start your own faith journey: ${GAME_URL}`;
+  const text = `${shareLine()} in Amen City ⛪ Start your own faith journey: ${GAME_URL}`;
   $('btn-share-wa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
   $('btn-share-x').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text);
   $('btn-share-native').onclick = () => {
     $('share-canvas').toBlob(async (blob) => {
-      const file = new File([blob], 'pastor-life.png', { type: 'image/png' });
+      const file = new File([blob], 'amen-city.png', { type: 'image/png' });
       try {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], text });
@@ -1354,7 +2122,7 @@ function openShare() {
 
 function downloadCard() {
   const a = document.createElement('a');
-  a.download = 'pastor-life.png';
+  a.download = 'amen-city.png';
   a.href = $('share-canvas').toDataURL('image/png');
   a.click();
 }
@@ -1372,13 +2140,14 @@ function switchTab(name) {
     t.classList.toggle('active', on);
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   }
-  for (const n of ['ministry', 'build', 'log']) $('tab-' + n).classList.toggle('hidden', n !== name);
+  for (const n of ['ministry', 'prayer', 'build', 'log']) $('tab-' + n).classList.toggle('hidden', n !== name);
 }
 
 function beginNew() {
   const name = $('in-name').value.trim() || 'Tunde';
   const church = $('in-church').value.trim() || 'Grace Assembly';
-  S = newState(name, church, $('in-ctype').value);
+  const roleEl = document.querySelector('input[name="role"]:checked');
+  S = newState(name, church, $('in-ctype').value, roleEl ? roleEl.value : 'worshipper');
   const st = STARTS[S.start];
   showScreen('reveal');
   $('reveal-emoji').textContent = '🎲';
@@ -1389,7 +2158,9 @@ function beginNew() {
     $('reveal-emoji').textContent = st.emoji;
     $('reveal-title').textContent = st.title;
     const ct = CHURCH_TYPES[S.ctype];
-    $('reveal-text').textContent = `${st.text}\n\nChurch: ${ct.emoji} ${ct.name} (${ct.perk.toLowerCase()}).\nJob: ${st.job}. Savings: ${naira(st.funds)}.\nOne day, you'll pastor "${church}".`;
+    const r = ROLES[S.role];
+    const future = S.role === 'minister' ? `One day, you'll pastor "${church}".` : `You start as ${r.ranks[0]} at ${church}, ${S.area}.`;
+    $('reveal-text').textContent = `${st.text}\n\nRole: ${r.emoji} ${r.name}\nChurch: ${ct.emoji} ${ct.name} (${ct.perk.toLowerCase()})\nHome: ${S.area}, Lagos · Job: ${st.job}\nSavings: ${naira(st.funds)}\n\n${future}`;
     log(`Your journey began as: ${st.title}.`);
     save();
     $('btn-begin').classList.remove('hidden');
@@ -1409,8 +2180,22 @@ function init() {
     o.textContent = `${ct.emoji} ${ct.name} — ${ct.perk}`;
     $('in-ctype').appendChild(o);
   }
+  const roleBox = $('role-picker');
+  Object.entries(ROLES).forEach(([id, r], i) => {
+    const l = document.createElement('label');
+    l.className = 'role-option';
+    l.innerHTML = '<input type="radio" name="role"><span class="re"></span><span class="rn"></span><span class="rb"></span>';
+    const input = l.querySelector('input');
+    input.value = id;
+    input.checked = i === 0;
+    l.querySelector('.re').textContent = r.emoji;
+    l.querySelector('.rn').textContent = r.name;
+    l.querySelector('.rb').textContent = r.blurb;
+    roleBox.appendChild(l);
+  });
   const saved = load();
   if (saved && !saved.over) $('btn-continue').classList.remove('hidden');
+  $('btn-view').addEventListener('click', () => { if (!S) return; S.view = S.view === 'home' ? 'church' : 'home'; afterChange(); });
 
   $('btn-start').addEventListener('click', beginNew);
   $('btn-continue').addEventListener('click', () => { S = saved; enterGame(); });
@@ -1420,7 +2205,44 @@ function init() {
   $('btn-share-dl').addEventListener('click', downloadCard);
   $('btn-share-close').addEventListener('click', () => $('share').classList.add('hidden'));
   for (const tab of document.querySelectorAll('.nav-item[data-tab]')) tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  initControls();
   icons();
+}
+
+/* ---------------- character controls ---------------- */
+
+function showControls() {
+  $('controls').classList.remove('hidden');
+  $('btn-controls-close').focus({ preventScroll: true });
+}
+
+function initControls() {
+  $('btn-controls').addEventListener('click', showControls);
+  $('btn-controls-close').addEventListener('click', () => $('controls').classList.add('hidden'));
+  // Touch pad: hold an arrow to walk, tap a button to act.
+  for (const b of document.querySelectorAll('.dpad [data-move]')) {
+    const on = (e) => { e.preventDefault(); b.classList.add('on'); if (window.World) World.setMove(b.dataset.move, true); };
+    const off = () => { b.classList.remove('on'); if (window.World) World.setMove(b.dataset.move, false); };
+    b.addEventListener('pointerdown', on);
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, off);
+  }
+  for (const b of document.querySelectorAll('.pad-actions [data-act]')) {
+    b.addEventListener('click', () => { if (window.World) World.act(b.dataset.act); });
+  }
+  // Game shortcuts (movement keys are handled by the 3D world).
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!$('controls').classList.contains('hidden')) $('controls').classList.add('hidden');
+      if (!$('share').classList.contains('hidden')) $('share').classList.add('hidden');
+      return;
+    }
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    if (document.querySelector('.modal:not(.hidden)') || $('game').classList.contains('hidden') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '?') showControls();
+    if (e.code === 'KeyN' && !e.repeat) endDay();
+    if (e.code === 'KeyV' && !e.repeat && S) { S.view = S.view === 'home' ? 'church' : 'home'; afterChange(); }
+  });
 }
 
 init();
