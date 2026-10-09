@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a1446">
+  <title>Pastor Life</title>
+  <meta name="description" content="A virtual Christian journey: from new convert to Bible school to pastor. Grow your church from a living room to a Camp Ground.">
+  <meta property="og:title" content="Pastor Life">
+  <meta property="og:description" content="Get baptized, pass Bible school, get ordained, and grow your church to branches abroad. Can you stay faithful?">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Start screen -->
+  <section id="start" class="screen">
+    <div class="start-card">
+      <div class="logo">⛪</div>
+      <h1>Pastor Life</h1>
+      <p class="tagline">From new convert to Bible school to pastor. Grow your church from a living room to a Camp Ground, and <b>stay faithful</b> on the way.</p>
+      <label>Your name
+        <input id="in-name" maxlength="20" placeholder="e.g. Tunde" autocomplete="off">
+      </label>
+      <label>The church you will one day plant
+        <input id="in-church" maxlength="36" placeholder="e.g. Grace Assembly" autocomplete="off">
+      </label>
+      <label>Church tradition
+        <select id="in-ctype"></select>
+      </label>
+      <button id="btn-start" class="btn primary big">Receive your calling 🙌</button>
+      <button id="btn-continue" class="btn ghost hidden">Continue saved ministry</button>
+      <p class="disclaimer">A virtual walk of faith. All people and churches are fictional. Scripture from the King James Version.</p>
+    </div>
+  </section>
+
+  <!-- Calling reveal -->
+  <section id="reveal" class="screen hidden">
+    <div class="start-card">
+      <div class="logo" id="reveal-emoji">🎲</div>
+      <h2 id="reveal-title">Rolling...</h2>
+      <p id="reveal-text"></p>
+      <button id="btn-begin" class="btn primary big hidden">Begin ministry</button>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="game" class="screen hidden">
+    <header class="hud">
+      <div class="hud-top">
+        <div>
+          <div class="church-name" id="hud-church"></div>
+          <div class="pastor-title" id="hud-title"></div>
+        </div>
+        <div class="day-pill" id="hud-day"></div>
+      </div>
+      <div class="energy">
+        <span>⚡ Energy</span>
+        <div class="bar"><div id="hud-energy-bar"></div></div>
+        <span id="hud-energy"></span>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="k">💰 Funds</span><span class="v" id="hud-funds"></span></div>
+        <div class="stat"><span class="k">🙏 Faith</span><span class="v" id="hud-faith"></span></div>
+        <div class="stat"><span class="k">🍇 Character</span><span class="v" id="hud-character"></span></div>
+        <div class="stat"><span class="k" id="hud-word-k">📖 Word</span><span class="v" id="hud-word"></span></div>
+        <div class="stat"><span class="k" id="hud-members-k">⛪ Services</span><span class="v" id="hud-members"></span></div>
+        <div class="stat"><span class="k" id="hud-venue-k">💼 Job</span><span class="v" id="hud-venue"></span></div>
+      </div>
+      <p class="verse" id="verse"></p>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="ministry">Ministry</button>
+      <button class="tab hidden" id="tab-btn-build" data-tab="build">Church</button>
+      <button class="tab" data-tab="log">Diary</button>
+    </nav>
+
+    <main>
+      <div id="tab-ministry" class="tab-body"></div>
+      <div id="tab-build" class="tab-body hidden"></div>
+      <div id="tab-log" class="tab-body hidden"><ul id="log"></ul></div>
+    </main>
+
+    <footer class="bottom-bar">
+      <button id="btn-share" class="btn ghost">📤 Share</button>
+      <button id="btn-endday" class="btn primary">🌙 End day</button>
+    </footer>
+  </section>
+
+  <!-- Modal for events / endings -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-emoji" id="modal-emoji"></div>
+      <h3 id="modal-title"></h3>
+      <p id="modal-text"></p>
+      <div id="modal-choices" class="choices"></div>
+    </div>
+  </div>
+
+  <!-- Share sheet -->
+  <div id="share" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3>Share your testimony</h3>
+      <canvas id="share-canvas" width="1080" height="1080"></canvas>
+      <div class="choices">
+        <button id="btn-share-native" class="btn primary">Share image</button>
+        <a id="btn-share-wa" class="btn wa" target="_blank" rel="noopener">WhatsApp</a>
+        <a id="btn-share-x" class="btn ghost" target="_blank" rel="noopener">Post on X</a>
+        <button id="btn-share-dl" class="btn ghost">Download</button>
+        <button id="btn-share-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
