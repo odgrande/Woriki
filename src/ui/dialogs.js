@@ -90,12 +90,14 @@ export function createDialogs({ root, game, onModal }) {
 
   /* ---------------------------------------------------------------- kinds */
   /** A simple message with one button. */
-  function info({ emoji = '🙏', title, text, ok = 'OK', deltas, onOk } = {}) {
+  function info({ emoji = '🙏', title, text, ok = 'OK', deltas, onOk, cancel } = {}) {
     open({
       dismissible: true,
       build(card, close) {
         setChildren(card, ...head(emoji, title, text), deltaChips(deltas),
-          h('div.ac-choices', null, h('button.ac-btn.is-primary', { type: 'button', on: { click: () => { close(); onOk?.(); } } }, ok)));
+          h('div.ac-choices', null,
+            h('button.ac-btn.is-primary', { type: 'button', on: { click: () => { close(); onOk?.(); } } }, ok),
+            cancel ? h('button.ac-btn', { type: 'button', on: { click: close } }, cancel) : null));
       },
     });
   }
@@ -242,7 +244,7 @@ export function createDialogs({ root, game, onModal }) {
   }
 
   /** Settings: graphics quality, sound, day length, new life. */
-  function settings({ muted, setMuted, quality, onNewLife }) {
+  function settings({ muted, setMuted, quality, onNewLife, onLogout }) {
     open({
       id: 'settings',
       dismissible: true,
@@ -263,6 +265,7 @@ export function createDialogs({ root, game, onModal }) {
         const sw = h('button', { type: 'button', attrs: { role: 'switch', 'aria-checked': String(!m), 'aria-label': 'Sound' } });
         sw.addEventListener('click', () => { m = !m; setMuted(m); sw.setAttribute('aria-checked', String(!m)); });
         let confirm = false;
+        const outBtn = onLogout ? h('button.ac-btn.is-block', { type: 'button', on: { click: () => { close(); onLogout(); } } }, ic('log-out', { size: 18 }), 'Log out') : null;
         const newBtn = h('button.ac-btn.is-pink.is-block', { type: 'button' }, ic('trash-2', { size: 18 }), 'Start a new life');
         newBtn.addEventListener('click', () => {
           if (!confirm) { confirm = true; newBtn.lastChild.textContent = 'Tap again: your saved life will be deleted'; return; }
@@ -278,7 +281,7 @@ export function createDialogs({ root, game, onModal }) {
             game.mode === 'shared'
               ? h('div.ac-field', null, h('span', { text: 'Time' }), h('small', { text: 'Amen City runs on real Lagos time (WAT). Services happen when they would in real life.' }))
               : h('div.ac-field', null, h('span', { text: 'Length of a day' }), dSeg, h('small', { text: 'Real minutes per in-game day. Services follow the in-game clock.' })),
-            h('div.ac-field', null, newBtn)),
+            h('div.ac-field', null, outBtn, newBtn)),
           h('div.ac-choices', null, h('button.ac-btn.is-primary', { type: 'button', on: { click: close } }, 'Done')));
       },
     });

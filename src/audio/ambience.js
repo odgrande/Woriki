@@ -76,10 +76,23 @@ export const BEDS = {
     { event: 'crow', every: [25, 60], gain: [0.03, 0.06], pan: [-0.9, 0.9], lowpass: [2000, 3000], reverb: 0.25 },
     { event: 'horn', every: [18, 40], gain: [0.02, 0.05], lowpass: [900, 1500], pan: [-0.9, 0.9], reverb: 0.3 },
   ],
+  beach: [
+    { noise: 'brown', filters: [hp(40), lp(420)], gain: 0.28, lfo: [[0.11, 0.2], [0.043, 0.07]] }, // surf swells
+    { noise: 'pink', filters: [hp(900), lp(5200)], gain: 0.05, lfo: [[0.11, 0.045], [0.27, 0.012]], pan: 0.2 }, // waves washing up
+    { noise: 'pink', filters: [hp(2400)], gain: 0.012, lfo: [[0.08, 0.008]] }, // sea breeze
+    { babble: { seed: 48, talkers: 4 }, filters: [hp(220), lp(2000)], gain: 0.05, pan: -0.4, hq: true }, // people on the sand
+    { event: 'hawker', every: [10, 24], gain: [0.03, 0.08], pan: [-0.9, 0.9], lowpass: [2000, 4000], reverb: 0.05 },
+  ],
+  cinema: [
+    { noise: 'pink', filters: [hp(60), lp(300)], gain: 0.05 }, // air conditioning
+    { babble: { seed: 49, talkers: 2 }, filters: [hp(150), lp(1800)], gain: 0.09 }, // the film's dialogue
+    { noise: 'brown', filters: [hp(30), lp(120)], gain: 0.05, lfo: [[0.2, 0.03]] }, // film score rumble
+    { event: 'creak', every: [10, 25], gain: [0.04, 0.1], pan: [-0.8, 0.8], reverb: 0.4, rate: [0.9, 1.1] },
+  ],
 };
 
 /** Overall level of each bed (quiet rooms are quiet, but not silent). */
-export const BED_LEVEL = { street: 1, church: 1.45, market: 1, prayer: 1.25, home: 1.4 };
+export const BED_LEVEL = { street: 1, church: 1.45, market: 1, prayer: 1.25, home: 1.4, beach: 1.2, cinema: 1.3 };
 
 const rnd = (range) => (Array.isArray(range) ? range[0] + Math.random() * (range[1] - range[0]) : range);
 

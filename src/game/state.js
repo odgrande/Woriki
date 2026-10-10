@@ -72,6 +72,8 @@ export function newState(profile = {}, { rng = Math.random, T = START_T } = {}) 
     repentances: 0,
     convicted: false,
     items: {},
+    /** Furniture at No. 14 (see life.js CATALOG). */
+    home: {},
     requests: [],
     pastor: null,
     // daily
@@ -110,7 +112,7 @@ export function migrate(raw) {
   // Fill any field added since the save was written.
   const base = newState({ name: s.name, role: s.role, tradition: s.tradition }, { rng: () => 0, T: s.T ?? START_T });
   const out = { ...base, ...s, v: SAVE_VERSION };
-  for (const k of ['items', 'doneToday']) if (!out[k] || typeof out[k] !== 'object') out[k] = {};
+  for (const k of ['items', 'doneToday', 'home']) if (!out[k] || typeof out[k] !== 'object') out[k] = {};
   for (const k of ['requests', 'pending', 'log']) if (!Array.isArray(out[k])) out[k] = [];
   for (const k of ['energy', 'hunger', 'faith', 'word', 'character', 'fame']) out[k] = clampNum(out[k], 0, 100, base[k]);
   for (const k of ['naira', 'points', 'xp', 'T', 'startT']) out[k] = Number.isFinite(out[k]) ? out[k] : base[k];

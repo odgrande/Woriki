@@ -12,6 +12,7 @@ import {
 import { ACTIONS, ACTION_BY_ID, SERVICE_DUTIES, SERVICE_CREDIT, isPastor, isMinister } from './actions.js';
 import { EVENTS, EVENT_BY_ID } from './events.js';
 import { newPastorChurch } from './state.js';
+import { restBonus } from './life.js';
 import { DAY, clockInfo, serviceAt, nextService, servicesBetween, countdown, minuteOfDay, weekdayOf, hhmm } from './clock.js';
 
 export { isPastor, isMinister };
@@ -375,14 +376,15 @@ export function sleep(s, env) {
   if (env.mode === 'shared') {
     if (s.doneToday.rest) { env.fx.push({ type: 'toast', text: 'You already rested today.' }); return; }
     s.doneToday.rest = true;
-    s.energy = clamp(s.energy + 50, 0, 100);
-    env.fx.push({ type: 'toast', text: 'You took a good rest. +50 energy.', emoji: '🛏️' });
+    const extra = restBonus(s);
+    s.energy = clamp(s.energy + 50 + extra, 0, 100);
+    env.fx.push({ type: 'toast', text: `You took a good rest. +${50 + extra} energy.${extra ? ' Your furniture helped.' : ''}`, emoji: '🛏️' });
     return;
   }
   const m = minuteOfDay(s.T);
   const minutes = m < 6 * 60 ? 6 * 60 - m : DAY - m + 6 * 60;
   skipTime(s, minutes, env, { label: 'Good morning!', asleep: true, to: 'home' });
-  s.energy = s.hunger < 25 ? 70 : 100;
+  s.energy = s.hunger < 25 ? 70 + restBonus(s) : 100;
   if (s.items.bike) s.energy = clamp(s.energy + 10, 0, 100);
   const c = clock(s);
   env.fx.push({ type: 'toast', text: `Good morning! It's ${c.weekdayName}, ${c.time}.${s.hunger < 25 ? ' You went to bed hungry, so you have less energy. Eat something!' : ''}`, emoji: '🌅' });

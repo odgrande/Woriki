@@ -8,6 +8,37 @@ It runs in the browser with no download, and it is built to work on cheap Androi
 
 ## What's in this version
 
+**The church comes first.** Everything else in Lagos is there so that your walk with God has
+real choices around it, as in real life.
+
+- **Like Lagos Life at the door.** A logo preloader, then a live 3D map of Lagos with *Sign up free* and
+  *Log in* before you join. Once you have a life you stay logged in on that device: you see your
+  character at home with a card (name, today's date, naira, today's church plan) and *Continue*,
+  *New life* or *Log out*.
+- **Real Lagos time.** The clock is the real time in Lagos (WAT), the same for everybody. Sunday service
+  is at 9am, Bible study Wednesday 6pm, the vigil Friday 10pm. On Saturday the workers clean the
+  sanctuary at 8am and the choir practises at 4pm. Every day starts at home.
+- **The Lagos map** (Map button or `M`). It shows:
+  - the lagoon and the Atlantic, Third Mainland, Carter, Eko and Lekki–Ikoyi Link bridges
+  - Lagos House (Government House) on the Marina and the Secretariat in Alausa
+  - the National Theatre, UNILAG, Makoko on stilts, Eko Atlantic, TBS and Balogun Market
+  - towers on the islands and thousands of tin roofs
+  - billboards, go-slow traffic and boats
+
+  Layers can be switched (Go-slow, Billboards, Sea, Gov, Names). The lighting follows the hour in Lagos,
+  with street lights at night.
+- **Go anywhere.** Tap a place, then pick how to go: trek (free, tiring), bike (okada, or your own
+  bicycle), danfo (cheap, go-slow, pickpockets), taxi (fast, costly) or a free ride from a church
+  member. The **Home** button (or `H`) takes you home from anywhere.
+- **Normal life, with temptations.** Walk around Elegushi Beach (suya, coconut, horse rides, praying by
+  the sea, and the beach party…) and the National Theatre cinema (Nollywood and gospel films, popcorn,
+  and the juju film). Day trips include the Saturday tour of Government House, Balogun Market, a
+  crusade at TBS, Computer Village, the prayer mountain and the Secretariat, where you can choose to
+  "settle" the officer or not.
+- **Furnish your home.** The **Buy** catalog sells a bed, wardrobe, fan, AC, solar, fridge, flat-screen TV,
+  dining set, bookshelf, prayer corner and more. Everything appears in No. 14 in 3D and gives small perks
+  (better rest, +faith when you pray at home, +word when you read).
+
 - **Realistic people.** CC0 human models with Nigerian outfits generated on the body, so clothes move
   with every animation: Ankara shirts and gowns, agbada, senator, iro and buba with gele, choir robes,
   Aladura white garments, security (hi-vis vest and beret) and usher uniforms. Six skin tones, several
@@ -28,9 +59,7 @@ It runs in the browser with no download, and it is built to work on cheap Androi
 - **Your role:** worshipper, prayer warrior, security, usher, choir, media and sound, hospitality,
   children's teacher, visitor, or the minister path (Bible school, then your own church). Each role has
   ranks, duties and its own temptations.
-- **Real-time days.** One in-game day lasts 24 real minutes. Sunday service is at 9:00, Wednesday Bible
-  study at 18:00 and the Friday vigil at 22:00. Go to the hall and sit, or serve at your post, while the
-  service runs.
+- **Services.** Go to the hall and sit, or serve at your post, while the service runs.
 - **Multiplayer and chat.** See other players walking around with name tags, chat with bubbles over
   your heads, use quick phrases ("God bless you 🙏", "Amen!"), and report or block players. Chat is
   filtered for swear words, including common Pidgin, Yoruba and Igbo insults.
@@ -55,6 +84,8 @@ It runs in the browser with no download, and it is built to work on cheap Androi
 | `G` / `B` | – | Clap / dance |
 | `F` | Interact | Use what's nearby (ring the bell, buy food, board the danfo) |
 | `Enter` or `T` | Chat | Open chat |
+| `M` | Map | Open the Lagos map |
+| `H` | Home | Go home (pick bike, taxi, danfo, free ride or trek) |
 | mouse drag / wheel | drag right side / pinch | Turn and zoom the camera |
 | `?` | ? button | Show all controls |
 
@@ -68,7 +99,7 @@ npm run assets     # downloads the CC0 characters and compresses them (already d
 npm run dev        # game on http://localhost:5173 and the multiplayer server on :8787
 ```
 
-Open the game in two browser windows to see multiplayer. `npm test` runs the unit tests and `npm run build`
+Open the game in two browser windows to see multiplayer. Add `?clock=local` for fast test days (24 real minutes each) instead of real Lagos time. `npm test` runs the unit tests and `npm run build`
 makes the production bundle in `dist/`. Add `?quality=low|medium|high` to the URL to force a graphics level.
 
 ## Deploy for free
@@ -85,13 +116,14 @@ makes the production bundle in `dist/`. Add `?quality=low|medium|high` to the UR
 |---|---|
 | `src/engine/` | Renderer, quality tiers, input (keyboard + touch), follow camera, collisions |
 | `src/characters/` | Character kit, outfits, skin tones, headwear, animations |
-| `src/world/` | The Yaba map: street, church, market, home, vehicles, navigation |
+| `src/world/` | The Yaba map (street, church, market, home, vehicles, navigation), Elegushi Beach, the National Theatre, home furniture |
 | `src/player/` | Your character's movement, sitting, kneeling, emotes |
 | `src/npc/` | The NPC community |
 | `src/audio/` | Procedural sound and music |
 | `src/net/`, `server/` | Multiplayer client and server, remote players |
-| `src/game/` | Game rules, content, clock and save |
-| `src/ui/` | Start screen, look editor, HUD, sheets, chat, speech bubbles |
+| `src/game/` | Game rules, content, clock and save; `life.js`: places, travel, activities, home catalog |
+| `src/map/` | The 3D Lagos map (geography data and renderer) |
+| `src/ui/` | Landing and home card, start screen, look editor, HUD, sheets, map panel, travel, chat, speech bubbles |
 | `legacy/` | The first 2D prototype, kept for reference |
 
 `ARCHITECTURE.md` describes how the modules fit together.

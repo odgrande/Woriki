@@ -216,3 +216,28 @@ mood, energy/hunger/faith/character bars, online count), bottom navigation (Toda
 toasts, modal events/temptations, controls help (`?`), settings (quality, sound). Neo-brutalist style ported from
 `legacy/style.css`: cream paper, 2px black borders, hard shadows, pastel blocks, Space Grotesk + Inter, Lucide-style
 inline SVG icons (no icon library needed). Mobile-first; the 3D view must stay visible (panels slide over, collapsible).
+
+## Lagos life around the church (map, travel, home)
+
+- **Clock.** `main.js` creates the game with `clock: 'shared'` and `realMinutesPerDay: REAL_TIME` (1440):
+  in-game time is the real time in Lagos (WAT). `servicesFor(role)` adds each role's own meetings
+  (Saturday cleaning, choir practice) to the worship services. `game.plan` gives today's plan.
+- **Places and travel** (`src/game/life.js`): `PLACES` (map position, walkable 3D place or day trip),
+  `TRAVEL_MODES`, `ACTIVITIES` and the home `CATALOG`. Game API: `game.here`, `game.trip`,
+  `game.quotes(to)`, `game.travel(to, mode)` (emits `game:travel` on the bus), `game.activities()`,
+  `game.activity(id)` and `game.buyFurniture(id)` (emits `home:changed`).
+- **Map** (`src/map/`): `createLagosMap(ctx, {root, onPick})` builds a separate scene. It is drawn instead
+  of the world with `ctx.setView(scene, camera)`, and `ctx.setView(null)` switches back to the world.
+  The map has HTML pins and layers (traffic, billboards, sea, gov, names), and its lighting follows the
+  hour in Lagos.
+- **UI**:
+  - `src/ui/front.js`: landing page and home card. The `amen.loggedOut` key in localStorage keeps you
+    logged out.
+  - `src/ui/mapview.js`: map panel, travel picker and the screen shown while you are on the way.
+  - The dock is Home, Map, Buy, Today, Phone (prayer wall and diary).
+- **World**:
+  - `src/world/districts.js` builds Elegushi Beach (around z = 600) and the National Theatre with its
+    cinema (around x = 600). They are far enough apart that they never appear in each other's view.
+  - Arrival points are in `world.spawns.places`.
+  - Stalls are interactables with `action: 'activity'`.
+  - `src/world/decor.js` places the furniture you bought in No. 14.

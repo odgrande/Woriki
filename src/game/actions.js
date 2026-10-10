@@ -55,7 +55,7 @@ export const ACTIONS = [
     id: 'pray', emoji: '🙏', name: 'Quiet Time', group: 'walk', energy: 10, once: true, kneel: true,
     desc: () => 'Kneel anywhere (P) and spend time with the Lord.',
     run(h) {
-      const f = Math.round(5 * h.bonus('prayer')) + (h.s.items.mat ? 2 : 0);
+      const f = Math.round(5 * h.bonus('prayer')) + (h.s.items.mat ? 2 : 0) + (h.s.home?.altar ? 2 : 0);
       h.grow('faith', f);
       h.sound('pray');
       return `You spent time in prayer. +${f} faith.` + h.reward(1, 1);
@@ -65,7 +65,7 @@ export const ACTIONS = [
     id: 'read', emoji: '📖', name: 'Read the Bible', group: 'walk', energy: (s) => (s.items.phone ? 10 : 15), once: true,
     desc: (s, c) => `Today: ${verseOfDay(s, c)[0]}`,
     run(h) {
-      const w = Math.round(5 * h.bonus('study')) + (h.s.items.bible ? 2 : 0);
+      const w = Math.round(5 * h.bonus('study')) + (h.s.items.bible ? 2 : 0) + (h.s.home?.bookshelf ? 1 : 0) + (h.s.home?.desk ? 1 : 0);
       h.grow('word', w); h.grow('faith', 2);
       const v = verseOfDay(h.s, h.c);
       return { text: `You meditated on ${v[0]}. +${w} word.` + h.reward(1, 1), modal: { emoji: '📖', title: v[0], text: `"${v[1]}"\n\nKing James Version`, ok: 'Amen' } };

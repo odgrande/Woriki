@@ -3,7 +3,7 @@
 /** @typedef {'street'|'church'|'market'|'home'|'prayer'|'none'} Ambience */
 /** @typedef {'inside'|'adjacent'|'compound'|'far'} Placement where the listener is relative to the church hall */
 
-export const AMBIENCES = ['street', 'church', 'market', 'home', 'prayer'];
+export const AMBIENCES = ['street', 'church', 'market', 'home', 'prayer', 'beach', 'cinema'];
 
 /** World zone id → [ambience bed, placement relative to the auditorium]. */
 export const ZONE_MAP = {
@@ -19,9 +19,13 @@ export const ZONE_MAP = {
   'prayer-room': ['prayer', 'adjacent'],
   kitchen: ['church', 'adjacent'],
   home: ['home', 'far'],
+  // Far from Yaba: the church's music is not heard there.
+  beach: ['beach', 'away'],
+  theatre: ['street', 'away'],
+  cinema: ['cinema', 'away'],
 };
 
-const DEFAULT_PLACEMENT = { street: 'far', church: 'inside', market: 'far', home: 'far', prayer: 'adjacent', none: 'far' };
+const DEFAULT_PLACEMENT = { street: 'far', church: 'inside', market: 'far', home: 'far', prayer: 'adjacent', beach: 'away', cinema: 'away', none: 'far' };
 
 /**
  * Resolve whatever the caller passed (zone object, zone id, ambience name, null) into
@@ -53,13 +57,14 @@ export function musicMix(placement) {
     case 'inside': return { gain: 1, lowpass: 16000, reverb: 1 };
     case 'adjacent': return { gain: 0.45, lowpass: 1600, reverb: 0.7 };
     case 'compound': return { gain: 0.4, lowpass: 900, reverb: 0.5 };
+    case 'away': return { gain: 0, lowpass: 300, reverb: 0 };
     default: return { gain: 0.16, lowpass: 520, reverb: 0.35 };
   }
 }
 
 /** Room reverb send for effects and footsteps per ambience (0..1). */
 export function reverbFor(ambience) {
-  return { church: 0.32, prayer: 0.2, home: 0.1, street: 0.07, market: 0.05, none: 0.05 }[ambience] ?? 0.07;
+  return { church: 0.32, prayer: 0.2, home: 0.1, street: 0.07, market: 0.05, beach: 0.03, cinema: 0.22, none: 0.05 }[ambience] ?? 0.07;
 }
 
 /** Footstep loudness per surface (relative), run boost and playback rate. */

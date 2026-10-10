@@ -5,11 +5,13 @@ import { newState, migrate, readSave, writeSave, clearSave, saveSummary, SAVE_KE
 import {
   makeEnv, tick as tickSystems, doAction, canDo, listActions, choose as chooseSys, answerQuiz,
   buyItem, buyFood, buyUpgrade, upgradeChoir, moveVenue, openBranch, postRequest, markAnswered,
-  completeMilestone, milestone, progress, presence, title, mood, clock, postLabel, advance, dayPlan, PRAISE_SECONDS,
+  completeMilestone, milestone, progress, presence, title, mood, clock, postLabel, advance, dayPlan, endService, addLog, PRAISE_SECONDS,
 } from './systems.js';
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID } from './life.js';
+import { deltas as deltasOf } from './systems.js';
 
 /**
  * @typedef {object} GameOptions
@@ -50,6 +52,8 @@ export function createGame(ctx = {}, opts = {}) {
   let dirty = false;
   let lastSave = 0;
   let lastChange = 0;
+  /** A trip place you are visiting (no 3D scene). */
+  let trip = null;
 
   /* ---------------------------------------------------------------- events */
   function on(type, fn) {
@@ -162,8 +166,18 @@ export function createGame(ctx = {}, opts = {}) {
           e.fx.push({ type: 'toast', text: 'You played a few chords. Somebody at the back shouted "Halleluyah!"', emoji: '🎹' });
           return { ok: true };
         });
+      case 'activity': {
+        // Beach stalls, cinema tickets…: things to do at a place (src/game/life.js ACTIVITIES).
+        const r = game.activity(item.activity);
+        if (r && !r.ok && r.reason) emitToast(r.reason);
+        return r;
+      }
       default: return null;
     }
+  }
+  function emitToast(text) {
+    emit('toast', { text, tone: 'warn' });
+    bus?.emit('game:toast', { text, tone: 'warn' });
   }
 
   /* ---------------------------------------------------------------- clock */
@@ -252,6 +266,15 @@ export function createGame(ctx = {}, opts = {}) {
     /** Today's meetings and a free-time idea. */
     get plan() { return s ? dayPlan(s) : null; },
     get paused() { return pauses.size > 0 || !!(s && (s.activeEvent || s.exam)); },
+    /** The saved life as it stands now (naira, points, clock, today's plan) without starting it. */
+    peek() {
+      const st = readStored();
+      if (!st) return null;
+      const T = mode === 'shared' ? sharedTime(Date.now(), realMinutesPerDay) : st.T;
+      const sameDay = Math.floor(T / 1440) === Math.floor(st.T / 1440);
+      const view = { ...st, T, doneToday: sameDay ? st.doneToday : {} };
+      return { naira: st.naira, points: st.points, clock: clock(view), plan: dayPlan(view), appearance: st.appearance, role: st.role, name: st.name };
+    },
     /** Summary of the saved life in storage (for "Continue"), or null. */
     get saved() { return saveSummary(readStored()); },
 
@@ -302,6 +325,75 @@ export function createGame(ctx = {}, opts = {}) {
     postRequest(text) { return run((e) => postRequest(s, text, e)); },
     markAnswered(id) { return run((e) => markAnswered(s, id, e)); },
     cancelShift() { return run(() => { if (s.shift) s.shift = null; return { ok: true }; }); },
+
+    /* ------------------------------------------------ normal life: places, travel, home */
+    /** Where you are: a trip place you went to, else the place of your world zone. */
+    get here() { return trip || placeOfZone(loc.zone) || (s ? 'home' : null); },
+    /** On a trip to a place without a walkable 3D scene (Balogun, Government House…). */
+    get trip() { return trip; },
+    /** Price, energy and time of going to `to` with every mode. */
+    quotes(to) {
+      if (!s) return [];
+      const km = distanceKm(game.here, to);
+      return TRAVEL_MODES.map((m) => ({ ...travelQuote(s, km, m.id), km }));
+    },
+    /**
+     * Go somewhere. Emits 'travel:go' (and game:travel on the bus) with {to, place, walk, minutes, mode}
+     * so the world can move the player; trips to non-walkable places set `trip`.
+     */
+    travel(to, mode) {
+      if (!s) return { ok: false, reason: 'No game' };
+      const from = game.here;
+      if (from === to) return { ok: false, reason: 'You are already here' };
+      const place = PLACE_BY_ID[to];
+      if (!place) return { ok: false, reason: 'Unknown place' };
+      return run((e) => {
+        if (s.attendance) endService(s, e, { silent: false });
+        const before = { ...s };
+        const r = travelSys(s, from, to, mode, rng);
+        if (!r.ok) return r;
+        trip = place.walk ? null : to;
+        if (place.fee) { s.naira -= Math.min(s.naira, place.fee); }
+        e.fx.push({ type: 'toast', text: r.text + (place.fee ? ` Gate fee ${naira(place.fee)}.` : ''), emoji: r.mode.emoji, deltas: deltasOf(before, s) });
+        const go = { to, place, walk: place.walk || null, minutes: r.minutes, mode: r.mode.id };
+        emit('travel:go', go);
+        bus?.emit('game:travel', go);
+        return { ...r, ...go };
+      });
+    },
+    /** End a trip without the 3D world (e.g. map closed): you are back where you were. */
+    endTrip() { trip = null; },
+    /** Things to do where you are (or at `placeId`). */
+    activities(placeId = game.here) {
+      if (!s) return [];
+      const c = clock(s);
+      return activitiesAt(s, placeId, c.weekdayShort, c.hour);
+    },
+    activity(id) {
+      return run((e) => {
+        const c = clock(s);
+        const before = { ...s };
+        const r = doActivity(s, id, c.weekdayShort, c.hour, rng);
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        e.fx.push({ type: 'toast', text: r.text, emoji: r.emoji, deltas: deltasOf(before, s), tone: r.shady ? 'warn' : undefined });
+        e.fx.push({ type: 'audio:play', name: r.shady ? 'fail' : 'success' });
+        return r;
+      });
+    },
+    /** Buy furniture from the home catalog (delivered to No. 14). */
+    buyFurniture(id) {
+      return run((e) => {
+        const before = { ...s };
+        const r = buyFurnitureSys(s, id);
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        e.fx.push({ type: 'toast', text: r.text, emoji: '📦', deltas: deltasOf(before, s), tone: 'good' });
+        e.fx.push({ type: 'audio:play', name: 'success' });
+        bus?.emit('home:changed', { home: { ...s.home } });
+        return r;
+      });
+    },
     interact,
 
     /** Advance the real-time clock (real seconds). Call every frame. */

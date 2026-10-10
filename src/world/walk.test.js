@@ -18,6 +18,9 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const nodes = navNodes().map(([x, z, zone], id) => ({ id, position: V(x, groundAt(x, z), z), zone }));
 const nav = createNav(nodes, buildEdges(nodes, blockers, 7.5, 0.3), { blockers, vec: (x, y, z) => V(x, groundAt(x, z), z) });
 
+/** The beach and the National Theatre are reached by travelling, not on foot from Yaba. */
+const inYaba = (p) => Math.abs(p.x) < 200 && Math.abs(p.z) < 200;
+
 /** Walk along the nav path at 1.6 m/s (60 fps). Returns the final position. */
 function walk(from, to) {
   let p = from.clone();
@@ -66,7 +69,7 @@ describe('world walkability (real physics)', () => {
 
   it('reaches every interactable', () => {
     const bad = [];
-    for (const it of W.interactables) {
+    for (const it of W.interactables.filter((i) => inYaba(i.position))) {
       const p = walk(start, it.position);
       const d = Math.hypot(p.x - it.position.x, p.z - it.position.z);
       if (d > it.radius) bad.push(`${it.id} (${d.toFixed(2)} m)`);
@@ -76,7 +79,7 @@ describe('world walkability (real physics)', () => {
 
   it('reaches a sample of seats (the player sits from up to 2 m away)', () => {
     const bad = [];
-    const sample = W.seats.filter((_, i) => i % 9 === 0);
+    const sample = W.seats.filter((s, i) => i % 9 === 0 && inYaba(s.position));
     for (const s of sample) {
       const p = walk(start, s.position);
       const d = Math.hypot(p.x - s.position.x, p.z - s.position.z);

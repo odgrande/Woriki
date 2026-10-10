@@ -1,7 +1,7 @@
 .amen-bubbles {
   position: fixed;
   inset: 0;
-  pointer-events: none;
+  pointer-events: none !important; /* #ui > * would turn it back on */
   z-index: 15;
   overflow: hidden;
 }

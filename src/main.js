@@ -1,7 +1,9 @@
 // Amen City entry point: wires every module together (see ARCHITECTURE.md).
 //
-// Start screen (role + look) → load the character kit and the Yaba map → spawn the player at
-// their post → NPC community, sound, multiplayer, chat and the game rules run together.
+// Logo preloader → the live Lagos map with Sign up / Log in (or, for a logged-in player, their
+// 3D home with Continue / New life) → role + look → the day starts at home in Yaba → NPC
+// community, sound, multiplayer, chat and the game rules run together. The Lagos map takes
+// you anywhere (Home button: bike, taxi, danfo, free ride or trekking).
 import * as THREE from 'three';
 import { createContext } from './engine/context.js';
 import { createInput } from './engine/input.js';
@@ -19,6 +21,9 @@ import { createChatUI } from './ui/chat.js';
 import { createGame } from './game/index.js';
 import { REAL_TIME } from './game/clock.js';
 import { createUI } from './ui/index.js';
+import { finishBoot } from './ui/front.js';
+import { createLagosMap } from './map/lagos.js';
+import { createDecor } from './world/decor.js';
 import './main.css';
 
 const params = new URLSearchParams(location.search);
@@ -47,7 +52,23 @@ const unlock = () => { audio.unlock(); window.removeEventListener('pointerdown',
 window.addEventListener('pointerdown', unlock);
 window.addEventListener('keydown', unlock);
 
-const ui = createUI(ctx, { root: uiRoot, game, kit: kitPromise, audio, input, onStart: (profile) => enter(profile) });
+// The Lagos map: the landing page before you join, and the Map button in the game.
+let ui = null;
+const lagosMap = createLagosMap(ctx, { root: uiRoot, onPick: (p) => ui?.mapPick(p) });
+
+// Furniture from the home catalog, rebuilt when you buy something.
+const decorPromise = worldPromise.then((world) => {
+  const decor = createDecor(ctx, { physics, seats: world.seats });
+  world.root.add(decor.root);
+  ctx.bus.on('home:changed', ({ home }) => decor.set(home));
+  return decor;
+});
+
+ui = createUI(ctx, {
+  root: uiRoot, game, kit: kitPromise, audio, input, map: lagosMap,
+  onStart: (profile) => enter(profile),
+  onArrive: (go) => arrive(go),
+});
 
 /* ---------------------------------------------------------------- loading overlay */
 function loadingOverlay() {
@@ -78,6 +99,9 @@ async function enter(profile) {
     loading.set('Getting dressed', 0.75);
     await nextFrame();
 
+    homeScene.hide();
+    const decor = await decorPromise;
+    decor.set(game.state?.home || {});
     const role = profile.role || game.state?.role || 'worshipper';
     const appearance = profile.appearance || game.state?.appearance || {};
     const character = createCharacter(kit, appearance, { detail: 'high' });
@@ -107,8 +131,8 @@ async function enter(profile) {
     // Your own chat lines appear above your head too.
     ctx.bus.on('chat:message', (e) => { if (e?.self) bubbles.show(player.object, e.text, { kind: 'self' }); });
 
-    Object.assign(session, { world, player, camera, community, net, remotes, chat, character });
-    Object.assign(debug, { game, ui, input, physics, world, player, camera, community, net, remotes, chat, audio, bubbles, kit });
+    Object.assign(session, { world, player, camera, community, net, remotes, chat, character, decor });
+    Object.assign(debug, { game, ui, input, physics, world, player, camera, community, net, remotes, chat, audio, bubbles, kit, map: lagosMap, decor });
 
     input.enabled = true;
     input.setVisible?.(true);
@@ -131,6 +155,7 @@ function frame(dt, t) {
   s.player.update(dt, t);
   s.camera.update(dt, s.player.position, physics);
   s.community.update(dt, t);
+  s.decor.update(dt, t);
   bubbles.update();
   ctx.camera.getWorldDirection(yawVec);
   audio.update(ctx.camera.position, Math.atan2(yawVec.x, yawVec.z));
@@ -139,8 +164,89 @@ function frame(dt, t) {
 
 function nextFrame() { return new Promise((r) => requestAnimationFrame(() => r())); }
 
-// Render only while playing; the start screen has its own small preview renderer.
-ctx.bus.on('ui:screen', ({ screen }) => {
-  if (screen === 'game') ctx.start();
-  else ctx.stop();
-});
+/* ---------------------------------------------------------------- travelling */
+/** After a trip to a walkable place: put the player there, facing the way in. */
+async function arrive(go) {
+  const s = session;
+  if (!s?.player) return;
+  const sp = s.world.spawns.places?.[go.walk] || s.world.spawns.home;
+  s.player.teleport(sp.position, sp.rotY);
+  s.camera.behind(sp.rotY || 0);
+  s.camera.snap?.();
+  ctx.setShadowFocus(sp.position);
+  const zone = s.world.zoneAt?.(sp.position);
+  ctx.bus.emit('player:zone', { zone });
+}
+
+/* ---------------------------------------------------------------- returning player's home */
+/** Your character standing in the living room of No. 14 behind the "welcome back" card. */
+const homeScene = (() => {
+  let char = null, off = null, token = 0;
+  return {
+    async show(saved) {
+      const my = ++token;
+      const [kit, world, decor] = await Promise.all([kitPromise, worldPromise, decorPromise]);
+      if (my !== token) return;
+      decor.set(saved?.home || {});
+      char?.dispose?.();
+      char = createCharacter(kit, saved?.appearance || {}, { detail: 'high' });
+      const at = new THREE.Vector3(15.9, world.groundAt(15.9, 20.6), 20.6);
+      char.object.position.copy(at);
+      char.object.rotation.y = 0.5;
+      ctx.scene.add(char.object);
+      char.play?.('idle');
+      ctx.camera.position.set(17.9, at.y + 1.55, 24.4);
+      ctx.camera.lookAt(15.6, at.y + 1.05, 20.9);
+      ctx.setShadowFocus(at);
+      let wave = 1.2;
+      off?.();
+      off = ctx.onUpdate((dt, t) => {
+        char.update?.(dt);
+        world.update?.(dt, t);
+        decor.update(dt, t);
+        wave -= dt;
+        if (wave < 0) { char.wave?.(); wave = 9; }
+      });
+    },
+    hide() {
+      token++;
+      off?.(); off = null;
+      if (char) { ctx.scene.remove(char.object); char.dispose?.(); char = null; }
+    },
+  };
+})();
+
+/* ---------------------------------------------------------------- screens */
+// Render while on the landing map, the home card or playing; the sign-up screens have their own
+// small preview renderer.
+async function onScreen({ screen, saved }) {
+  if (screen === 'landing') {
+    homeScene.hide();
+    ctx.start();
+    finishBoot(1500);
+    fetchOnline();
+  } else if (screen === 'home') {
+    ctx.start();
+    try { await homeScene.show({ ...saved, home: readHome() }); } catch (e) { console.error('[main] home scene', e); }
+    finishBoot(800);
+  } else if (screen === 'game') {
+    ctx.start();
+    finishBoot(0);
+  } else {
+    homeScene.hide();
+    ctx.stop();
+    finishBoot(600);
+  }
+}
+ctx.bus.on('ui:screen', onScreen);
+// createUI already showed its first screen before this listener existed.
+onScreen({ screen: game.state ? 'game' : document.querySelector('.fr-home:not([hidden])') ? 'home' : document.querySelector('.fr-landing:not([hidden])') ? 'landing' : 'start', saved: game.peek?.() });
+
+function readHome() {
+  try { return JSON.parse(localStorage.getItem(game.SAVE_KEY) || '{}').state?.home || {}; } catch { return {}; }
+}
+
+/** Players online for the landing page (the server's /stats; nothing when offline). */
+function fetchOnline() {
+  fetch(`${import.meta.env.BASE_URL}stats`).then((r) => (r.ok ? r.json() : null)).then((st) => { if (st && st.total > 0) ui.setLandingOnline(st.total); }).catch(() => {});
+}

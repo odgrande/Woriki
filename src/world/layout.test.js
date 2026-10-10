@@ -1,3 +1,4 @@
+import { AMBIENCES } from '../audio/zones.js';
 import { describe, it, expect } from 'vitest';
 import { groundAt, surfaceAt, pickZone, gutterRuns, ZONE_DEFS, CROSS_N, navNodes, HALL, ALTAR } from './layout.js';
 
@@ -56,7 +57,7 @@ describe('zones', () => {
     expect(zoneId(200, 200)).toBe(null);
   });
   it('labels have an ambience the audio module knows', () => {
-    for (const z of ZONE_DEFS) expect(['street', 'church', 'market', 'home', 'prayer']).toContain(z.ambience);
+    for (const z of ZONE_DEFS) expect(AMBIENCES).toContain(z.ambience);
   });
 });
 

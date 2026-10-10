@@ -21,7 +21,8 @@ const BARS = [
 export function createHud({ game, root, actions }) {
   const time = h('strong', { text: '--:--' });
   const day = h('span', { text: '' });
-  const nairaChip = h('span.ac-chip', { title: 'Naira' }, h('span', { text: '₦0' }));
+  const nairaChip = h('span.ac-chip.ac-naira', { title: 'Naira' }, h('span', { text: '₦0' }),
+    h('button.ac-plus', { type: 'button', attrs: { 'aria-label': 'Ways to earn naira' }, on: { click: () => actions.earn?.() } }, ic('plus', { size: 12 })));
   const pointsChip = h('span.ac-chip', { title: 'Points' }, ic('star', { cls: 'ac-star' }), h('span', { text: '0' }));
   const moodChip = h('span.ac-chip.ac-mood', { title: 'Mood' }, h('span.ac-mood-emoji'), h('span.ac-mood-label'));
   const who = h('div.ac-who');
@@ -69,8 +70,9 @@ export function createHud({ game, root, actions }) {
     const s = game.state;
     if (!s) return;
     const c = game.clock;
-    time.textContent = c.time;
-    day.textContent = `${c.weekdayShort} · Day ${c.day}`;
+    const hr = c.hour % 12 || 12;
+    time.textContent = `${hr}:${c.time.slice(3)} ${c.hour < 12 ? 'AM' : 'PM'}`;
+    day.textContent = game.mode === 'shared' && c.date ? `${c.weekdayShort} ${c.date.day} ${c.date.monthName}` : `${c.weekdayShort} · Day ${c.day}`;
     nairaChip.firstChild.textContent = naira(s.naira);
     pointsChip.lastChild.textContent = String(s.points);
     pointsChip.setAttribute('aria-label', `${s.points} points`);

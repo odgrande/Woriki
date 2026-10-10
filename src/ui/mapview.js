@@ -1,0 +1,221 @@
+// In-game Lagos map (and the landing page's map): layer chips, city tabs, place cards with
+// things to do, the travel picker (trek / bike / danfo / taxi / free ride) and the short
+// travel screen while you are on the way.
+import { h, ic, setChildren } from './dom.js';
+import { naira } from '../game/content.js';
+import { PLACE_BY_ID, distanceKm } from '../game/life.js';
+import { countdown } from '../game/clock.js';
+
+const CHIPS = [
+  ['traffic', '🚗', 'Go-slow'],
+  ['billboards', '🪧', 'Billboards'],
+  ['sea', '🌊', 'Sea'],
+  ['gov', '🏛️', 'Gov'],
+  ['names', '🏷️', 'Names'],
+];
+const CITIES = [['lagos', 'Lagos'], ['ph', 'Port Harcourt'], ['abuja', 'Abuja']];
+
+/**
+ * @param {object} o
+ * @param {HTMLElement} o.root
+ * @param {object} o.game
+ * @param {object} o.map from createLagosMap
+ * @param {(text: string, opts?: object) => void} o.toast
+ * @param {(go: object) => Promise<void>|void} o.onArrive move the player (walkable places)
+ * @param {(open: boolean) => void} [o.onToggle]
+ */
+export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {} }) {
+  let open = false;
+  let mode = 'game'; // 'game' | 'landing'
+  let selected = null;
+  let landingPick = null;
+
+  const chips = h('div.mv-chips', { attrs: { role: 'group', 'aria-label': 'Map layers' } }, CHIPS.map(([id, emoji, label]) => {
+    const b = h('button.mv-chip', { type: 'button', attrs: { 'aria-pressed': String(map.layers[id] !== false) } }, h('span', { text: emoji, attrs: { 'aria-hidden': 'true' } }), label);
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on));
+      map.setLayer(id, on);
+      if (id === 'gov' && on) map.focus('govhouse', { dist: 60 });
+      if (id === 'sea' && on) map.focus([30, -10], { dist: 140 });
+    });
+    return b;
+  }));
+  const cities = h('div.mv-cities', { attrs: { role: 'tablist', 'aria-label': 'City' } }, CITIES.map(([id, label]) => h('button.mv-city', {
+    type: 'button', attrs: { role: 'tab', 'aria-selected': String(id === 'lagos') },
+    on: { click: () => { if (id !== 'lagos') toast(`${label} is coming soon. Pastors will open branches there first.`, { emoji: '🚧' }); } },
+  }, label)));
+  const walkBtn = h('button.ac-btn.is-yellow.mv-walk', { type: 'button', on: { click: () => walkYaba() } }, '🚶', 'Walk Yaba');
+  const closeBtn = h('button.ac-iconbtn.mv-close', { type: 'button', attrs: { 'aria-label': 'Close map' }, on: { click: () => close() } }, ic('x'));
+  const top = h('div.mv-top', null, cities, closeBtn);
+  const card = h('section.mv-card', { hidden: true, attrs: { 'aria-live': 'polite' } });
+  const el = h('div.mv', { hidden: true }, top, h('div.mv-row', null, chips, walkBtn), card);
+  root.append(el);
+
+  /* ---------------------------------------------------------------- open / close */
+  function show(o = {}) {
+    mode = o.mode || 'game';
+    el.classList.toggle('is-landing', mode === 'landing');
+    closeBtn.hidden = mode === 'landing';
+    walkBtn.hidden = mode === 'landing';
+    top.hidden = false;
+    el.hidden = false;
+    open = true;
+    const here = mode === 'game' ? game.here : null;
+    map.setHere(here);
+    map.show({ focus: o.focus || (mode === 'game' ? (here || 'grace') : null), dist: o.dist ?? 70 });
+    if (mode === 'landing') map.tour(true);
+    else map.tour(false);
+    if (o.place) pick(PLACE_BY_ID[o.place]);
+    else hideCard();
+    onToggle(true);
+  }
+
+  function close() {
+    if (!open) return;
+    open = false;
+    el.hidden = true;
+    hideCard();
+    map.hide();
+    if (game.trip) game.endTrip();
+    onToggle(false);
+  }
+
+  function hideCard() { card.hidden = true; selected = null; }
+
+  /* ---------------------------------------------------------------- places */
+  function pick(p) {
+    if (!p) return;
+    map.tour(false);
+    map.focus(p.id, { dist: 45 });
+    selected = p;
+    if (mode === 'landing') { landingPick?.(p); return; }
+    renderPlace();
+  }
+
+  function renderPlace() {
+    const p = selected;
+    if (!p) return;
+    const s = game.state;
+    const here = game.here === p.id;
+    const km = distanceKm(game.here, p.id);
+    const acts = game.activities(p.id);
+    const isChurch = p.id === 'grace';
+    setChildren(card,
+      h('div.mv-card-head', null,
+        h('span.mv-card-emoji', { text: p.emoji, attrs: { 'aria-hidden': 'true' } }),
+        h('div', null, h('h3', { text: p.name }), h('p', { text: `${p.area}${here ? ' · you are here' : ` · ${km} km away`}` })),
+        h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Close' }, on: { click: hideCard } }, ic('x'))),
+      h('p.mv-desc', { text: p.desc }),
+      isChurch && s ? churchLine() : null,
+      acts.length ? h('div.mv-acts', null, acts.map((a) => h(`div.mv-act${a.shady ? '.is-shady' : ''}`, null,
+        h('span.mv-act-ic', { text: a.emoji, attrs: { 'aria-hidden': 'true' } }),
+        h('span.mv-act-body', null, h('b', { text: a.name }), a.shady ? h('span.ac-tag', { text: 'temptation' }) : null,
+          h('small', { text: [a.naira ? naira(a.naira) : 'Free', a.energy > 0 ? `${a.energy} energy` : a.energy < 0 ? `+${-a.energy} energy` : '', !here ? '' : a.reason || ''].filter(Boolean).join(' · ') })),
+        h('button.ac-btn.is-sm', {
+          type: 'button', class: here && a.ok && !a.shady ? 'is-green' : '', disabled: !here || !a.ok,
+          on: { click: () => { const r = game.activity(a.id); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); renderPlace(); } },
+        }, here ? 'Do' : 'Go first')))) : null,
+      here
+        ? (game.trip ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker('home') } }, '🏠', 'Go home') : p.walk ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: close } }, 'Back to the street') : null)
+        : h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker(p.id) } }, 'Go here', ic('arrow-right', { size: 18 })));
+    card.hidden = false;
+  }
+
+  function churchLine() {
+    const c = game.clock;
+    const plan = game.plan;
+    const today = plan?.items?.length ? plan.items.map((x) => `${x.emoji} ${x.name} ${x.time}`).join(' · ') : null;
+    return h('p.mv-church', null, h('b', { text: c?.current ? `${c.current.name} is on now!` : c?.next ? `Next: ${c.next.name}, ${c.next.when}` : '' }), today ? h('span', { text: ` Today: ${today}` }) : null);
+  }
+
+  /* ---------------------------------------------------------------- travel picker */
+  function picker(to) {
+    const p = PLACE_BY_ID[to];
+    if (!p || !game.state) return;
+    if (game.here === to) { toast(`You are already at ${p.name}.`); return; }
+    const quotes = game.quotes(to);
+    const km = quotes[0]?.km ?? 0;
+    const sheet = h('div.mv-travel', { attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': `How do you want to go to ${p.name}?` } });
+    const closeSheet = () => sheet.remove();
+    setChildren(sheet, h('div.mv-travel-card', null,
+      h('div.mv-card-head', null,
+        h('span.mv-card-emoji', { text: p.emoji, attrs: { 'aria-hidden': 'true' } }),
+        h('div', null, h('h3', { text: `Go to ${p.name}` }), h('p', { text: `${km} km · how will you go?` })),
+        h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Cancel' }, on: { click: closeSheet } }, ic('x'))),
+      h('div.mv-modes', null, quotes.map((q) => h('button.mv-mode', {
+        type: 'button', disabled: !q.ok,
+        on: { click: () => { closeSheet(); go(to, q.mode.id); } },
+      },
+      h('span.mv-mode-ic', { text: q.ownBike ? '🚲' : q.mode.emoji, attrs: { 'aria-hidden': 'true' } }),
+      h('span.mv-mode-body', null, h('b', { text: q.ownBike ? 'Your bicycle' : q.mode.name }), h('small', { text: q.ok ? q.mode.blurb : q.reason })),
+      h('span.mv-mode-meta', null,
+        h('b', { text: q.naira ? naira(q.naira) : 'Free' }),
+        h('small', { text: `${countdown(q.minutes)}${q.energy ? ` · −${q.energy}⚡` : ''}` }))))),
+      p.fee ? h('p.ac-note', { text: `Gate fee at ${p.name}: ${naira(p.fee)}.` }) : null));
+    sheet.addEventListener('pointerdown', (e) => { if (e.target === sheet) closeSheet(); });
+    root.append(sheet);
+    sheet.querySelector('.mv-mode:not([disabled])')?.focus({ preventScroll: true });
+  }
+
+  async function go(to, modeId) {
+    const r = game.travel(to, modeId);
+    if (!r?.ok) {
+      if (r?.reason) toast(r.reason, { tone: 'warn' });
+      if (r?.stuck) setTimeout(() => picker(to), 300);
+      return;
+    }
+    await travelScreen(r);
+    const p = PLACE_BY_ID[to];
+    if (r.walk) {
+      if (open) { open = false; el.hidden = true; hideCard(); map.hide(); onToggle(false); }
+      await onArrive?.(r);
+    } else {
+      // A trip: you are at the place on the map, with what you can do there.
+      if (!open) show({ place: to, dist: 45 });
+      map.setHere(to);
+      selected = p;
+      renderPlace();
+    }
+  }
+
+  /** "🚕 Taxi to Elegushi Beach · 42 min" with the vehicle crossing the screen. */
+  function travelScreen(r) {
+    return new Promise((resolve) => {
+      const p = PLACE_BY_ID[r.to];
+      const vehicle = h('span.mv-go-vehicle', { text: r.mode === 'bike' && game.state?.items?.bike ? '🚲' : { trek: '🚶', bike: '🏍️', danfo: '🚐', taxi: '🚕', free: '🚗' }[r.mode] || '🚕' });
+      const scr = h('div.mv-go', { attrs: { role: 'status' } },
+        h('div.mv-go-card', null,
+          h('p.mv-go-to', { text: `On the way to ${p.name}` }),
+          h('p.mv-go-sub', { text: `${p.area} · ${countdown(r.minutes)} in Lagos traffic` }),
+          h('div.mv-go-road', null, vehicle, h('span.mv-go-flag', { text: p.emoji }))));
+      root.append(scr);
+      const ms = Math.min(3200, 1400 + r.minutes * 25);
+      vehicle.style.animationDuration = `${ms}ms`;
+      setTimeout(() => { scr.classList.add('is-done'); resolve(); setTimeout(() => scr.remove(), 400); }, ms);
+    });
+  }
+
+  function walkYaba() {
+    const here = game.here;
+    if (['home', 'grace', 'market'].includes(here) && !game.trip) { close(); return; }
+    picker('market');
+  }
+
+  return {
+    el,
+    get open() { return open; },
+    show,
+    close,
+    pick,
+    picker,
+    /** On the landing page a pick asks you to sign up. */
+    set onLandingPick(fn) { landingPick = fn; },
+    /** Go home from anywhere (the Home button). */
+    goHome() {
+      if (game.here === 'home' && !game.trip) { toast('You are at home. 🏠'); return; }
+      picker('home');
+    },
+    refresh() { if (open && selected && !card.hidden) renderPlace(); },
+  };
+}

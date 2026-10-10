@@ -1,0 +1,34 @@
+/* Lagos map: place pins and area labels over the 3D map. */
+.lm-pins { position: fixed; inset: 0; pointer-events: none !important; z-index: 12; overflow: hidden; }
+.lm-pin {
+  position: absolute; left: 0; top: 0; pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 5px;
+  font: 600 12.5px/1.1 Inter, system-ui, sans-serif; color: #18181b; white-space: nowrap;
+  background: #fffdf7; border: 2px solid #18181b; border-radius: 999px; box-shadow: 2px 2px 0 #18181b;
+  cursor: pointer; will-change: transform; transition: background-color .15s;
+}
+.lm-pin::after {
+  content: ''; position: absolute; left: 50%; bottom: -8px; width: 10px; height: 10px; margin-left: -6px;
+  background: inherit; border-right: 2px solid #18181b; border-bottom: 2px solid #18181b; transform: rotate(45deg); border-radius: 0 0 3px 0;
+}
+.lm-pin:hover, .lm-pin:focus-visible { background: #fef3c7; outline: none; }
+.lm-pin-emoji { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #f4f1e8; font-size: 13px; }
+.lm-pin.is-walk { background: #facc15; }
+.lm-pin.is-walk .lm-pin-emoji { background: #fffdf7; }
+.lm-pin.is-church { background: #1e3a8a; color: #fff; font-size: 14px; padding: 6px 13px 6px 6px; z-index: 99999 !important; }
+.lm-pin.is-church .lm-pin-emoji { width: 28px; height: 28px; font-size: 17px; background: #facc15; }
+.lm-pin.is-gov { background: #ede9fe; }
+.lm-pin.is-here { background: #22c55e; color: #fff; }
+.lm-pin.is-here::before { content: 'You'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 800 10px/1 'Space Grotesk', system-ui; color: #fff; background: #18181b; padding: 3px 6px; border-radius: 999px; }
+.lm-pin.is-compact { padding: 4px; }
+.lm-pin.is-compact .lm-pin-name { display: none; }
+.lm-pin-badge { margin-left: 2px; padding: 2px 6px; border-radius: 999px; background: #18181b; color: #fff; font-size: 10.5px; }
+.lm-area {
+  position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap;
+  font: 700 12px/1 'Space Grotesk', system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(24, 24, 27, .62); text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+.lm-area.is-water { color: rgba(255, 255, 255, .8); text-shadow: 0 1px 2px rgba(0, 0, 0, .35); font-style: italic; letter-spacing: .14em; }
+@media (prefers-reduced-motion: reduce) { .lm-pin { transition: none; } }
+/* [hidden] must win over the display rules above. */
+.lm-pins[hidden], .lm-pin[hidden], .lm-area[hidden] { display: none !important; }

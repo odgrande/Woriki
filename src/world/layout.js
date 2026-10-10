@@ -34,6 +34,12 @@ export const MARKET = { x0: -46, x1: 2, z0: 5, z1: 24 };
 export const BUSSTOP = { x0: -62, x1: -46, z0: 0, z1: 12, shelter: [-58, -50] };
 export const BUKA = { x0: -11, x1: -1, z0: 9.5, z1: 16 };
 
+/** Elegushi Beach (far south of Yaba in world space): sand from the gate (z0) to the shore. */
+export const BEACH = { x0: -40, x1: 40, z0: 580, z1: 640, shore: 612 };
+/** National Theatre plaza (far east), with the cinema hall in front of the "cap". */
+export const THEATRE = { x0: 570, x1: 630, z0: -50, z1: 44, cap: [600, -30, 20] };
+export const CINEMA = { x0: 588, x1: 612, z0: -6, z1: 16, h: 6, door: [598.6, 601.4] };
+
 const Y0 = -2, Y1 = 14;
 /** Zone definitions. `extra` zones (compound, children) are additions to the contract list. */
 export const ZONE_DEFS = [
@@ -51,6 +57,9 @@ export const ZONE_DEFS = [
   { id: 'kitchen', label: 'Canteen & Kitchen', ambience: 'church', min: [CANTEEN.x0, Y0, CANTEEN.z0], max: [CANTEEN.x1, Y1, CANTEEN.z1] },
   { id: 'children', label: "Children's Church", ambience: 'street', min: [KIDS.x0 - 1, Y0, KIDS.z0 - 1], max: [KIDS.x1 + 1, Y1, KIDS.z1 + 1] },
   { id: 'home', label: 'Home, No. 14', ambience: 'home', min: [HOME.x0, Y0, HOME.z0], max: [HOME.x1, Y1, HOME.z1] },
+  { id: 'beach', label: 'Elegushi Beach, Lekki', ambience: 'beach', min: [BEACH.x0 - 30, Y0, BEACH.z0 - 40], max: [BEACH.x1 + 30, Y1, BEACH.z1] },
+  { id: 'theatre', label: 'National Theatre, Iganmu', ambience: 'street', min: [THEATRE.x0 - 40, Y0, THEATRE.z0 - 40], max: [THEATRE.x1 + 40, Y1, THEATRE.z1 + 40] },
+  { id: 'cinema', label: 'National Theatre Cinema', ambience: 'cinema', min: [CINEMA.x0, Y0, CINEMA.z0], max: [CINEMA.x1, Y1, CINEMA.z1] },
 ];
 
 /** Raised floors: [x0, z0, x1, z1, y]. Later entries win. */

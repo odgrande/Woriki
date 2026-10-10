@@ -57,9 +57,12 @@ export function buildHome(W) {
   wall(W, 'x', hx0, hx1, hz1, { ...o, out: 1, inner: INT, openings: [win(13, 14.4, 'win-dark'), win(21, 22.2, 'win-louvre-a')] });
   wall(W, 'z', hz0, hz1, hx0, { ...o, out: -1, inner: INT, openings: [win(21.5, 23.1)] });
   wall(W, 'z', hz0, hz1, hx1, { ...o, out: 1, inner: '#f1e3c8', openings: [win(20, 21.6, 'win-louvre-a'), win(24, 25.4, 'win-dark')] });
-  wall(W, 'z', hz0, hz1, HOUSE.living, { y0: fy, h: HOUSE.h, t: 0.15, color: INT, out: 1, inner: '#f1e3c8', mat: 'wallIn' });
-  const dg = new THREE.PlaneGeometry(0.9, 2.05); rectUV(dg, P['door-white']);
-  B.add('props', dg, { m: mat(HOUSE.living - 0.08, fy + 1.03, 22.5, -Math.PI / 2) });
+  // partition between the living room and the bedroom, with a doorway
+  wall(W, 'z', hz0, hz1, HOUSE.living, { y0: fy, h: HOUSE.h, t: 0.15, color: INT, out: 1, inner: '#f1e3c8', mat: 'wallIn', openings: [{ a: 22.05, b: 23.0, y0: 0, y1: 2.1, type: 'open' }] });
+  B.boxMM('wood', HOUSE.living - 0.09, fy + 2.1, 22.0, HOUSE.living + 0.09, fy + 2.2, 23.05, { color: '#6b4a2d' });
+  // a foam mattress on the bedroom floor until you buy a bed
+  B.boxMM('fabric', 22.6, fy, 24.8, 24.2, fy + 0.18, 26.8, { color: '#e8edf5' });
+  B.boxMM('fabric', 22.75, fy + 0.18, 26.2, 23.35, fy + 0.3, 26.65, { color: '#ffffff' });
   // base band outside
   for (const [a, b, c, ax] of [[hx0, hx1, hz1 + 0.12, 'x'], [hz0, hz1, hx0 - 0.12, 'z'], [hz0, hz1, hx1 + 0.12, 'z']]) {
     if (ax === 'x') B.boxMM('plaster', a, 0, c - 0.02, b, fy + 0.45, c + 0.02, { color: BASE });

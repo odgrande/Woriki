@@ -10,6 +10,7 @@ import { buildStreet } from './street.js';
 import { buildChurch } from './church.js';
 import { buildMarket } from './market.js';
 import { buildHome } from './home.js';
+import { buildBeach, buildTheatre } from './districts.js';
 import { buildVehicles, createTraffic } from './vehicles.js';
 import { ZONE_DEFS, groundAt, surfaceAt, pickZone, navNodes, HALL, ALTAR } from './layout.js';
 import { buildEdges, createNav } from './nav.js';
@@ -48,8 +49,10 @@ export function createState(P, S, mats = {}, root = new THREE.Group(), kits = {}
   const lines = [];
   const fans = [];
   const doors = [];
+  /** Factories of objects with their own materials and animation (() => {object, update?}), e.g. the sea. */
+  const extras = [];
   return {
-    b: new Batch(), P, S, mats, root, lines, fans, kits, seats, interactables, instances, doors,
+    b: new Batch(), P, S, mats, root, lines, fans, kits, seats, interactables, instances, doors, extras,
     col: colliders,
     collide(x0, y0, z0, x1, y1, z1, kind = 'wall') {
       colliders.push({ x0: Math.min(x0, x1), y0: Math.min(y0, y1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), y1: Math.max(y0, y1), z1: Math.max(z0, z1), kind });
@@ -68,7 +71,7 @@ export function createState(P, S, mats = {}, root = new THREE.Group(), kits = {}
 /** Run every area builder synchronously (used by tests). */
 export function planWorld(P, S) {
   const W = createState(P, S);
-  buildStreet(W); buildChurch(W); buildMarket(W); buildHome(W); buildVehicles(W);
+  buildStreet(W); buildChurch(W); buildMarket(W); buildHome(W); buildVehicles(W); buildBeach(W); buildTheatre(W);
   return W;
 }
 
@@ -82,6 +85,14 @@ export function makeSpawns() {
     player: sp(14.6, 16.6, Math.PI),
     /** In the living room of No. 14: every day starts at home. */
     home: sp(16.6, 23.8, Math.PI / 2),
+    /** Where you arrive after travelling (keys of PLACES[].walk in src/game/life.js). */
+    places: {
+      home: sp(16.6, 23.8, Math.PI / 2),
+      church: sp(9, -6.2, Math.PI),
+      market: sp(-21.5, 9.6, 0),
+      beach: sp(0, 584, 0),
+      theatre: sp(600, 30, Math.PI),
+    },
     byRole: {
       worshipper: sp(14.6, 16.6, Math.PI),
       visitor: sp(-53.2, 6.4, Math.PI),
@@ -134,6 +145,8 @@ export async function buildWorld(ctx, physics) {
   buildMarket(W);
   buildHome(W);
   buildVehicles(W);
+  buildBeach(W);
+  buildTheatre(W);
   progress('meshes', 0.9);
   await tick();
 
@@ -178,6 +191,8 @@ export async function buildWorld(ctx, physics) {
   const wires = new THREE.LineSegments(wireGeo, new THREE.LineBasicMaterial({ color: '#1b1b1b' }));
   wires.name = 'world:wires';
   root.add(wires);
+  const extras = W.extras.map((make) => make());
+  for (const e of extras) root.add(e.object);
 
   // ---------------------------------------------------------------- dynamic doors and the bell
   const doorState = [];
@@ -285,6 +300,7 @@ export async function buildWorld(ctx, physics) {
         im.instanceMatrix.needsUpdate = true;
       }
       traffic.update(dt);
+      for (const e of extras) e.update?.(dt, t);
       for (const d of doorState) {
         const target = d.open ? d.openAngle : d.closedAngle;
         d.angle += (target - d.angle) * Math.min(1, dt * 6);

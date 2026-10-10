@@ -8,12 +8,16 @@ import {
 import { GROUPS } from '../game/actions.js';
 import { countdown, ampm } from '../game/clock.js';
 import { logStamp, choirCost } from '../game/systems.js';
+import { CATALOG } from '../game/life.js';
 
+// Like Lagos Life: Home and Map are buttons (go home from anywhere, open the Lagos map);
+// Buy, Today and Phone open the sheet. Prayer wall and diary live on the phone.
 const TABS = [
-  ['today', 'sun', 'Today'],
-  ['prayer', 'hand-heart', 'Prayer'],
-  ['shop', 'shopping-bag', 'Shop'],
-  ['diary', 'notebook-pen', 'Diary'],
+  ['home', 'house', 'Home', true],
+  ['map', 'map', 'Map', true],
+  ['shop', 'shopping-bag', 'Buy'],
+  ['today', 'church', 'Today'],
+  ['phone', 'smartphone', 'Phone'],
 ];
 
 const REASON_ICON = { where: 'map-pin', time: 'clock', energy: 'zap', money: 'wallet', done: 'check', service: 'church', busy: 'hourglass', over: 'lock', hidden: 'lock' };
@@ -24,8 +28,10 @@ const REASON_ICON = { where: 'map-pin', time: 'clock', energy: 'zap', money: 'wa
  * @param {HTMLElement} o.root
  * @param {(text: string, opts?: object) => void} o.toast
  * @param {(open: boolean) => void} [o.onToggle]
+ * @param {{home?: () => void, map?: () => void}} [o.actions] the Home and Map buttons
  */
-export function createDock({ game, root, toast, onToggle = () => {} }) {
+export function createDock({ game, root, toast, onToggle = () => {}, actions = {} }) {
+  let phoneTab = 'prayer';
   let tab = 'today';
   let open = false;
   let queued = false;
@@ -82,6 +88,8 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
   navH.observe(nav);
 
   function select(id) {
+    if (TABS.find((t) => t[0] === id)?.[3]) { setOpen(false); actions[id]?.(); return; }
+    if (id === 'prayer' || id === 'diary') { phoneTab = id; id = 'phone'; lastKey = ''; }
     if (open && tab === id) { setOpen(false); return; }
     tab = id;
     setOpen(true);
@@ -110,11 +118,12 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
       const m = game.milestone;
       return JSON.stringify([...base, Math.floor(s.T / 5), acts, m ? m.reqs.map((r) => r.join()).join() : '', s.convicted, s.role, s.stage]);
     }
-    if (tab === 'prayer') {
+    if (tab === 'phone' && phoneTab === 'diary') return JSON.stringify([tab, phoneTab, s.log.length, s.log[0]?.text, s.streak, s.services, s.souls, s.prayed, Math.round(s.word), s.testimonies, s.role, s.rank, s.stage]);
+    if (tab === 'phone') {
       const acts = game.actions('prayer').map((a) => `${a.id}:${a.ok ? 1 : 0}${a.done ? 1 : 0}${a.reason || ''}`).join('|');
-      return JSON.stringify([...base, s.prayed, s.requests, acts]);
+      return JSON.stringify([...base, phoneTab, s.prayed, s.requests, acts]);
     }
-    if (tab === 'shop') return JSON.stringify([tab, s.naira, s.points, s.items, s.pastor, s.over]);
+    if (tab === 'shop') return JSON.stringify([tab, s.naira, s.points, s.items, s.home, s.pastor, s.over]);
     return JSON.stringify([tab, s.log.length, s.log[0]?.text, s.streak, s.services, s.souls, s.prayed, Math.round(s.word), s.testimonies, s.role, s.rank, s.stage]);
   }
 
@@ -207,6 +216,20 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     return null;
   }
 
+  /** Today's church plan for this role, then normal life. */
+  function planCard() {
+    const plan = game.plan;
+    if (!plan) return null;
+    return h('div.ac-plan', null,
+      h('div.ac-plan-title', null, ic('church'), `${plan.weekday} at Grace Assembly`),
+      plan.items.length
+        ? h('ul', null, plan.items.map((x) => h(`li${x.done ? '.is-done' : x.live ? '.is-live' : x.past ? '.is-past' : ''}`, null,
+          h('span.ac-plan-time', { text: x.time }), h('span', { text: `${x.emoji} ${x.name}` }),
+          h('span.ac-plan-state', { text: x.done ? '✓ done' : x.live ? 'on now' : x.past ? 'missed' : '' }))))
+        : h('p', { text: 'No church meeting for you today.' }),
+      h('p.ac-plan-idea', { text: plan.idea }));
+  }
+
   function journeyCard(s) {
     const m = game.milestone;
     if (!m) return null;
@@ -225,8 +248,11 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     const out = [
       h('p.ac-verse', null, ic('quote'), h('span', null, `“${v[1]}” `, h('b', { text: `— ${v[0]}` }))),
       nowCard(s),
+      planCard(),
       journeyCard(s),
     ];
+    const prayers = game.actions('prayer');
+    if (prayers.length) out.push(section('Prayer'), ...prayers.map(actionRow));
     for (const [group, label] of GROUPS) {
       const list = game.actions(group);
       if (!list.length) continue;
@@ -276,11 +302,26 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
   }
 
   function renderShop(s) {
+    const home = s.home || {};
+    const rooms = [...new Set(CATALOG.map((c) => c.room))];
     const out = [
       h('div.ac-wallet', null, h('div', null, h('span', { text: 'Naira' }), h('strong', { text: naira(s.naira) })), h('div', null, h('span', { text: 'Points' }), h('strong', null, String(s.points), ic('star', { cls: 'ac-star' })))),
-      h('p.ac-note', { text: 'Naira comes from work and missions. ⭐ points come from showing up, serving and praying. Every item does something.' }),
-      section('Shop'),
-      ...SHOP.map((it) => buyRow({
+      h('p.ac-note', { text: 'Naira comes from work and missions. ⭐ points come from showing up, serving and praying. Remember your tithe and offering on Sunday.' }),
+      section('For the church'),
+      ...SHOP.filter((it) => ['bible', 'mat', 'tambourine', 'outfit', 'gele'].includes(it.id)).map((it) => buyRow({
+        emoji: it.emoji, name: it.name, desc: it.desc, price: it.naira ? naira(it.naira) : `${it.points}⭐`, owned: !!s.items[it.id],
+        can: !s.over && (it.naira ? s.naira >= it.naira : s.points >= it.points), onBuy: () => game.buy(it.id),
+      })),
+      ...rooms.flatMap((room) => [
+        section(`Home catalog · ${room}`),
+        ...CATALOG.filter((c) => c.room === room).map((c) => buyRow({
+          emoji: c.emoji, name: c.name, desc: c.perk, price: naira(c.naira), owned: !!home[c.id], shady: c.vanity,
+          can: !s.over && s.naira >= c.naira, onBuy: () => { const r = game.buyFurniture(c.id); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); },
+        })),
+      ]),
+      h('p.ac-note', { text: 'Furniture is delivered to No. 14 straight away. Go home to see it.' }),
+      section('Getting around'),
+      ...SHOP.filter((it) => !['bible', 'mat', 'tambourine', 'outfit', 'gele'].includes(it.id)).map((it) => buyRow({
         emoji: it.emoji, name: it.name, desc: it.desc, price: it.naira ? naira(it.naira) : `${it.points}⭐`, owned: !!s.items[it.id],
         can: !s.over && (it.naira ? s.naira >= it.naira : s.points >= it.points), onBuy: () => game.buy(it.id),
       })),
@@ -333,6 +374,16 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     ];
   }
 
+  /* ---------------------------------------------------------------- Phone */
+  function renderPhone(s) {
+    const seg = h('div.ac-seg.ac-phone-seg', { attrs: { role: 'group', 'aria-label': 'Phone apps' } },
+      [['prayer', '🙏 Prayer wall'], ['diary', '📔 My story']].map(([id, label]) => h('button', {
+        type: 'button', attrs: { 'aria-pressed': String(phoneTab === id) },
+        on: { click: () => { phoneTab = id; lastKey = ''; render(); } },
+      }, label)));
+    return [seg, ...(phoneTab === 'diary' ? renderDiary(s) : renderPrayer(s))];
+  }
+
   /* ---------------------------------------------------------------- render */
   function render() {
     queued = false;
@@ -347,10 +398,10 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     const [, , label] = TABS.find((t) => t[0] === tab);
     title.textContent = label;
     const c = game.clock;
-    sub.textContent = tab === 'today' ? `${c.weekdayName} ${c.time} · Day ${c.day}` : tab === 'shop' ? `${naira(s.naira)} · ${s.points} points` : '';
+    sub.textContent = tab === 'today' ? `${c.weekdayName} ${c.time} · Day ${c.day}` : tab === 'shop' ? `${naira(s.naira)} · ${s.points} points` : tab === 'phone' ? (phoneTab === 'diary' ? 'My story' : 'Prayer wall') : '';
     const top = body.scrollTop;
     const focusId = document.activeElement?.id;
-    const content = tab === 'today' ? renderToday(s) : tab === 'prayer' ? renderPrayer(s) : tab === 'shop' ? renderShop(s) : renderDiary(s);
+    const content = tab === 'today' ? renderToday(s) : tab === 'shop' ? renderShop(s) : renderPhone(s);
     setChildren(body, content);
     body.scrollTop = top;
     if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });

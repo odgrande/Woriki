@@ -69,6 +69,8 @@ export function createContext(canvas, opts = {}) {
   const timer = new THREE.Timer();
   const updates = new Set();
   const bus = createBus();
+  /** What is drawn: the world, or another scene such as the Lagos map. */
+  const view = { scene: null, camera: null };
 
   function resize() {
     const w = canvas.clientWidth || window.innerWidth;
@@ -99,10 +101,13 @@ export function createContext(canvas, opts = {}) {
         const dt = Math.min(timer.getDelta(), 0.05);
         ctx.time += dt;
         for (const fn of updates) fn(dt, ctx.time);
-        renderer.render(scene, camera);
+        renderer.render(view.scene || scene, view.camera || camera);
       });
     },
     stop() { renderer.setAnimationLoop(null); },
+    /** Draw another scene (e.g. the Lagos map) instead of the world; setView(null) goes back. */
+    setView(sc = null, cam = null) { view.scene = sc; view.camera = cam; bus.emit('view:changed', { world: !sc }); },
+    get viewingWorld() { return !view.scene; },
   };
   return ctx;
 }

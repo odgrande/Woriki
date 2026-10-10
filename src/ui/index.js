@@ -3,11 +3,15 @@
 // modals for events, temptations and the Bible quiz, toasts, help and settings.
 import './ui.css';
 import './start.css';
+import './front.css';
+import '../map/map.css';
 import { h, store } from './dom.js';
 import { createStartScreen } from './start.js';
 import { createHud } from './hud.js';
 import { createDock } from './sheet.js';
 import { createDialogs } from './dialogs.js';
+import { createFront, isLoggedIn } from './front.js';
+import { createMapView } from './mapview.js';
 import { countdown } from '../game/clock.js';
 
 /**
@@ -20,6 +24,8 @@ import { countdown } from '../game/clock.js';
  * @property {{setMuted?: (m: boolean) => void}} [audio] optional, muted with the sound button
  * @property {{enabled: boolean}} [input] optional, disabled while modals are open
  * @property {boolean} [keys] handle "?" and Esc (default true)
+ * @property {object} [map] the Lagos map (createLagosMap): landing page and the in-game Map
+ * @property {(go: object) => Promise<void>|void} [onArrive] move the player after travelling to a walkable place
  */
 
 /**
@@ -99,14 +105,80 @@ export function createUI(ctx, opts) {
       settings: () => openSettings(),
       help: () => dialogs.help(),
       today: () => dock.select('today'),
+      earn: () => dock.select('today'),
     },
   });
+
+  /* ---------------------------------------------------------------- map and front door */
+  const mapView = opts.map ? createMapView({
+    root: el,
+    game,
+    map: opts.map,
+    toast: (t, o) => dialogs.toast(t, o),
+    onArrive: (go) => opts.onArrive?.(go),
+    onToggle(open) {
+      if (!inGame) return;
+      hud.show(!open);
+      dock.show(!open);
+      if (opts.input) { opts.input.enabled = !open && !modalOpen; opts.input.setVisible?.(!open); }
+      bus?.emit('ui:map', { open });
+    },
+  }) : null;
+  if (mapView) {
+    mapView.onLandingPick = (p) => dialogs.info({
+      emoji: p.emoji, title: p.name, text: `${p.area}. ${p.desc}\n\nSign up free to go there, worship at Grace Assembly and live your Lagos life.`,
+      ok: 'Sign up free', onOk: () => signUp(),
+    });
+  }
+
+  const front = createFront({
+    root: el,
+    game,
+    dialogs,
+    onSignUp: () => signUp(),
+    onLogin: () => showHomeCard(),
+    onContinue: () => { front.hide(); begin(null, 'continue'); },
+    onNewLife: () => { game.reset(); store.set('amen.loggedOut', '0'); front.hide(); showStart(); },
+    onLogout: () => showLanding(),
+  });
+
+  /** Before joining: the live Lagos map with Sign up / Log in. */
+  function showLanding() {
+    inGame = false;
+    start.hide();
+    hud.show(false);
+    dock.show(false);
+    front.showLanding();
+    mapView?.show({ mode: 'landing' });
+    bus?.emit('ui:screen', { screen: 'landing' });
+  }
+
+  /** Returning player: their home in 3D with the welcome-back card. */
+  function showHomeCard() {
+    inGame = false;
+    start.hide();
+    hud.show(false);
+    dock.show(false);
+    mapView?.close();
+    front.showHome();
+    bus?.emit('ui:screen', { screen: 'home', saved: game.peek?.() });
+  }
+
+  function signUp() {
+    mapView?.close();
+    front.hide();
+    showStart();
+  }
   hud.setMuted(muted);
 
   const dock = createDock({
     game,
     root: el,
     toast: (t, o) => dialogs.toast(t, o),
+    actions: {
+      home: () => mapView ? mapView.goHome() : dialogs.toast('The map is not ready yet.'),
+      map: () => mapView?.show(),
+    },
     onToggle(open) {
       document.documentElement.classList.toggle('ac-sheet-open', open);
       bus?.emit('ui:sheet', { open });
@@ -120,6 +192,11 @@ export function createUI(ctx, opts) {
       quality,
       onNewLife() {
         game.reset();
+        location.reload();
+      },
+      onLogout() {
+        game.save();
+        store.set('amen.loggedOut', '1');
         location.reload();
       },
     });
@@ -171,6 +248,7 @@ export function createUI(ctx, opts) {
     if (!inGame) return;
     hud.update();
     dock.update();
+    mapView?.refresh();
   }
 
   /* ---------------------------------------------------------------- game events */
@@ -199,16 +277,22 @@ export function createUI(ctx, opts) {
       return;
     }
     if (!inGame) return;
+    if ((e.key === 'm' || e.key === 'M') && mapView) { if (mapView.open) mapView.close(); else mapView.show(); return; }
+    if ((e.key === 'h' || e.key === 'H') && mapView && !mapView.open) { mapView.goHome(); return; }
     if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); dialogs.help(); return; }
     if (e.key === 'Escape') {
       if (dialogs.escape()) return;
+      if (mapView?.open) { mapView.close(); return; }
       if (dock.open) dock.setOpen(false);
     }
   };
   if (opts.keys !== false) window.addEventListener('keydown', onKey);
 
   /* ---------------------------------------------------------------- start */
+  // Lagos Life style: logged-in players see their home; everyone else the live city map.
   if (game.state) enterGame();
+  else if (isLoggedIn(game)) showHomeCard();
+  else if (mapView) showLanding();
   else showStart();
 
   const ui = {
@@ -221,7 +305,17 @@ export function createUI(ctx, opts) {
     get sheetOpen() { return dock.open; },
     setMuted,
     /** "● 23 online" chip in the HUD (mode 'local' for the same-device fallback). */
-    setOnline: (count, mode) => hud.setOnline(count, mode),
+    setOnline: (count, mode) => { hud.setOnline(count, mode); if (mode !== 'local') front.setOnline(count); },
+    /** Players online on the landing page (from the server's /stats). */
+    setLandingOnline: (n) => front.setOnline(n),
+    /** A pin on the Lagos map was tapped. */
+    mapPick: (p) => mapView?.pick(p),
+    get mapOpen() { return !!mapView?.open; },
+    showMap: (o) => mapView?.show(o),
+    closeMap: () => mapView?.close(),
+    goHome: () => mapView?.goHome(),
+    showLanding,
+    showHomeCard,
     toast: (text, o) => dialogs.toast(text, o),
     modal: (m) => dialogs.info(m),
     help: () => dialogs.help(),
@@ -232,7 +326,7 @@ export function createUI(ctx, opts) {
     /** Skip the start screen: begin a new life with this profile, or 'continue' the saved one. */
     begin,
     /** Dev harness helpers. */
-    dev: { start, dock, dialogs, hud },
+    dev: { start, dock, dialogs, hud, front, mapView },
     destroy() {
       offs.forEach((f) => f());
       window.removeEventListener('keydown', onKey);
