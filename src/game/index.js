@@ -417,7 +417,6 @@ export function createGame(ctx = {}, opts = {}) {
         return r;
       });
     },
-    /** Visit the family in a house on the map and invite them to church. */
     /** Things to do with a piece of furniture you have: [{id, emoji, label, pose, ok, reason}]. */
     homeActions(slot) {
       if (!s) return [];
@@ -441,6 +440,7 @@ export function createGame(ctx = {}, opts = {}) {
         return r;
       });
     },
+    /** Visit the family in a house on the map and invite them to church. */
     visitFamily(key, area) {
       return run((e) => {
         const before = { ...s };

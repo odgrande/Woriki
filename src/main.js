@@ -26,6 +26,8 @@ import { createLagosMap } from './map/lagos.js';
 import { createDecor } from './world/decor.js';
 import { createJourney } from './world/journey.js';
 import { randomAppearance } from './characters/index.js';
+import { buildInterior, INTERIOR_OF } from './world/interiors.js';
+import { ACTIVITIES, PLACE_BY_ID } from './game/life.js';
 import './main.css';
 
 const params = new URLSearchParams(location.search);
@@ -73,11 +75,13 @@ ui = createUI(ctx, {
   onArrive: (go) => arrive(go),
   onJourney: (go) => journey(go),
   onSkipJourney: () => session?.journey?.skip(),
+  onEnterPlace: (placeId) => enterPlace(placeId),
   snapshot: () => snapshot(),
 });
 debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
 debug.mapDebug = lagosMap;
 debug.journey = (go) => journey(go); // tests: play a trip on the road
+debug.enterPlace = (id) => enterPlace(id); // tests: find yourself inside a place
 
 /* ---------------------------------------------------------------- loading overlay */
 function loadingOverlay() {
@@ -175,6 +179,8 @@ function frame(dt, t) {
   }
   s.community.update(dt, t);
   s.decor.update(dt, t);
+  if (s.inside) for (const n of s.inside.people) n.char.update?.(dt);
+  for (const m of s.inside?.markers || []) m.position.y = m.userData.y + Math.sin(t * 2.2 + m.userData.y) * 0.08;
   bubbles.update();
   ctx.camera.getWorldDirection(yawVec);
   audio.update(ctx.camera.position, Math.atan2(yawVec.x, yawVec.z));
@@ -256,7 +262,92 @@ async function crossFootbridge(path) {
 ctx.bus.on('player:interact', (item) => {
   if (item?.action === 'footbridge') crossFootbridge(item.path);
   if (item?.action === 'furniture') ui.furniture(item.slot);
+  if (item?.action === 'place-activity') ui.activity(item.activity);
+  if (item?.action === 'leave-place') ui.showMap({ place: item.place });
 });
+
+/* ---------------------------------------------------------------- inside the places */
+// After a trip you find yourself inside the place (src/world/interiors.js): its people, and a
+// floating sign on each thing you can do there (walk up and press F, or tap the sign).
+const interiors = new Map();
+async function enterPlace(placeId) {
+  const s = session;
+  const place = PLACE_BY_ID[placeId];
+  if (!s?.player || !place || !INTERIOR_OF[placeId]) return false;
+  let inside = interiors.get(placeId);
+  if (!inside) {
+    let info = null;
+    s.world.scenery((W) => {
+      info = buildInterior(W, placeId, place);
+      // what you can do here: a spot for each activity, and the way out
+      ACTIVITIES.filter((a) => a.place === placeId).forEach((a, i) => {
+        const st = info.stations[i % Math.max(1, info.stations.length)] || info.spawn;
+        const at = st.clone();
+        if (i >= info.stations.length) at.x += 1.3 * Math.floor(i / info.stations.length);
+        W.interact(`act-${a.id}`, at, 1.4, a.name, 'place-activity', { activity: a.id, short: `${a.emoji} ${a.shady ? 'Hmm…' : 'Do'}` });
+      });
+      W.interact(`exit-${placeId}`, info.exit.clone(), 1.6, 'Go outside (the Lagos map)', 'leave-place', { place: placeId, short: '🚪 Exit' });
+      return { zones: [info.zone] };
+    }, `inside:${placeId}`);
+    const kit = await kitPromise;
+    const people = info.npcs.map((n, i) => {
+      const char = createCharacter(kit, randomAppearance(Math.random, n.role === 'minister' ? 'minister' : n.role), { detail: 'low' });
+      char.object.position.copy(n.pos);
+      char.object.rotation.y = n.rotY;
+      if (n.scale) char.object.scale.setScalar(n.scale);
+      const act = char.play(n.pose === 'kneel' ? 'kneel' : n.pose === 'lie' ? 'lie' : n.pose, { fade: 0 });
+      if (n.pose === 'kneel' && act) { act.time = 2.0; act.timeScale = 0; }
+      s.world.root.add(char.object);
+      return { id: 9000 + interiors.size * 20 + i, name: n.name || ['Bro. Tayo', 'Sis. Ngozi', 'Mr. Bello', 'Aunty Funmi', 'Chidi', 'Baba Sule'][i % 6], role: n.role, kind: n.scale ? 'kid' : 'inside', char, pos: char.object.position };
+    });
+    // floating signs over the things to do
+    const markers = s.world.interactables.filter((it) => it.action === 'place-activity' && ACTIVITIES.find((a) => a.id === it.activity)?.place === placeId).map((it) => {
+      const a = ACTIVITIES.find((x) => x.id === it.activity);
+      const m = signSprite(a.emoji, a.shady);
+      m.position.set(it.position.x, it.position.y + 2.3, it.position.z);
+      m.userData = { y: it.position.y + 2.3, activity: a.id };
+      s.world.root.add(m);
+      return m;
+    });
+    const exitSign = signSprite('🚪', false);
+    exitSign.position.set(info.exit.x, info.exit.y + 2.5, info.exit.z);
+    exitSign.userData = { y: info.exit.y + 2.5, exit: placeId };
+    s.world.root.add(exitSign);
+    markers.push(exitSign);
+    inside = { info, people, markers, placeId };
+    interiors.set(placeId, inside);
+  }
+  s.inside = inside;
+  s.player.teleport(inside.info.spawn, inside.info.spawnRot);
+  s.camera.behind(inside.info.spawnRot);
+  // a wide look at the room as you come in
+  s.camera.pitch = 0.22;
+  s.camera.distance = Math.min(s.camera.maxDistance, inside.info.outdoor ? 7 : 4.6);
+  s.camera.snap?.();
+  ctx.setShadowFocus(inside.info.spawn);
+  ctx.bus.emit('player:zone', { zone: s.world.zoneAt?.(inside.info.spawn) });
+  quiet(false);
+  ui.toast?.(`📍 You are inside ${place.name}. Walk to a sign and press F (or tap it) to do something. The door takes you back to the map.`);
+  return true;
+}
+/** A round sign with an emoji, floating over a thing to do. */
+function signSprite(emoji, shady) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = shady ? '#fecaca' : '#fde047';
+  g.strokeStyle = '#000'; g.lineWidth = 8;
+  g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.font = '64px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(emoji, 64, 70);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true }));
+  sp.scale.set(0.6, 0.6, 0.6);
+  sp.name = 'activity-sign';
+  return sp;
+}
 
 /* ---------------------------------------------------------------- life in your room */
 // Do something with a piece of furniture (from its menu): sit, lie on the bed, kneel at the
@@ -329,10 +420,13 @@ ctx.bus.on('home:do', ({ slot, id, pose, toggle }) => {
     const hit = ray.intersectObject(s.decor.root, true)[0];
     const slot = hit && s.decor.slotOf(hit.object);
     if (slot) { ui.furniture(slot); return; }
+    // the floating signs over things to do inside a place
+    const sign = s.inside?.markers.length ? ray.intersectObjects(s.inside.markers, false)[0] : null;
+    if (sign) { if (sign.object.userData.exit) ui.showMap({ place: sign.object.userData.exit }); else ui.activity(sign.object.userData.activity); return; }
     // people: the nearest one on screen under the pointer (cheaper than raycasting skinned meshes)
     let best = null, bd = 46;
     const v = new THREE.Vector3();
-    for (const n of s.community.npcs) {
+    for (const n of [...s.community.npcs, ...(s.inside?.people || [])]) {
       if (!n.char.object.visible) continue;
       v.copy(n.pos); v.y += 1.2;
       if (v.distanceTo(ctx.camera.position) > 30) continue;
@@ -384,6 +478,7 @@ async function arrive(go) {
   const s = session;
   if (!s?.player) return;
   const sp = s.world.spawns.places?.[go.walk] || s.world.spawns.home;
+  s.inside = null;
   s.player.teleport(sp.position, sp.rotY);
   s.camera.behind(sp.rotY || 0);
   s.camera.snap?.();

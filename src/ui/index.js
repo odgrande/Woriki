@@ -13,7 +13,7 @@ import { createDialogs } from './dialogs.js';
 import { createFront, isLoggedIn } from './front.js';
 import { createMapView } from './mapview.js';
 import { createPhone } from './phone/phone.js';
-import { FURNITURE_BY_ID, variantOf } from '../game/life.js';
+import { FURNITURE_BY_ID, variantOf, ACTIVITY_BY_ID } from '../game/life.js';
 import { drawPoster } from '../map/posters.js';
 import { ROLES as GAME_ROLES } from '../game/content.js';
 import { naira } from '../game/content.js';
@@ -172,6 +172,7 @@ export function createUI(ctx, opts) {
       });
     } : undefined,
     onSkip: () => opts.onSkipJourney?.(),
+    onEnterPlace: opts.onEnterPlace,
     onAds: () => phone.show('ads'),
     onToggle(open) {
       if (!inGame) return;
@@ -300,6 +301,28 @@ export function createUI(ctx, opts) {
       },
     });
   }
+  /** Something to do at the place you are in (its sign inside): what it costs, and do it. */
+  function activity(id) {
+    if (!inGame) return;
+    const a = (game.activities?.(ACTIVITY_BY_ID[id]?.place) || []).find((x) => x.id === id);
+    if (!a) return;
+    dialogs.open({
+      id: `activity:${id}`,
+      dismissible: true,
+      build(card, close) {
+        const cost = [a.naira ? naira(a.naira) : 'Free', a.energy > 0 ? `${a.energy} energy` : a.energy < 0 ? `+${-a.energy} energy` : null].filter(Boolean).join(' · ');
+        setChildren(card,
+          h('div.ac-modal-emoji', { text: a.emoji, attrs: { 'aria-hidden': 'true' } }),
+          h('h3', { text: a.name, id: 'ac-modal-title' }),
+          a.shady ? h('p', null, h('span.ac-chip.is-red', { text: 'TEMPTATION' }), ' Think about it. What would Jesus do?') : null,
+          h('p', { text: cost + (a.ok ? '' : ` — ${a.reason}`) }),
+          h('div.ac-choices', null,
+            h('button.ac-btn.is-primary', { type: 'button', disabled: !a.ok, on: { click: () => { close(); const r = game.activity(id); if (r && !r.ok && r.reason) dialogs.toast(r.reason, { tone: 'warn' }); } } }, a.shady ? 'Do it anyway' : 'Do it'),
+            h('button.ac-btn', { type: 'button', on: { click: close } }, a.shady ? 'No, I will not' : 'Not now')));
+      },
+    });
+  }
+
   /** A billboard poster, big. */
   function poster(p) {
     dialogs.open({
@@ -503,6 +526,7 @@ export function createUI(ctx, opts) {
     /** Replace or upgrade furniture in a slot of the home. */
     furniture,
     furnitureShop,
+    activity,
     /** A clicked person in the 3D world. */
     person,
     /** A clicked billboard poster. */

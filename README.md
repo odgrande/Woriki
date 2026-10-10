@@ -24,7 +24,11 @@ real choices around it, as in real life.
   Finish all three for a bonus.
 - **Road safety.** There is a zebra crossing with traffic lights at the church gate, where cars stop on red
   and people wait for the green light to cross, and a pedestrian bridge by the market. An invisible barrier along
-  the kerbs tells you where to cross. Horns are heard only on the street.
+  the kerbs tells you where to cross.
+- **Sounds that fit the place.** Traffic, horns and okadas only on the road itself; home, church, the
+  market, the beach and the compound each sound like themselves. Background voices are only on the
+  street, and quiet: the real talk in Amen City is from real players in the chat. Nothing from the world
+  plays while the map is open.
 - **Everything on the map is tappable:** places, buildings, billboards, neighbourhoods, bridges, roads,
   cars, boats, palms, water tanks and the lagoon. Every house has a family living in it, with their own
   story and prayer need: visit and invite them to church, or pray for them. Lagos only. "Coming soon" places are already on the map: Prayer City camp, the airport,
@@ -33,8 +37,14 @@ real choices around it, as in real life.
 - **Choices beyond the church gate** (police station at Sabo, LUTH, a children's home, gospel radio,
   a betting shop, a lounge, an owambe hall): bail a brother, pray in the police cell, donate blood,
   or fall for bribery, betting and the lounge.
-- **Change your furniture.** Click any furniture (or press F next to it) to replace or upgrade it, from the
-  old maroon sofa and box TV to leather and a 75-inch screen. Your old one goes to a neighbour in need.
+- **Life in your room.** Click any furniture (or press F next to it) to use it:
+  - lie down on the bed to rest, or say your prayers and sleep after 8pm
+  - sit on the sofa, chairs, dining table or desk, or watch Gospel TV (or the NTA news) from the sofa
+  - kneel at your prayer corner, have quiet time at the desk, read a Christian book
+  - practise worship songs, eat from the fridge, water the plants, iron your Sunday best, switch the fan on
+
+  The same menu lets you replace or upgrade the piece, from the old maroon sofa and box TV to leather and
+  a 75-inch screen. Your old one goes to a neighbour in need.
 - **Like Lagos Life at the door.** A logo preloader, then a live 3D map of Lagos with *Sign up free* and
   *Log in* before you join. Once you have a life you stay logged in on that device: you see your
   character at home with a card (name, today's date, naira, today's church plan) and *Continue*,
@@ -75,7 +85,25 @@ real choices around it, as in real life.
   - Your booked posters show up on both.
 - **Day and night.** The street gets darker as Lagos does: orange dusk, a moonlit night, lit billboards and lamps.
 - **Camera.** The eye button (or `V`) switches between Behind, Close, Wide, From above and My eyes (first person). Mouse look locks the pointer, and the wheel zooms.
-- **See the journey.** After you choose a ride you see it on the road: trekking on the walkway, on the back of an okada, in a danfo with the conductor hanging out, or in a taxi. Agberos collect "owo ero" at the park.
+- **See the journey, on the real roads.** After you choose a ride you see it on the road: trekking on the
+  walkway, on the back of an okada, in a danfo with the conductor hanging out, or in a taxi, with traffic
+  passing and people walking. The road depends on where you go:
+  - Third Mainland Bridge across the lagoon (Makoko on stilts and its little church on the water below)
+  - Ikorodu Road with the red BRT lane and the pedestrian bridge (Ikeja side)
+  - the Lekki–Epe Expressway with the toll plaza, palms and estates (Lekki and V.I.)
+  - the market under the Ojuelegba bridge (Surulere side)
+  - Herbert Macaulay Way in Yaba
+
+  Long trips show two or three of them, and the banner says the way. Agberos collect "owo ero" at the park.
+- **Inside every place.** When you arrive you find yourself inside, with people there:
+  - the LUTH ward, with patients in their beds and a nurse
+  - Sabo police station, with its counter and the cell
+  - the buka, the betting shop, Hope Children's Home, the gospel radio studio
+  - the lounge, the owambe hall, government offices, Balogun Market and Computer Village
+  - open places: TBS, the sea wall, Prayer Mountain, Makoko and UNILAG
+
+  A floating sign marks each thing you can do: walk up and press F, or tap the sign. Temptations warn
+  you first. The 🚪 door takes you back to the map.
 - **Furnish your home.** The **Buy** catalog sells a bed, wardrobe, fan, AC, solar, fridge, flat-screen TV,
   dining set, bookshelf, prayer corner and more. Everything appears in No. 14 in 3D and gives small perks
   (better rest, +faith when you pray at home, +word when you read).
@@ -116,25 +144,26 @@ real choices around it, as in real life.
 
 | Keyboard | Phone | Action |
 |---|---|---|
-| `W` `A` `S` `D` / arrows | joystick (left thumb) | Walk |
+| `W` `S` / ↑ ↓ | joystick (left thumb) | Walk forward / back |
+| `A` `D` / ← → | joystick | Turn left / right (the camera stays behind you) |
 | `Shift` | push the joystick far | Run |
 | `Space` | Jump | Jump |
 | `C` | Sit | Sit on the nearest seat / stand up |
 | `P` | Pray | Kneel and pray |
 | `E` | Wave | Wave |
 | `G` / `B` | – | Clap / dance |
-| `F` | Interact | Use what's nearby (ring the bell, buy food, board the danfo) |
+| `F` | Interact | Use what's nearby (furniture, a sign inside a place, the bell, the danfo) |
 | `Enter` or `T` | Chat | Open chat |
 | `V` | eye button | Change the camera view (mouse look is in the same menu) |
 | `M` | Map | Open the Lagos map |
 | `H` | Home | Go home (pick bike, taxi, danfo, free ride or trek) |
 | mouse drag / wheel | drag right side / pinch | Turn and zoom the camera |
 | touchpad | – | Two-finger swipe up/down zooms, left/right turns; pinch zooms |
-| click | tap | Click a person to greet them or share the Gospel, furniture to change it, a billboard to read it |
+| click | tap | Click a person to greet them or share the Gospel, furniture to use it, a billboard to read it |
+| `?` | ? button | Show all controls |
 
 On the map, drag to move around, scroll or pinch to zoom (a two-finger swipe moves the map), right-drag
 to turn, or use the + / − / turn buttons on the right.
-| `?` | ? button | Show all controls |
 
 ## Run it
 
@@ -163,7 +192,7 @@ makes the production bundle in `dist/`. Add `?quality=low|medium|high` to the UR
 |---|---|
 | `src/engine/` | Renderer, quality tiers, input (keyboard + touch), follow camera, collisions |
 | `src/characters/` | Character kit, outfits, skin tones, headwear, animations |
-| `src/world/` | The Yaba map (street, church, market, home, vehicles, navigation), Elegushi Beach, the National Theatre, home furniture |
+| `src/world/` | The Yaba map (street, church, market, home, vehicles, navigation), Elegushi Beach, the National Theatre, home furniture, the journey roads (`roads.js`) and the inside of places (`interiors.js`) |
 | `src/player/` | Your character's movement, sitting, kneeling, emotes |
 | `src/npc/` | The NPC community |
 | `src/audio/` | Procedural sound and music |

@@ -37,7 +37,7 @@ export function buildRoute(W, id) {
 }
 
 /* ---------------------------------------------------------------- local-coordinate builder */
-function local(W, ox, oz) {
+export function local(W, ox, oz) {
   const B = W.b;
   const off = new THREE.Matrix4().makeTranslation(ox, 0, oz);
   const b = {

@@ -4,6 +4,7 @@
 import { h, ic, setChildren } from './dom.js';
 import { naira } from '../game/content.js';
 import { PLACE_BY_ID, distanceKm, familyAt, ROUTE_LABELS } from '../game/life.js';
+import { INTERIOR_OF } from '../world/interiors.js';
 import { drawPoster } from '../map/posters.js';
 import { countdown } from '../game/clock.js';
 
@@ -27,7 +28,7 @@ const CHIPS = [
  * @param {() => void} [o.onSkip] skip the journey scene
  * @param {() => void} [o.onAds] open the phone's Billboards app
  */
-export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {}, onJourney, onSkip, onAds }) {
+export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {}, onJourney, onSkip, onAds, onEnterPlace }) {
   let open = false;
   let mode = 'game'; // 'game' | 'landing'
   let selected = null;
@@ -84,7 +85,8 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
     el.hidden = true;
     hideCard();
     map.hide();
-    if (game.trip) game.endTrip();
+    // closing the map on a trip: you are still inside the place (if it has an inside), else back where you were
+    if (game.trip && !(onEnterPlace && INTERIOR_OF[game.trip])) game.endTrip();
     onToggle(false);
   }
 
@@ -178,7 +180,9 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
           on: { click: () => { const r = game.activity(a.id); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); renderPlace(); } },
         }, here ? 'Do' : 'Go first')))) : null,
       p.soon ? null : here
-        ? (game.trip ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker('home') } }, '🏠', 'Go home') : p.walk ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: close } }, 'Back to the street') : null)
+        ? (game.trip ? h('div.mv-family-btns', null,
+          INTERIOR_OF[p.id] && onEnterPlace ? h('button.ac-btn.is-yellow', { type: 'button', on: { click: () => { close(); onEnterPlace(p.id); } } }, '🚪 Go back inside') : null,
+          h('button.ac-btn.is-primary', { type: 'button', on: { click: () => picker('home') } }, '🏠', 'Go home')) : p.walk ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: close } }, 'Back to the street') : null)
         : h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker(p.id) } }, 'Go here', ic('arrow-right', { size: 18 })));
     card.hidden = false;
   }
@@ -236,6 +240,11 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
     if (r.walk) {
       if (open) { open = false; el.hidden = true; hideCard(); map.hide(); onToggle(false); }
       await onArrive?.(r);
+    } else if (onEnterPlace && INTERIOR_OF[to]) {
+      // A trip: you find yourself inside the place.
+      if (open) { open = false; el.hidden = true; hideCard(); map.hide(); onToggle(false); }
+      map.setHere(to);
+      await onEnterPlace(to);
     } else {
       // A trip: you are at the place on the map, with what you can do there.
       if (!open) show({ place: to, dist: 45 });

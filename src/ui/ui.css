@@ -114,6 +114,7 @@
 .ac-chip .ac-star { width: 15px; height: 15px; }
 .ac-chip.is-yellow { background: var(--yellow); }
 .ac-chip.is-green { background: var(--green); }
+.ac-chip.is-red { background: #fecaca; color: #7f1d1d; }
 .ac-chip.is-pink { background: var(--pink); }
 .ac-chip.is-blue { background: var(--blue); }
 .ac-chip.is-purple { background: var(--purple); }
