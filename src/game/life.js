@@ -192,6 +192,46 @@ export function crossesLagoon(a, b) {
   return island(a) !== island(b);
 }
 
+/* ================================================================ which roads you take */
+
+/** Stretches of road you see on a journey (built in src/world/roads.js). */
+export const ROUTE_LABELS = {
+  herbert: 'Herbert Macaulay Way',
+  thirdmainland: 'Third Mainland Bridge',
+  ikorodu: 'Ikorodu Road',
+  lekki: 'Lekki–Epe Expressway',
+  ojuelegba: 'Ojuelegba under-bridge',
+};
+
+/**
+ * Which roads you go along from one place to another (one to three stretches): crossing the
+ * lagoon is Third Mainland Bridge, Lekki / V.I. is the expressway, the Ikeja side is Ikorodu
+ * Road, the Surulere side is Ojuelegba; short trips around Yaba vary.
+ * @param {string} fromId @param {string} toId @param {() => number} [rnd]
+ */
+export function routeFor(fromId, toId, rnd = Math.random) {
+  const leg = (id) => {
+    const a = PLACE_BY_ID[id]?.area || 'Yaba';
+    if (/Lekki|Ajah|Victoria Island|Ikoyi/i.test(a)) return 'lekki';
+    if (/Lagos Island|Marina/i.test(a)) return 'island';
+    if (/Ikeja|Alausa|Oshodi|Ojota|Ketu|Ikorodu|Ibadan/i.test(a)) return 'ikorodu';
+    if (/Surulere|Ojuelegba|Iganmu|Idi-Araba/i.test(a)) return 'ojuelegba';
+    return 'yaba';
+  };
+  const a = leg(fromId), z = leg(toId);
+  const out = [];
+  if (a !== 'yaba' && a !== 'island' && a !== z) out.push(a);
+  if (crossesLagoon(fromId, toId)) out.push('thirdmainland');
+  if (z !== 'yaba' && z !== 'island') out.push(z);
+  if (z === 'yaba') {
+    const x = rnd();
+    out.push(out.length ? 'herbert' : x < 0.5 ? 'herbert' : x < 0.75 ? 'ikorodu' : 'ojuelegba');
+  }
+  const seq = [];
+  for (const id of out) if (seq[seq.length - 1] !== id) seq.push(id);
+  return seq.length ? seq.slice(0, 3) : ['herbert'];
+}
+
 /* ================================================================ home catalog */
 
 /**

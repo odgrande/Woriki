@@ -77,6 +77,7 @@ ui = createUI(ctx, {
 });
 debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
 debug.mapDebug = lagosMap;
+debug.journey = (go) => journey(go); // tests: play a trip on the road
 
 /* ---------------------------------------------------------------- loading overlay */
 function loadingOverlay() {
@@ -318,7 +319,7 @@ async function journey(go) {
   quiet(false);
   audio.setZone('street'); // on the road: traffic, horns, okadas
   try {
-    await s.journey.play({ mode: go.mode, ownBike: go.mode === 'bike' && !!game.state?.items?.bike }, s.character);
+    await s.journey.play({ mode: go.mode, ownBike: go.mode === 'bike' && !!game.state?.items?.bike, route: go.route }, s.character);
   } finally {
     s.travelling = false;
     if (!go.walk) { s.player.teleport(back, heading); s.camera.behind(heading); s.camera.snap?.(); }

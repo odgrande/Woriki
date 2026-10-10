@@ -186,3 +186,19 @@ describe('families in the houses', () => {
     expect(s.faith).toBe(Math.min(100, f0 + 1));
   });
 });
+
+describe('journey roads', () => {
+  it('crosses Third Mainland Bridge to the Island and takes the expressway to Lekki', async () => {
+    const { routeFor } = await import('./life.js');
+    expect(routeFor('home', 'beach', () => 0)).toEqual(['thirdmainland', 'lekki']);
+    expect(routeFor('home', 'balogun', () => 0)).toEqual(['thirdmainland']);
+    expect(routeFor('home', 'computer', () => 0)).toEqual(['ikorodu']);
+    expect(routeFor('home', 'owambe', () => 0)).toEqual(['ojuelegba']);
+    expect(routeFor('beach', 'home', () => 0)).toEqual(['lekki', 'thirdmainland', 'herbert']);
+  });
+  it('varies short trips around Yaba', async () => {
+    const { routeFor } = await import('./life.js');
+    const seen = new Set([0.1, 0.6, 0.9].map((x) => routeFor('home', 'police', () => x)[0]));
+    expect(seen.size).toBe(3);
+  });
+});

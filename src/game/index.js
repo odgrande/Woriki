@@ -10,7 +10,7 @@ import {
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
-import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds, visitFamily as visitFamilySys, prayFamily as prayFamilySys } from './life.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds, visitFamily as visitFamilySys, prayFamily as prayFamilySys, routeFor } from './life.js';
 import { deltas as deltasOf } from './systems.js';
 import { checkAssignments, assignmentView } from './assignments.js';
 
@@ -391,7 +391,7 @@ export function createGame(ctx = {}, opts = {}) {
         trip = place.walk ? null : to;
         if (place.fee) { s.naira -= Math.min(s.naira, place.fee); }
         e.fx.push({ type: 'toast', text: r.text + (place.fee ? ` Gate fee ${naira(place.fee)}.` : ''), emoji: r.mode.emoji, deltas: deltasOf(before, s) });
-        const go = { to, place, walk: place.walk || null, minutes: r.minutes, mode: r.mode.id };
+        const go = { from, to, place, walk: place.walk || null, minutes: r.minutes, mode: r.mode.id, route: routeFor(from, to, rng) };
         emit('travel:go', go);
         bus?.emit('game:travel', go);
         return { ...r, ...go };

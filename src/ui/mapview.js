@@ -3,7 +3,7 @@
 // travel screen while you are on the way.
 import { h, ic, setChildren } from './dom.js';
 import { naira } from '../game/content.js';
-import { PLACE_BY_ID, distanceKm, familyAt } from '../game/life.js';
+import { PLACE_BY_ID, distanceKm, familyAt, ROUTE_LABELS } from '../game/life.js';
 import { drawPoster } from '../map/posters.js';
 import { countdown } from '../game/clock.js';
 
@@ -251,7 +251,7 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
     const name = { trek: 'Trekking', bike: game.state?.items?.bike ? 'Cycling' : 'On an okada', danfo: 'In a danfo', taxi: 'In a taxi', free: 'Free ride' }[r.mode] || 'On the way';
     const b = h('div.mv-journey', { attrs: { role: 'status' } },
       h('span.mv-journey-emoji', { text: { trek: '🚶', bike: '🏍️', danfo: '🚐', taxi: '🚕', free: '🚗' }[r.mode] || '🚕' }),
-      h('span', null, h('b', { text: `${name} to ${p.name}` }), h('small', { text: `${p.area} · ${countdown(r.minutes)} in Lagos traffic` })),
+      h('span', null, h('b', { text: `${name} to ${p.name}` }), h('small', { text: `${p.area} · ${countdown(r.minutes)} · via ${(r.route || ['herbert']).map((id) => ROUTE_LABELS[id] || id).join(' → ')}` })),
       h('button.ac-btn.is-sm', { type: 'button', on: { click: () => onSkip?.() } }, 'Skip'));
     root.append(b);
     return b;

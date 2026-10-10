@@ -299,12 +299,48 @@ export async function buildWorld(ctx, physics) {
   ];
 
   let lastHour = -1;
+  const sceneryUpdates = [];
   const world = {
     root, spawns, seats, nav, zones, interactables, roadRules,
     vehicles: traffic.list,
     surfaceAt, zoneAt,
     groundAt,
     colliders,
+    /**
+     * Build extra scenery on demand (journey roads, the inside of places) with the same
+     * builders, materials and kits as the street: `fn(W)` fills a fresh builder state. Its
+     * colliders go into physics, its seats / interactables / zones join the world's, and the
+     * meshes come back as one group (added to the world, frustum-culled as a unit).
+     * @param {(W: ReturnType<typeof createState>) => ({zones?: {id: string, label: string, ambience: string, min: number[], max: number[]}[]}|void)} fn
+     */
+    scenery(fn, name = 'scenery') {
+      const group = new THREE.Group();
+      group.name = 'world:' + name;
+      const S2 = createState(P, S, mats, group, kits);
+      const out = fn(S2) || {};
+      for (const [key, geo] of S2.b.finish()) {
+        const mesh = new THREE.Mesh(geo, mats[key]);
+        mesh.name = `${name}:${key}`;
+        mesh.castShadow = !noCast.has(key);
+        mesh.receiveShadow = key !== 'lamp' && key !== 'screen';
+        mesh.matrixAutoUpdate = false;
+        group.add(mesh);
+      }
+      for (const [kname, e] of S2.instances) {
+        const k = kits[kname];
+        if (!k) continue;
+        const hasColor = e.c.some((c) => c);
+        for (const im of instanced(k, mats, e.m, hasColor ? e.c : null, { name: kname, cast: kname !== 'tube' })) group.add(im);
+      }
+      if (S2.lines.length) group.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(S2.lines), wires.material));
+      for (const make of S2.extras) { const e = make(); group.add(e.object); if (e.update) sceneryUpdates.push(e); }
+      registerColliders(physics, S2.col);
+      seats.push(...S2.seats);
+      interactables.push(...S2.interactables);
+      for (const z of out.zones || []) zones.push({ id: z.id, label: z.label, ambience: z.ambience, box: new THREE.Box3(V(...z.min), V(...z.max)) });
+      root.add(group);
+      return { group, state: S2, ...out };
+    },
     /**
      * A vehicle model (danfo, car, keke, okada) as its own group, e.g. for the journey scenes.
      * @param {'danfo'|'car'|'keke'|'okada'} kind @param {string} [color] body colour (cars)
@@ -370,6 +406,7 @@ export async function buildWorld(ctx, physics) {
       roadRules.update(dt);
       traffic.update(dt, roadRules);
       for (const e of extras) e.update?.(dt, t);
+      for (const e of sceneryUpdates) e.update?.(dt, t);
       for (const d of doorState) {
         const target = d.open ? d.openAngle : d.closedAngle;
         d.angle += (target - d.angle) * Math.min(1, dt * 6);
