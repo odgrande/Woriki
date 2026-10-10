@@ -11,6 +11,7 @@ import { buildChurch } from './church.js';
 import { buildMarket } from './market.js';
 import { buildHome } from './home.js';
 import { buildBeach, buildTheatre } from './districts.js';
+import { createStreetBillboards } from './billboards.js';
 import { buildVehicles, createTraffic } from './vehicles.js';
 import { ZONE_DEFS, groundAt, surfaceAt, pickZone, navNodes, HALL, ALTAR } from './layout.js';
 import { buildEdges, createNav } from './nav.js';
@@ -203,6 +204,8 @@ export async function buildWorld(ctx, physics) {
   root.add(wires);
   const extras = W.extras.map((make) => make());
   for (const e of extras) root.add(e.object);
+  // Church billboards over the street (posts collide like poles).
+  const billboards = createStreetBillboards(root, (x, z, r, h) => colliders.push({ cyl: true, x, z, r, h, x0: x - r, x1: x + r, z0: z - r, z1: z + r, y0: 0, y1: h, kind: 'post' }));
 
   // ---------------------------------------------------------------- dynamic doors and the bell
   const doorState = [];
@@ -343,7 +346,10 @@ export async function buildWorld(ctx, physics) {
       ctx.scene.fog.color.copy(FOG_NIGHT).lerp(FOG_DAY, day).lerp(DUSK_FOG, glow * 0.4);
       if (ctx.scene.background?.isColor) ctx.scene.background.copy(ctx.scene.fog.color);
       ctx.renderer.toneMappingExposure = 0.9 + day * 0.1;
+      billboards.setNight(1 - day);
     },
+    /** Players' booked church adverts on the street billboard. */
+    setAds(ads) { billboards.setAds(ads); },
     get night() { return lastHour >= 0 && daylight(lastHour) < 0.3; },
     /** Show a lyrics slide on the projector screens (0 = welcome). */
     setLyrics(i) { slide = i; screen.show(i); },

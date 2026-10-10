@@ -94,3 +94,26 @@ describe('real Lagos time and old saves', () => {
     expect(real.state.T).toBeGreaterThanOrEqual(now - 1);
   });
 });
+
+describe('church billboards and giving', () => {
+  it('books a billboard for a week', async () => {
+    const { bookAd, activeAds } = await import('./life.js');
+    const s = life({ naira: 300000 });
+    const r = bookAd(s, { spot: 'thirdmainland', title: 'Holy Ghost Night', sub: 'Friday 10pm' });
+    expect(r.ok).toBe(true);
+    expect(s.naira).toBe(50000);
+    expect(activeAds(s)[0].title).toBe('HOLY GHOST NIGHT');
+    expect(bookAd(s, { spot: 'thirdmainland', title: 'Again' }).ok).toBe(false);
+    s.T += 8 * 1440;
+    expect(activeAds(s)).toEqual([]);
+  });
+
+  it('takes the tithe once a week', async () => {
+    const { give } = await import('./life.js');
+    const s = life({ naira: 100000, salary: 5000 });
+    expect(give(s, 'tithe', 0, 3).amount).toBe(3500);
+    expect(give(s, 'tithe', 0, 3).ok).toBe(false);
+    expect(give(s, 'tithe', 0, 4).ok).toBe(true);
+    expect(give(s, 'offering', 1000, 4).ok).toBe(true);
+  });
+});

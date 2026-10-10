@@ -8,8 +8,9 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LAND, BEACHES, BRIDGES, ROADS, AREAS, TOWERS, BILLBOARDS, BOUNDS, housePlots, landAt, rng32 } from './geography.js';
+import { LAND, BEACHES, BRIDGES, ROADS, AREAS, TOWERS, BILLBOARDS, BOUNDS, housePlots, landAt, distToPolyline, rng32 } from './geography.js';
 import { PLACES, PLACE_BY_ID } from '../game/life.js';
+import { defaultPosters, drawPoster } from './posters.js';
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const LAND_Y = 0.5;
@@ -319,23 +320,44 @@ export function createLagosMap(ctx, opts) {
     }
   }
 
-  /* ---------------------------------------------------------------- billboards */
+  /* ---------------------------------------------------------------- billboards (church posters) */
+  // All posters live in one canvas atlas (8 × 8 cells) so dozens of boards cost two draw calls.
   const boards = new THREE.Group();
   scene.add(boards);
-  for (const b of BILLBOARDS) {
-    const g = new THREE.Group();
-    const [x, z] = b.at;
-    g.position.set(x, LAND_Y, z);
-    g.rotation.y = b.rot;
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.2, 6).translate(0, 1.1, 0), std('#4b5563'));
-    const face = billboardTexture(b);
-    const frame = std('#374151');
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 0.12).translate(0, 2.7, 0), [frame, frame, frame, frame,
-      new THREE.MeshStandardMaterial({ map: face, roughness: 0.6, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: 0.15 }), frame]);
-    post.castShadow = panel.castShadow = shadows;
-    g.add(post, panel);
-    boards.add(g);
+  const COLS = 8, ROWS = 8, CW = 256, CH = 112;
+  const atlas = document.createElement('canvas');
+  atlas.width = COLS * CW; atlas.height = ROWS * CH;
+  const ag = atlas.getContext('2d');
+  const atlasTex = new THREE.CanvasTexture(atlas);
+  atlasTex.colorSpace = THREE.SRGBColorSpace;
+  atlasTex.anisotropy = 4;
+  const spots = billboardSpots(rand);
+  const posters = defaultPosters(spots.length, 4);
+  posters[1] = { title: 'AMEN CITY', sub: 'Pray · Serve · Live · Join free', church: 'Lagos', theme: 'gold', motif: 'cross' };
+  const drawCell = (i, p) => drawPoster(ag, (i % COLS) * CW, Math.floor(i / COLS) * CH, CW, CH, p);
+  posters.forEach((p, i) => drawCell(i, p));
+  {
+    const faces = [], frames = [];
+    const W = 6.4, H = 2.8, Yb = 4.6;
+    spots.forEach((b, i) => {
+      const m = new THREE.Matrix4().makeRotationY(b.rot).setPosition(b.at[0], LAND_Y, b.at[1]);
+      const face = new THREE.PlaneGeometry(W, H).translate(0, Yb, 0.08);
+      const u0 = (i % COLS) / COLS, v1 = 1 - Math.floor(i / COLS) / ROWS, u1 = u0 + 1 / COLS, v0 = v1 - 1 / ROWS;
+      const uv = face.attributes.uv;
+      uv.setXY(0, u0, v1); uv.setXY(1, u1, v1); uv.setXY(2, u0, v0); uv.setXY(3, u1, v0);
+      faces.push(face.applyMatrix4(m));
+      frames.push(new THREE.BoxGeometry(W + 0.2, H + 0.2, 0.12).translate(0, Yb, 0).applyMatrix4(m));
+      for (const sx of [-1.2, 1.2]) frames.push(new THREE.CylinderGeometry(0.08, 0.1, Yb - H / 2, 6).translate(sx, (Yb - H / 2) / 2, 0).applyMatrix4(m));
+    });
+    const faceMesh = new THREE.Mesh(mergeGeometries(faces), new THREE.MeshStandardMaterial({ map: atlasTex, roughness: 0.55, emissive: '#ffffff', emissiveMap: atlasTex, emissiveIntensity: 0.18 }));
+    const frameMesh = new THREE.Mesh(mergeGeometries(frames), std('#374151'));
+    frameMesh.castShadow = shadows;
+    boards.add(faceMesh, frameMesh);
+    // at night the boards light up
+    anim.push(() => { faceMesh.material.emissiveIntensity = 0.18 + (1 - daylight(lastHour < 0 ? 12 : lastHour)) * 0.7; });
   }
+  /** Ad spots players can book (src/game/life.js AD_SPOTS) → billboard index. */
+  const AD_BOARD = { yaba: 1, thirdmainland: 0, lekki: 4 };
 
   /* ---------------------------------------------------------------- go-slow traffic */
   const traffic = new THREE.Group();
@@ -625,6 +647,16 @@ export function createLagosMap(ctx, opts) {
     },
     setLayer,
     layers,
+    /** Show players' booked church adverts on their billboards: [{spot, title, sub, church, theme, motif}]. */
+    setAds(ads = []) {
+      for (const [spot, i] of Object.entries(AD_BOARD)) {
+        const ad = ads.find((a) => a.spot === spot);
+        drawCell(i, ad ? { ...ad, booked: true } : posters[i]);
+      }
+      atlasTex.needsUpdate = true;
+    },
+    /** Billboard positions (for tests / focusing). */
+    billboards: spots,
     applyTime,
     dispose() {
       map.hide();
@@ -752,4 +784,29 @@ function rippleTexture(n) {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
+}
+
+/**
+ * Where billboards stand: the hand-placed ones, then boards along the main roads facing the
+ * traffic (up to 64, one per atlas cell).
+ */
+function billboardSpots(rand) {
+  const out = BILLBOARDS.map((b) => ({ at: b.at, rot: b.rot }));
+  const near = (x, z) => out.some((o) => Math.hypot(o.at[0] - x, o.at[1] - z) < 8) || PLACES.some((p) => Math.hypot(p.at[0] - x, p.at[1] - z) < 4);
+  for (const r of ROADS) {
+    for (let i = 0; i < r.pts.length - 1 && out.length < 64; i++) {
+      const [ax, az] = r.pts[i], [bx, bz] = r.pts[i + 1];
+      const len = Math.hypot(bx - ax, bz - az);
+      for (let d = 3; d < len && out.length < 64; d += 9 + rand() * 6) {
+        const t = d / len, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+        const side = rand() < 0.5 ? -1 : 1;
+        const nx = (-(bz - az) / len) * side, nz = ((bx - ax) / len) * side;
+        const px = x + nx * (r.w / 2 + 2.2), pz = z + nz * (r.w / 2 + 2.2);
+        if (!landAt(px, pz) || near(px, pz) || ROADS.some((o) => distToPolyline(o.pts, px, pz) < o.w / 2 + 0.6)) continue;
+        // face the road: the board's front (+Z) points back at the road
+        out.push({ at: [px, pz], rot: Math.atan2(-nx, -nz) });
+      }
+    }
+  }
+  return out.slice(0, 64);
 }

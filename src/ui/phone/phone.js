@@ -6,7 +6,8 @@ import './phone.css';
 import { h, setChildren, store as ls } from '../dom.js';
 import { naira, VERSES, servicesFor, WEEKDAY_NAMES } from '../../game/content.js';
 import { servicesBetween, hhmm, DAY } from '../../game/clock.js';
-import { GIVING, titheAmount, DELIVERY, PLACES, distanceKm } from '../../game/life.js';
+import { GIVING, titheAmount, DELIVERY, PLACES, distanceKm, AD_SPOTS } from '../../game/life.js';
+import { drawPoster, THEMES, MOTIFS } from '../../map/posters.js';
 import { logStamp } from '../../game/systems.js';
 import { PASSAGES } from './bible.js';
 import { threadDefs, newStore, post, scheduled, replyTo, preview, seed } from './messages.js';
@@ -16,7 +17,7 @@ const APPS = [
   ['chats', '💬', 'Chats', '#16a34a'], ['bible', '📖', 'Bible', '#7f1d1d'], ['live', '🔴', 'Church Live', '#dc2626'], ['give', '🙏', 'AmenPay', '#1e3a8a'],
   ['calendar', '📅', 'Calendar', '#ea580c'], ['prayer', '🕊️', 'Prayer Wall', '#7c3aed'], ['calls', '📞', 'Phone', '#15803d'], ['maps', '🗺️', 'Maps', '#0284c7'],
   ['rides', '🚕', 'Rides', '#ca8a04'], ['food', '🍲', 'Chow', '#c2410c'], ['notes', '📝', 'Notes', '#a16207'], ['camera', '📷', 'Camera', '#374151'],
-  ['music', '🎵', 'Praise', '#be185d'], ['diary', '📔', 'My Story', '#0f766e'], ['settings', '⚙️', 'Settings', '#4b5563'],
+  ['ads', '📣', 'Billboards', '#9333ea'], ['music', '🎵', 'Praise', '#be185d'], ['diary', '📔', 'My Story', '#0f766e'], ['settings', '⚙️', 'Settings', '#4b5563'],
 ];
 const DOCK = ['chats', 'bible', 'give', 'calls'];
 const CONTACTS = [
@@ -110,7 +111,7 @@ export function createPhone({ root, game, bus, toast, actions = {}, onBadge = ()
   }
   function render() {
     if (!open || !ensure()) return;
-    const r = { chats, bible, live, give, calendar, prayer, calls, maps, rides, food, notes, camera, music: praise, diary, settings }[app] || home;
+    const r = { chats, bible, live, give, calendar, prayer, calls, maps, rides, food, notes, camera, music: praise, diary, ads, settings }[app] || home;
     setChildren(view, r());
     device.dataset.app = app || 'home';
   }
@@ -418,6 +419,48 @@ export function createPhone({ root, game, bus, toast, actions = {}, onBadge = ()
     ];
   }
   function settings() { return home(); }
+
+  /* ---------------------------------------------------------------- billboards: advertise a church programme */
+  const draft = { spot: 'yaba', title: 'HOLY GHOST NIGHT', sub: 'Friday 10pm · All are welcome', church: '', theme: 'fire', motif: 'flame' };
+  function ads() {
+    const s = game.state;
+    if (!draft.church) draft.church = s.pastor?.church || 'Grace Assembly, Yaba';
+    const canvas = h('canvas.ph-poster', { width: 512, height: 224, attrs: { 'aria-label': 'Poster preview' } });
+    const paint = () => drawPoster(canvas.getContext('2d'), 0, 0, 512, 224, draft);
+    const field = (label, key, max) => {
+      const inp = h('input.ph-input.is-field', { value: draft[key], maxLength: max, attrs: { 'aria-label': label } });
+      inp.addEventListener('input', () => { draft[key] = key === 'title' ? inp.value.toUpperCase() : inp.value; paint(); });
+      inp.addEventListener('keydown', (e) => e.stopPropagation());
+      return h('label.ph-field', null, h('small', { text: label }), inp);
+    };
+    const running = game.ads;
+    requestAnimationFrame(paint);
+    return [
+      header('Billboards'),
+      h('p.ph-note', { text: 'Put your church programme on a real Lagos billboard for a week. More people hear about it, and they come.' }),
+      canvas,
+      field('Programme title', 'title', 28),
+      field('Date, time, venue', 'sub', 40),
+      field('Church', 'church', 36),
+      h('div.ph-swatches', null, Object.entries(THEMES).map(([id, [bg, ac]]) => h('button', {
+        type: 'button', title: id, attrs: { 'aria-label': `Colours: ${id}`, 'aria-pressed': String(draft.theme === id) }, style: { background: `linear-gradient(135deg, ${bg} 60%, ${ac} 60%)` },
+        on: { click: () => { draft.theme = id; render(); } },
+      }))),
+      h('div.ph-quick', null, MOTIFS.map((m) => h('button', { type: 'button', attrs: { 'aria-pressed': String(draft.motif === m) }, on: { click: () => { draft.motif = m; render(); } } }, { cross: '✝️ Cross', dove: '🕊️ Dove', flame: '🔥 Fire', crown: '👑 Crown', mic: '🎤 Mic', bible: '📖 Bible' }[m]))),
+      h('p.ph-section', { text: 'Choose a billboard' }),
+      h('div.ph-list', null, AD_SPOTS.map((sp) => {
+        const busy = running.find((a) => a.spot === sp.id);
+        return h('button.ph-row', { type: 'button', attrs: { 'aria-pressed': String(draft.spot === sp.id) }, class: draft.spot === sp.id ? 'is-picked' : '', on: { click: () => { draft.spot = sp.id; render(); } } },
+          h('span.ph-avatar', { text: sp.emoji }), h('span.ph-row-body', null, h('b', { text: sp.name }), h('small', { text: busy ? `Showing "${busy.title}"` : sp.reach })),
+          h('b', { text: naira(sp.naira) }));
+      })),
+      h('button.ac-btn.is-primary.is-block', {
+        type: 'button',
+        on: { click: () => { const r = game.bookAd({ ...draft }); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); render(); } },
+      }, `Book for a week · ${naira(AD_SPOTS.find((x) => x.id === draft.spot).naira)}`),
+      running.length ? h('p.ph-note', { text: `Running now: ${running.map((a) => `"${a.title}"`).join(', ')}. See them on the Lagos map.` }) : null,
+    ];
+  }
   function diary() {
     const s = game.state;
     const stats = [['Sunday streak', `${s.streak} wk`], ['Services', s.services], ['Souls won', s.souls], ['Prayed for', s.prayed], ['Given', naira(s.given || 0)], ['Repented', s.repentances]];

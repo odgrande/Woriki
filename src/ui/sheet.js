@@ -320,6 +320,8 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
         })),
       ]),
       h('p.ac-note', { text: 'Furniture is delivered to No. 14 straight away. Go home to see it.' }),
+      section('Advertise your church'),
+      buyRow({ emoji: '📣', name: 'Church billboard', desc: 'Put your church programme on a Lagos billboard for a week (Yaba, Third Mainland Bridge, Lekki).', price: 'from ₦50k', can: !s.over, onBuy: () => { setOpen(false); actions.phone?.('ads'); } }),
       section('Getting around'),
       ...SHOP.filter((it) => !['bible', 'mat', 'tambourine', 'outfit', 'gele'].includes(it.id)).map((it) => buyRow({
         emoji: it.emoji, name: it.name, desc: it.desc, price: it.naira ? naira(it.naira) : `${it.points}⭐`, owned: !!s.items[it.id],

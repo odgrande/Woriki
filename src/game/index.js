@@ -10,7 +10,7 @@ import {
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
-import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone } from './life.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds } from './life.js';
 import { deltas as deltasOf } from './systems.js';
 
 /**
@@ -399,6 +399,20 @@ export function createGame(ctx = {}, opts = {}) {
         addLog(s, r.text);
         e.fx.push({ type: 'toast', text: r.text, emoji: r.emoji, deltas: deltasOf(before, s), tone: r.shady ? 'warn' : undefined });
         e.fx.push({ type: 'audio:play', name: r.shady ? 'fail' : 'success' });
+        return r;
+      });
+    },
+    /** Church adverts running on billboards. */
+    get ads() { return s ? activeAds(s) : []; },
+    /** Book a billboard for a church programme (see life.js AD_SPOTS). */
+    bookAd(ad) {
+      return run((e) => {
+        const before = { ...s };
+        const r = bookAdSys(s, ad);
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        e.fx.push({ type: 'toast', text: r.text, emoji: '🪧', deltas: deltasOf(before, s), tone: 'good' });
+        bus?.emit('ads:changed', { ads: activeAds(s) });
         return r;
       });
     },

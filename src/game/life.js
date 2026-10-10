@@ -366,3 +366,42 @@ export function doPhone(s, id) {
   s.naira = Math.round(s.naira);
   return { ok: true, text };
 }
+
+/* ================================================================ church billboards */
+
+/** Billboards you can book for a church programme (one week). */
+export const AD_SPOTS = [
+  { id: 'yaba', name: 'Herbert Macaulay Way, Yaba', emoji: '🪧', naira: 50000, reach: 'People walking to church and the market' },
+  { id: 'thirdmainland', name: 'Third Mainland Bridge', emoji: '🌉', naira: 250000, reach: 'Thousands stuck in go-slow every day' },
+  { id: 'lekki', name: 'Lekki Toll Gate', emoji: '🚗', naira: 500000, reach: 'The Island crowd, day and night' },
+];
+export const AD_DAYS = 7;
+
+/**
+ * Book a billboard for a church programme. Mutates `s`. Returns the ad.
+ * @param {{spot: string, title: string, sub?: string, church?: string, theme?: string, motif?: string}} ad
+ */
+export function bookAd(s, ad) {
+  const spot = AD_SPOTS.find((x) => x.id === ad?.spot);
+  if (!spot) return { ok: false, reason: 'Choose a billboard' };
+  const title = String(ad.title || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 28);
+  if (!title) return { ok: false, reason: 'Write the programme title' };
+  s.ads = (s.ads || []).filter((a) => a.untilT > s.T);
+  if (s.ads.some((a) => a.spot === spot.id)) return { ok: false, reason: 'You already have that billboard this week' };
+  if (s.naira < spot.naira) return { ok: false, reason: `You need ${naira(spot.naira)}` };
+  s.naira -= spot.naira;
+  const booked = {
+    spot: spot.id, title: title.toUpperCase(), sub: String(ad.sub || '').trim().slice(0, 40),
+    church: String(ad.church || s.pastor?.church || 'Grace Assembly, Yaba').slice(0, 36),
+    theme: ad.theme || 'royal', motif: ad.motif || 'cross', untilT: s.T + AD_DAYS * 1440,
+  };
+  s.ads.push(booked);
+  // More people hear about the programme: your own church grows, or Grace Assembly gets visitors.
+  const reach = { yaba: 1, thirdmainland: 4, lekki: 7 }[spot.id];
+  if (s.pastor) { s.pastor.members += 3 * reach; s.fame = clamp((s.fame || 0) + reach, 0, 100); }
+  s.points += 5 * reach;
+  return { ok: true, ad: booked, text: `Your poster "${booked.title}" is up on ${spot.name} for a week. People are talking about it! +${5 * reach}⭐` };
+}
+
+/** Booked ads still running at time T. */
+export const activeAds = (s) => (s.ads || []).filter((a) => a.untilT > s.T);

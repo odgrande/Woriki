@@ -230,7 +230,7 @@ export function createUI(ctx, opts) {
     actions: {
       home: () => mapView ? mapView.goHome() : dialogs.toast('The map is not ready yet.'),
       map: () => mapView?.show(),
-      phone: (app) => phone.show(app === 'prayer' ? 'prayer' : app === 'diary' ? 'diary' : null),
+      phone: (app) => phone.show(['prayer', 'diary', 'ads'].includes(app) ? app : null),
     },
     onToggle(open) {
       document.documentElement.classList.toggle('ac-sheet-open', open);

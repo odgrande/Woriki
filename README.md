@@ -35,6 +35,23 @@ real choices around it, as in real life.
   and the juju film). Day trips include the Saturday tour of Government House, Balogun Market, a
   crusade at TBS, Computer Village, the prayer mountain and the Secretariat, where you can choose to
   "settle" the officer or not.
+- **A real phone** (Phone button). The church comes first:
+  - **Chats:** the Grace Assembly family group and your department's group, Pastor Ade (he answers with scripture), Mum, your prayer partner, and live chat with players online.
+  - **Bible** in the KJV, which counts as your quiet time.
+  - **Church Live** with sermons.
+  - **AmenPay** for tithe, offering, thanksgiving, the building fund and missions.
+  - **Church calendar** and **prayer wall**.
+  - **Calls** to the pastor, Mum and your prayer partner.
+  - **Rides**, **Chow** food delivery, **Notes**, **Camera** and **Praise** music.
+  - **Billboards:** design a poster for a church programme and book a real Lagos billboard for a week.
+  - Scam texts from "unknown numbers": block them or fall for them.
+- **Church billboards everywhere:**
+  - Dozens of programme posters line the roads on the map: crusades, revivals, choir concerts and youth conferences.
+  - Big boards stand on Herbert Macaulay Way.
+  - Your booked posters show up on both.
+- **Day and night.** The street gets darker as Lagos does: orange dusk, a moonlit night, lit billboards and lamps.
+- **Camera.** The eye button (or `V`) switches between Behind, Close, Wide, From above and My eyes (first person). Mouse look locks the pointer, and the wheel zooms.
+- **See the journey.** After you choose a ride you see it on the road: trekking on the walkway, on the back of an okada, in a danfo with the conductor hanging out, or in a taxi. Agberos collect "owo ero" at the park.
 - **Furnish your home.** The **Buy** catalog sells a bed, wardrobe, fan, AC, solar, fridge, flat-screen TV,
   dining set, bookshelf, prayer corner and more. Everything appears in No. 14 in 3D and gives small perks
   (better rest, +faith when you pray at home, +word when you read).
@@ -84,6 +101,7 @@ real choices around it, as in real life.
 | `G` / `B` | – | Clap / dance |
 | `F` | Interact | Use what's nearby (ring the bell, buy food, board the danfo) |
 | `Enter` or `T` | Chat | Open chat |
+| `V` | eye button | Change the camera view (mouse look is in the same menu) |
 | `M` | Map | Open the Lagos map |
 | `H` | Home | Go home (pick bike, taxi, danfo, free ride or trek) |
 | mouse drag / wheel | drag right side / pinch | Turn and zoom the camera |

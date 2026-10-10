@@ -145,6 +145,7 @@ async function enter(profile) {
 
     input.enabled = true;
     input.setVisible?.(true);
+    showAds();
     ctx.onUpdate((dt, t) => frame(dt, t));
     loading.done();
     ctx.bus.emit('game:toast', { text: `Welcome to ${world.zoneAt?.(player.position)?.label || 'Yaba'}! Press ? for controls.` });
@@ -284,6 +285,9 @@ async function onScreen({ screen, saved }) {
 }
 ctx.bus.on('ui:screen', onScreen);
 ctx.bus.on('ui:view', ({ mode }) => session?.camera?.setMode(mode));
+// Players' church adverts on the billboards (map and street).
+const showAds = () => { const ads = game.ads || []; lagosMap.setAds(ads); session?.world?.setAds?.(ads); };
+ctx.bus.on('ads:changed', showAds);
 ctx.bus.on('ui:mouselook', ({ on }) => { input.mouseLook = on; });
 // createUI already showed its first screen before this listener existed.
 onScreen({ screen: game.state ? 'game' : document.querySelector('.fr-home:not([hidden])') ? 'home' : document.querySelector('.fr-landing:not([hidden])') ? 'landing' : 'start', saved: game.peek?.() });
