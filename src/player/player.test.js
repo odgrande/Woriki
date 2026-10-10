@@ -237,3 +237,25 @@ describe('player seats, prayer, emotes', () => {
     expect(player.position.toArray()).toEqual([10, 0, 10]);
   });
 });
+
+describe('lying down', () => {
+  it('lies on the bed, and gets up beside it when you move', () => {
+    const { player, input, run } = setup();
+    const spot = { position: V(2, 0.6, -3), rotY: Math.PI };
+    player.lieAt(spot, V(0.6, 0, -3));
+    run(1.5);
+    expect(player.state).toBe('lie');
+    expect(player.position.distanceTo(spot.position)).toBeLessThan(0.01);
+    input.move = { x: 0, y: 1 };
+    run(0.6);
+    expect(player.state).toBe('move');
+    expect(Math.hypot(player.position.x - 0.6, player.position.z + 3)).toBeLessThan(1.2);
+  });
+  it('does an action on the spot and goes back to walking', () => {
+    const { player, run } = setup();
+    expect(player.act('interact', 0.5)).toBe(true);
+    expect(player.state).toBe('emote');
+    run(0.8);
+    expect(player.state).toBe('move');
+  });
+});

@@ -316,6 +316,107 @@ export function restBonus(s) {
   return bed + fan + ac;
 }
 
+/* ================================================================ life in your room */
+
+/**
+ * What you can do with each piece of furniture at No. 14 (click it, or press F next to it).
+ * `pose` is how your body does it (sit, lie, kneel, tv = sit on the sofa facing the TV, read,
+ * eat, interact, none); `act` runs a game action (src/game/actions.js: pray, read, cook, sleep);
+ * `home` runs a small effect below; `toggle` switches something on / off.
+ */
+export const HOME_ACTIONS = {
+  sofa: [
+    { id: 'sit', emoji: '🛋️', label: 'Sit down and relax', pose: 'sit' },
+    { id: 'tv', emoji: '📺', label: 'Sit and watch TV', pose: 'tv', home: 'tv', needs: 'tv' },
+  ],
+  chairs: [{ id: 'sit', emoji: '🪑', label: 'Sit down', pose: 'sit' }],
+  dining: [
+    { id: 'cook', emoji: '🍳', label: 'Cook and eat at the table (₦400)', pose: 'sit', act: 'cook' },
+    { id: 'sit', emoji: '🪑', label: 'Sit at the table', pose: 'sit' },
+  ],
+  bed: [
+    { id: 'rest', emoji: '😌', label: 'Lie down and rest', pose: 'lie', home: 'rest' },
+    { id: 'sleep', emoji: '🌙', label: 'Say your prayers and sleep till morning', pose: 'lie', act: 'sleep' },
+    { id: 'sit', emoji: '🛏️', label: 'Sit on the bed', pose: 'sit' },
+  ],
+  tv: [{ id: 'tv', emoji: '📺', label: (v) => (v === 'old' ? 'Watch the NTA news' : 'Watch Gospel TV'), pose: 'tv', home: 'tv' }],
+  altar: [{ id: 'pray', emoji: '🙏', label: 'Kneel and pray at your prayer corner', pose: 'kneel' }],
+  desk: [{ id: 'read', emoji: '📖', label: 'Quiet time: study your Bible at the desk', pose: 'sit', act: 'read' }],
+  bookshelf: [{ id: 'book', emoji: '📚', label: 'Read a Christian book', pose: 'read', home: 'book' }],
+  keyboard: [{ id: 'keys', emoji: '🎹', label: 'Practise worship songs', pose: 'interact', home: 'keys' }],
+  fridge: [{ id: 'snack', emoji: '🥤', label: 'Cold water and some bread', pose: 'eat', home: 'snack' }],
+  plants: [{ id: 'water', emoji: '💧', label: 'Water the plants', pose: 'interact', home: 'water' }],
+  wardrobe: [{ id: 'dress', emoji: '👔', label: 'Iron your Sunday best', pose: 'interact', home: 'dress' }],
+  picture: [{ id: 'verse', emoji: '🖼️', label: 'Read the verse on the wall', pose: 'none', home: 'verse' }],
+  fan: [{ id: 'fan', emoji: '🌀', label: 'Switch the fan on / off', pose: 'interact', toggle: 'fan' }],
+  ac: [{ id: 'ac', emoji: '❄️', label: 'Switch the AC on / off', pose: 'interact', toggle: 'ac' }],
+  chandelier: [{ id: 'admire', emoji: '💡', label: 'Admire the chandelier', pose: 'none', home: 'admire' }],
+};
+
+const once = (s, k) => { if (s.doneToday[k]) return false; s.doneToday[k] = true; return true; };
+const count = (s, k, max) => { const n = s.doneToday[k] || 0; if (n >= max) return false; s.doneToday[k] = n + 1; return true; };
+
+/** Small effects of the room actions (`home` keys). Mutates `s`. @returns {{ok, text?, reason?}} */
+export function doHomeAction(s, key, hour = 12) {
+  s.doneToday = s.doneToday || {};
+  const h = s.home || {};
+  switch (key) {
+    case 'rest': {
+      if (s.energy >= 98) return { ok: true, text: 'You lay down for a bit. You were not even tired. 😌' };
+      if (!count(s, 'restN', 3)) return { ok: true, text: 'You lay down, but you cannot rest any more today. Get up and do something!' };
+      const e = 15 + Math.round(restBonus(s) / 2);
+      s.energy = clamp(s.energy + e, 0, 100);
+      return { ok: true, text: `You rested on your bed and thanked God for a roof over your head. +${e} energy.` };
+    }
+    case 'tv': {
+      if (h.tv === 'old' || !h.tv) {
+        if (!once(s, 'tvnews')) return { ok: true, text: 'The same news again. Time to switch it off and do something.' };
+        return { ok: true, text: 'NTA news: fuel queues, rain in Lagos, an election coming. You prayed for the nation and its leaders (1 Timothy 2:1–2).' };
+      }
+      if (!once(s, 'tvgospel')) return { ok: true, text: 'You have watched enough TV today. 📺' };
+      s.faith = clamp(s.faith + 2, 0, 100); s.word = clamp(s.word + 1, 0, 100);
+      return { ok: true, text: 'Gospel TV: a powerful message on faith and a choir from Ghana. You sang along. +2 faith, +1 word.' };
+    }
+    case 'book': {
+      if (!h.bookshelf) return { ok: false, reason: 'You have no bookshelf yet.' };
+      if (!once(s, 'book')) return { ok: true, text: 'You read some more, but your eyes are tired. Tomorrow!' };
+      const w = 2 + (h.bookshelf === 'library' ? 1 : 0);
+      s.word = clamp(s.word + w, 0, 100);
+      return { ok: true, text: `You read a chapter of a good Christian book on prayer. +${w} word.` };
+    }
+    case 'keys': {
+      if (!once(s, 'rehearse')) return { ok: true, text: 'You played a little more for joy. 🎶' };
+      s.faith = clamp(s.faith + 1, 0, 100);
+      return { ok: true, text: 'You practised "Great Is Thy Faithfulness" and two choruses for Sunday. +1 faith.' };
+    }
+    case 'snack': {
+      if (!h.fridge) return { ok: false, reason: 'You have no fridge yet.' };
+      if (s.hunger >= 95) return { ok: false, reason: 'You are full.' };
+      if (!count(s, 'snackN', 3)) return { ok: false, reason: 'The bread is finished. Buy food at the market.' };
+      s.hunger = clamp(s.hunger + 12, 0, 100);
+      return { ok: true, text: 'Cold water and bread from the fridge. You said grace first. +12 food.' };
+    }
+    case 'water': {
+      if (!once(s, 'plants')) return { ok: true, text: 'The plants are already watered today. 🪴' };
+      s.character = clamp(s.character + 1, 0, 100);
+      return { ok: true, text: 'You watered the plants. "I have planted, Apollos watered; but God gave the increase." (1 Corinthians 3:6) +1 character.' };
+    }
+    case 'verse': {
+      const house = h.picture === 'house';
+      if (once(s, 'verse')) s.word = clamp(s.word + 1, 0, 100);
+      return { ok: true, text: house ? '"As for me and my house, we will serve the LORD." (Joshua 24:15)' : '"The LORD is my shepherd; I shall not want." (Psalm 23:1)' };
+    }
+    case 'dress': {
+      if (once(s, 'dress')) s.character = clamp(s.character + 1, 0, 100);
+      return { ok: true, text: 'You ironed your Sunday best and hung it ready for church. "Let all things be done decently and in order." (1 Corinthians 14:40)' };
+    }
+    case 'admire':
+      return { ok: true, text: 'It sparkles. Visitors will talk… but remember: "Let not the wise man glory in his wisdom… nor the rich man in his riches" (Jeremiah 9:23).' };
+    default:
+      return { ok: false, reason: 'Nothing to do' };
+  }
+}
+
 /* ================================================================ things to do */
 
 /**

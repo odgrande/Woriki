@@ -10,7 +10,7 @@ import {
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
-import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds, visitFamily as visitFamilySys, prayFamily as prayFamilySys, routeFor } from './life.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds, visitFamily as visitFamilySys, prayFamily as prayFamilySys, routeFor, HOME_ACTIONS, doHomeAction, variantOf } from './life.js';
 import { deltas as deltasOf } from './systems.js';
 import { checkAssignments, assignmentView } from './assignments.js';
 
@@ -418,6 +418,29 @@ export function createGame(ctx = {}, opts = {}) {
       });
     },
     /** Visit the family in a house on the map and invite them to church. */
+    /** Things to do with a piece of furniture you have: [{id, emoji, label, pose, ok, reason}]. */
+    homeActions(slot) {
+      if (!s) return [];
+      const v = s.home?.[slot] || variantOf(s, slot)?.id;
+      return (HOME_ACTIONS[slot] || []).filter((a) => !a.needs || s.home?.[a.needs] || variantOf(s, a.needs)).map((a) => {
+        const c = a.act ? canDo(s, a.act, env()) : { ok: true };
+        return { ...a, label: typeof a.label === 'function' ? a.label(v) : a.label, ok: c.ok !== false, reason: c.reason || '' };
+      });
+    },
+    /** Do a room action's effect (the body's pose is the caller's). */
+    homeAction(slot, id) {
+      const a = (HOME_ACTIONS[slot] || []).find((x) => x.id === id);
+      if (!s || !a) return { ok: false, reason: 'Nothing to do' };
+      if (a.act) return game.act(a.act);
+      if (!a.home) return { ok: true };
+      return run((e) => {
+        const before = { ...s };
+        const r = doHomeAction(s, a.home, clock(s).hour);
+        if (!r.ok) { e.fx.push({ type: 'toast', text: r.reason, emoji: a.emoji, tone: 'warn' }); return r; }
+        e.fx.push({ type: 'toast', text: r.text, emoji: a.emoji, deltas: deltasOf(before, s) });
+        return r;
+      });
+    },
     visitFamily(key, area) {
       return run((e) => {
         const before = { ...s };

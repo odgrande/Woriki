@@ -69,7 +69,7 @@ export function createPlayer(ctx, deps = {}) {
   let vy = 0;
   let grounded = true;
   let heading = 0;
-  let state = /** @type {'move'|'air'|'sit'|'kneel'|'emote'} */ ('move');
+  let state = /** @type {'move'|'air'|'sit'|'lie'|'kneel'|'emote'} */ ('move');
   let phase = '';
   let phaseT = 0;
   let airT = 0;
@@ -201,10 +201,64 @@ export function createPlayer(ctx, deps = {}) {
       phaseT = 0;
       if (kneelAct) { kneelAct.time = Math.max(kneelAct.time, KNEEL_UP); kneelAct.timeScale = 1.35; }
       emitAction('stand');
+    } else if (state === 'lie') {
+      getUp();
     } else if (state === 'emote') {
       stopEmote(true);
     }
   }
+
+  // ------------------------------------------------------------ lie down (bed)
+  let lieSpot = null;
+  let lieStand = new THREE.Vector3();
+  /**
+   * Lie down on your back at a spot (the head is about 0.93 m behind the spot along rotY).
+   * @param {{position: THREE.Vector3, rotY: number}} spot @param {THREE.Vector3} standAt where you get up to
+   */
+  function lieAt(spot, standAt) {
+    if (!spot || state === 'air') return false;
+    if (seat) { seat.taken = false; seat = null; }
+    stopEmote();
+    kneelAct = null; prayW = 0;
+    lieSpot = spot;
+    lieStand.copy(standAt || position);
+    sitFrom.pos.copy(position); sitFrom.rot = heading;
+    sitTo.pos.copy(spot.position); sitTo.rot = spot.rotY;
+    state = 'lie';
+    phase = 'approach';
+    phaseT = 0;
+    vel.set(0, 0, 0); vy = 0;
+    play('walk', { fade: 0.15 });
+    input?.setButton?.('sit', { label: 'Get up' });
+    emitAction('lie');
+    return true;
+  }
+  function getUp() {
+    if (state !== 'lie') return;
+    position.copy(lieStand);
+    if (physics) position.y = Math.max(position.y, physics.groundHeight(position.x, position.z, position.y + 0.3));
+    heading = wrap(lieSpot ? lieSpot.rotY : heading);
+    lieSpot = null;
+    visual.position.set(0, 0, 0);
+    input?.setButton?.('sit', { label: null });
+    emitAction('stand');
+    toMove(0.35);
+  }
+
+  // ------------------------------------------------------------ do something (read, eat, use)
+  /** Play an action clip on the spot ('interact', 'eat', 'phone' = reading…) for a few seconds. */
+  function act(anim = 'interact', seconds = 2.5) {
+    if (state === 'air' || state === 'sit' || state === 'lie' || state === 'kneel') return false;
+    stopEmote();
+    state = 'emote';
+    emoteKind = 'act';
+    emoteFor = seconds;
+    phaseT = 0;
+    vel.set(0, 0, 0);
+    emoteAct = play(anim, { fade: 0.25, loop: anim === 'phone' || anim === 'talk' });
+    return true;
+  }
+  let emoteFor = 0;
 
   function finishStand() {
     if (seat) { seat.taken = false; seat = null; }
@@ -381,7 +435,7 @@ export function createPlayer(ctx, deps = {}) {
     if (input) {
       if (input.consume('jump')) jumpBuf = JUMP_BUFFER;
       if (input.consume('sit')) {
-        if (state === 'sit') stand();
+        if (state === 'sit' || state === 'lie') stand();
         else if (state === 'move' || state === 'emote' || state === 'kneel') {
           const s = nearestSeat();
           if (s) sitAt(s);
@@ -506,9 +560,18 @@ export function createPlayer(ctx, deps = {}) {
       const wantPray = phase === 'pray' || (phase === 'down' && (!kneelAct || kneelAct.time > 0.45)) ? 1 : 0;
       prayW += (wantPray - prayW) * damp(phase === 'up' ? 9 : 5, dt);
       armW += ((handsUp ? 1 : 0) - armW) * damp(handsUp ? 7 : 12, dt);
+    } else if (state === 'lie') {
+      if (phase === 'approach') {
+        const k = Math.min(1, phaseT / (0.35 + 0.2 * sitFrom.pos.distanceTo(sitTo.pos)));
+        const e = smooth(k);
+        position.lerpVectors(sitFrom.pos, sitTo.pos, e);
+        heading = sitFrom.rot + wrap(sitTo.rot - sitFrom.rot) * e;
+        if (k >= 1) { phase = 'lying'; phaseT = 0; play('lie', { fade: 0.35 }); }
+      } else if ((wantsMove && phaseT > 0.4) || jumpBuf > 0) { jumpBuf = 0; getUp(); }
     } else if (state === 'emote') {
       if (wantsMove || jumpBuf > 0) stopEmote(true);
       else if (emoteKind === 'interact' && phaseT > 1.0) stopEmote(true);
+      else if (emoteKind === 'act' && phaseT > emoteFor) stopEmote(true);
     }
 
     // ---------------- speed (actual, so walking into a wall plays idle)
@@ -595,7 +658,7 @@ export function createPlayer(ctx, deps = {}) {
   const player = {
     object,
     position,
-    /** 'move' | 'air' | 'sit' | 'kneel' | 'emote' */
+    /** 'move' | 'air' | 'sit' | 'lie' | 'kneel' | 'emote' */
     get state() { return state; },
     /** Sub-phase of sit / kneel ('approach', 'down', 'seated', 'pray', 'up'). */
     get phase() { return phase; },
@@ -618,6 +681,8 @@ export function createPlayer(ctx, deps = {}) {
     height,
     update,
     sitAt,
+    lieAt,
+    act,
     stand,
     teleport,
     kneel,

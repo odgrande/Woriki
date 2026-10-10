@@ -151,7 +151,7 @@ const ITEMS = {
     if (v === 'foam') {
       box(g, 23.4, Y + 0.09, 25.8, 1.6, 0.18, 2.0, '#e8edf5');
       box(g, 23.05, Y + 0.24, 26.42, 0.6, 0.12, 0.45, '#ffffff');
-      return { seats: [[23.4, Y + 0.2, 24.95, 0]] };
+      return { seats: [[23.4, Y + 0.2, 24.95, 0]], lie: [23.25, Y + 0.2, 25.45, Math.PI] };
     }
     if (v === 'king') {
       box(g, 23.2, Y + 0.22, 25.7, 2.1, 0.44, 2.3, '#3b2412');
@@ -160,14 +160,14 @@ const ITEMS = {
       for (const x of [22.7, 23.7]) box(g, x, Y + 0.7, 26.55, 0.7, 0.16, 0.38, '#ffffff');
       box(g, 23.2, Y + 1.0, 26.86, 2.2, 1.5, 0.12, '#d4b483');
       for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) box(g, 22.4 + i * 0.4, Y + 0.6 + j * 0.42, 26.8, 0.06, 0.06, 0.03, '#a07d4f');
-      return { colliders: [[22.15, 24.55, 24.25, 26.9, 0.75]], seats: [[23.2, Y + 0.62, 24.55, 0]] };
+      return { colliders: [[22.15, 24.55, 24.25, 26.9, 0.75]], seats: [[23.2, Y + 0.62, 24.55, 0]], lie: [23.2, Y + 0.7, 25.6, Math.PI] };
     }
     box(g, 23.4, Y + 0.2, 25.75, 1.7, 0.4, 2.15, '#5b3418');
     box(g, 23.4, Y + 0.48, 25.75, 1.6, 0.18, 2.05, '#f8fafc');
     box(g, 23.4, Y + 0.6, 25.55, 1.62, 0.06, 1.55, '#1d4ed8');
     for (const x of [23.0, 23.8]) box(g, x, Y + 0.64, 26.5, 0.6, 0.14, 0.35, '#ffffff');
     box(g, 23.4, Y + 0.75, 26.85, 1.75, 1.1, 0.08, '#5b3418');
-    return { colliders: [[22.55, 24.65, 24.25, 26.9, 0.75]], seats: [[23.4, Y + 0.6, 24.7, 0]] };
+    return { colliders: [[22.55, 24.65, 24.25, 26.9, 0.75]], seats: [[23.4, Y + 0.6, 24.7, 0]], lie: [23.4, Y + 0.64, 25.55, Math.PI] };
   },
   fan(g, v) {
     g.add(mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.05, 16), '#e5e7eb', 21.9, Y + 0.03, 24.0));
@@ -272,25 +272,38 @@ export function createDecor(ctx, { physics, seats, interactables }) {
         const r = ITEMS[f.id](g, v.id) || {};
         g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         root.add(g);
-        const entry = { variant: v.id, group: g, colliders: [], seats: [], item: null, spin: r.spin, flicker: r.flicker };
+        const entry = { variant: v.id, group: g, colliders: [], seats: [], item: null, spin: r.spin, flicker: r.flicker, on: true, lie: r.lie ? { position: new THREE.Vector3(r.lie[0], r.lie[1], r.lie[2]), rotY: r.lie[3] } : null };
         for (const [x0, z0, x1, z1, hgt] of r.colliders || []) entry.colliders.push(physics.addBox(new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, Y + hgt, z1), { kind: 'furniture', camera: false, walkable: false }));
         for (const [x, y, z, rotY] of r.seats || []) { const st = { position: new THREE.Vector3(x, y, z), rotY, kind: 'chair', zone: 'home', taken: false }; seats?.push(st); entry.seats.push(st); }
         // press F near it (or click it) to replace or upgrade
         const box3 = new THREE.Box3().setFromObject(g);
+        entry.center = box3.isEmpty() ? null : box3.getCenter(new THREE.Vector3());
         if (!box3.isEmpty() && f.id !== 'solar') {
           const c = box3.getCenter(new THREE.Vector3());
-          entry.item = { id: `furniture-${f.id}`, position: new THREE.Vector3(c.x, Y, c.z), radius: 1.5, label: `Change the ${f.name.toLowerCase()}`, action: 'furniture', slot: f.id };
+          entry.item = { id: `furniture-${f.id}`, position: new THREE.Vector3(c.x, Y, c.z), radius: 1.5, label: `Use the ${f.name.toLowerCase()}`, short: f.emoji + ' Use', action: 'furniture', slot: f.id };
           interactables?.push(entry.item);
         }
         built.set(f.id, entry);
       }
     },
     has: (id) => built.has(id),
+    /** Where to use a piece: its seats, the lying spot (bed), its centre on the floor. */
+    spots(slot) {
+      const b = built.get(slot);
+      return b ? { seats: b.seats, lie: b.lie, center: b.center ? new THREE.Vector3(b.center.x, Y, b.center.z) : null, variant: b.variant } : null;
+    },
+    /** Switch a fan on / off. @returns {boolean} on */
+    toggle(slot) {
+      const b = built.get(slot);
+      if (!b) return false;
+      b.on = !b.on;
+      return b.on;
+    },
     /** Which furniture slot an object belongs to (for clicks), or null. */
     slotOf(o) { while (o) { if (o.userData?.slot) return o.userData.slot; o = o.parent; } return null; },
     update(dt, t) {
       for (const b of built.values()) {
-        if (b.spin) b.spin.rotation.z += dt * 14;
+        if (b.spin && b.on) b.spin.rotation.z += dt * 14;
         if (b.flicker) b.flicker.scale.y = 1.6 + Math.sin(t * 13) * 0.25 + Math.sin(t * 7.3) * 0.15;
       }
     },

@@ -202,3 +202,31 @@ describe('journey roads', () => {
     expect(seen.size).toBe(3);
   });
 });
+
+describe('life in your room', () => {
+  it('every piece of furniture has something to do with it', async () => {
+    const { HOME_ACTIONS, FURNITURE } = await import('./life.js');
+    for (const f of FURNITURE) if (f.id !== 'solar') expect(HOME_ACTIONS[f.id]?.length, f.id).toBeGreaterThan(0);
+  });
+  it('rest gives energy a few times a day, Gospel TV builds faith once', async () => {
+    const { doHomeAction } = await import('./life.js');
+    const s = newState({ name: 'A', role: 'usher' });
+    s.energy = 40;
+    expect(doHomeAction(s, 'rest').ok).toBe(true);
+    expect(s.energy).toBeGreaterThan(40);
+    s.home = { tv: 'flat55' };
+    const f0 = s.faith;
+    doHomeAction(s, 'tv'); doHomeAction(s, 'tv');
+    expect(s.faith).toBe(Math.min(100, f0 + 2));
+  });
+  it('the game lists room actions and runs them', () => {
+    const g = createGame({}, { save: false });
+    g.newGame({ name: 'A', role: 'choir' });
+    const acts = g.homeActions('bed');
+    expect(acts.map((a) => a.id)).toEqual(['rest', 'sleep', 'sit']);
+    expect(g.homeActions('sofa').some((a) => a.id === 'tv')).toBe(true);
+    g.state.energy = 30;
+    expect(g.homeAction('bed', 'rest').ok).toBe(true);
+    expect(g.state.energy).toBeGreaterThan(30);
+  });
+});

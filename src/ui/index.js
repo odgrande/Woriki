@@ -241,7 +241,7 @@ export function createUI(ctx, opts) {
       home: () => mapView ? mapView.goHome() : dialogs.toast('The map is not ready yet.'),
       map: () => mapView?.show(),
       phone: (app) => phone.show(['prayer', 'diary', 'ads'].includes(app) ? app : null),
-      furniture: (slot) => furniture(slot),
+      furniture: (slot) => furnitureShop(slot),
     },
     onToggle(open) {
       document.documentElement.classList.toggle('ac-sheet-open', open);
@@ -319,7 +319,33 @@ export function createUI(ctx, opts) {
   }
 
   /** Replace or upgrade a piece of furniture (click it, or press F next to it). */
+  /** Click a piece of furniture (or press F by it): what you can do with it, or replace it. */
   function furniture(slot) {
+    const f = FURNITURE_BY_ID[slot];
+    const s = game.state;
+    if (!f || !s || !inGame) return;
+    const acts = game.homeActions?.(slot) || [];
+    if (!acts.length) { furnitureShop(slot); return; }
+    const cur = variantOf(s, slot);
+    dialogs.open({
+      id: `use:${slot}`,
+      dismissible: true,
+      build(card, close) {
+        setChildren(card,
+          h('div.ac-modal-emoji', { text: f.emoji, attrs: { 'aria-hidden': 'true' } }),
+          h('h3', { text: cur?.name || f.name, id: 'ac-modal-title' }),
+          h('div.ac-use', null, acts.map((a) => h('button.ac-use-btn', {
+            type: 'button', disabled: !a.ok, attrs: { title: a.reason || '' },
+            on: { click: () => { close(); bus?.emit('home:do', { slot, id: a.id, pose: a.pose, act: a.act, ui: a.ui, toggle: a.toggle }); } },
+          }, h('span.ac-use-emoji', { text: a.emoji, attrs: { 'aria-hidden': 'true' } }), h('span', null, h('b', { text: a.label }), a.ok ? null : h('small', { text: a.reason }))))),
+          h('div.ac-choices', null,
+            h('button.ac-btn', { type: 'button', on: { click: () => { close(); furnitureShop(slot); } } }, '🔁 Replace or upgrade'),
+            h('button.ac-btn', { type: 'button', on: { click: close } }, 'Close')));
+      },
+    });
+  }
+
+  function furnitureShop(slot) {
     const f = FURNITURE_BY_ID[slot];
     const s = game.state;
     if (!f || !s || !inGame) return;
@@ -476,6 +502,7 @@ export function createUI(ctx, opts) {
     phone,
     /** Replace or upgrade furniture in a slot of the home. */
     furniture,
+    furnitureShop,
     /** A clicked person in the 3D world. */
     person,
     /** A clicked billboard poster. */

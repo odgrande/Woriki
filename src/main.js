@@ -258,7 +258,59 @@ ctx.bus.on('player:interact', (item) => {
   if (item?.action === 'furniture') ui.furniture(item.slot);
 });
 
-/* ---------------------------------------------------------------- click on furniture to replace it */
+/* ---------------------------------------------------------------- life in your room */
+// Do something with a piece of furniture (from its menu): sit, lie on the bed, kneel at the
+// prayer corner, watch TV from the sofa, read, eat, play… then the game applies the effect.
+ctx.bus.on('home:do', ({ slot, id, pose, toggle }) => {
+  const s = session;
+  if (!s?.player || !s.decor || s.travelling) return;
+  const P = s.player;
+  const sp = s.decor.spots(slot);
+  if (!sp) return;
+  const v = new THREE.Vector3();
+  /** A floor point `d` metres from the item towards you, and the heading that faces the item. */
+  const besideItem = (d = 0.95) => {
+    const c = sp.center || P.position;
+    v.copy(P.position).sub(c).setY(0);
+    if (v.lengthSq() < 0.01) v.set(1, 0, 0);
+    v.normalize();
+    const at = c.clone().addScaledVector(v, d);
+    at.y = physics.groundHeight(at.x, at.z, c.y + 0.5);
+    return { at, rot: Math.atan2(c.x - at.x, c.z - at.z) };
+  };
+  const nearestSeat = (seats) => seats.filter((x) => !x.taken).sort((a, b) => a.position.distanceTo(P.position) - b.position.distanceTo(P.position))[0];
+  const effect = () => game.homeAction?.(slot, id);
+  if (toggle) {
+    const b = besideItem(0.8);
+    P.teleport(b.at, b.rot);
+    P.act('interact', 1.2);
+    const on = s.decor.toggle(slot);
+    ui.toast?.(`${slot === 'fan' ? 'The fan' : 'The AC'} is ${on ? 'on' : 'off'}.${on ? ' Thank God for light! 💡' : ''}`);
+    return;
+  }
+  if (pose === 'sit' || pose === 'tv') {
+    const seats = pose === 'tv' ? (s.decor.spots('sofa')?.seats || []).filter((x) => Math.abs(x.rotY - Math.PI / 2) < 0.1) : sp.seats;
+    const seat = pose === 'tv' ? seats[1] || seats[0] : nearestSeat(sp.seats);
+    if (seat && !seat.taken) P.sitAt(seat);
+    else if (seat) P.sitAt(nearestSeat(seats) || seat);
+    effect();
+  } else if (pose === 'lie' && sp.lie) {
+    P.lieAt(sp.lie, besideItem(1.45).at);
+    if (id === 'sleep') setTimeout(() => { if (P.state === 'lie') effect(); }, 1800);
+    else effect();
+  } else if (pose === 'kneel') {
+    const b = besideItem(0.9);
+    P.teleport(b.at, b.rot);
+    P.kneel();
+  } else if (pose === 'read' || pose === 'eat' || pose === 'interact') {
+    const b = besideItem(0.85);
+    P.teleport(b.at, b.rot);
+    P.act({ read: 'phone', eat: 'eat', interact: 'interact' }[pose], pose === 'read' ? 4 : pose === 'eat' ? 3 : 2);
+    effect();
+  } else effect();
+});
+
+/* ---------------------------------------------------------------- click on furniture to use it */
 {
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();

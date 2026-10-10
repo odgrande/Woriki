@@ -487,3 +487,17 @@
 .ac-assign li.is-done { background: var(--green); }
 .ac-assign-check { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border: var(--b); border-radius: 6px; background: var(--white); font-weight: 800; }
 .ac-assign p { margin: 8px 0 0; font-size: 13.5px; color: var(--zinc-600); }
+
+/* use a piece of furniture */
+.ac-use { display: grid; gap: 8px; margin: 12px 0; text-align: left; }
+.ac-use-btn {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 12px;
+  border: var(--b, 2px solid #000); border-radius: 14px; background: #fff; color: #18181b;
+  font: inherit; text-align: left; cursor: pointer; box-shadow: 0 2px 0 #000;
+}
+.ac-use-btn:hover:not(:disabled) { background: #fef9c3; }
+.ac-use-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.ac-use-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+.ac-use-btn b { display: block; font-size: 15px; }
+.ac-use-btn small { display: block; color: #71717a; font-size: 12.5px; }
+.ac-use-emoji { font-size: 24px; flex: none; }
