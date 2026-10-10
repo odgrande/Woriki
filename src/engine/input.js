@@ -32,6 +32,9 @@ export const KEY_BINDINGS = [
   { keys: ['N'], action: 'End the day' },
   { keys: ['Esc'], action: 'Close / menu' },
   { keys: ['Drag'], alt: 'Wheel to zoom', action: 'Look around' },
+  { keys: ['V'], alt: 'eye button', action: 'Change camera view' },
+  { keys: ['M'], action: 'Lagos map' },
+  { keys: ['H'], action: 'Go home' },
 ];
 
 // Lucide-style inline icons (24×24, stroke = currentColor).
@@ -75,6 +78,8 @@ export function createInput(domRoot = document.body, opts = {}) {
   const look = { dx: 0, dy: 0 };
   let zoom = 0;
   let enabled = true;
+  /** Mouse look (pointer lock) instead of drag-to-look. */
+  let mouseLook = false;
   let shift = false;
 
   // ------------------------------------------------------------------ DOM
@@ -198,6 +203,12 @@ export function createInput(domRoot = document.body, opts = {}) {
     if (e.pointerType === 'touch' || e.pointerType === 'pen') { if (!isTouch) setTouch(true); }
     if (!enabled || !isGameTarget(e.target)) return;
     if (e.pointerType === 'mouse') {
+      // Mouse look: a click locks the pointer, then moving the mouse turns the camera (Esc frees it).
+      if (mouseLook && e.button === 0 && !document.pointerLockElement && e.target?.tagName === 'CANVAS') {
+        try { const r = e.target.requestPointerLock?.(); r?.catch?.(() => {}); } catch { /* not allowed here */ }
+        return;
+      }
+      if (document.pointerLockElement) return;
       if (e.button !== 0 && e.button !== 2) return;
       mouseDrag = e.pointerId;
       lookers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -219,6 +230,10 @@ export function createInput(domRoot = document.body, opts = {}) {
     }
   }
   function onPointerMove(e) {
+    if (document.pointerLockElement && e.pointerType === 'mouse') {
+      if (enabled && (e.movementX || e.movementY)) { look.dx += e.movementX * 0.8; look.dy += e.movementY * 0.8; lastLookAt = performance.now(); }
+      return;
+    }
     if (e.pointerType === 'mouse' && isTouch && opts.touch === undefined && (e.movementX || e.movementY) && stick.id === -1 && lookers.size === 0) setTouch(false);
     if (e.pointerId === stick.id) { updateStick(e.clientX, e.clientY); return; }
     const p = lookers.get(e.pointerId);
@@ -341,7 +356,7 @@ export function createInput(domRoot = document.body, opts = {}) {
     set enabled(v) {
       enabled = !!v;
       root.classList.toggle('is-disabled', !enabled);
-      if (!enabled) { clearHeld(); releaseStick(); lookers.clear(); mouseDrag = -1; look.dx = 0; look.dy = 0; zoom = 0; pressed.clear(); gesture = false; }
+      if (!enabled) { clearHeld(); releaseStick(); lookers.clear(); mouseDrag = -1; look.dx = 0; look.dy = 0; zoom = 0; pressed.clear(); gesture = false; if (document.pointerLockElement) document.exitPointerLock?.(); }
     },
     /** Show or hide the touch controls (e.g. while a full-screen panel is open). */
     setVisible(v) { root.classList.toggle('is-hidden', !v); },
@@ -362,6 +377,14 @@ export function createInput(domRoot = document.body, opts = {}) {
       if ('active' in s) b.classList.toggle('is-hint', !!s.active);
       if ('hidden' in s) b.hidden = !!s.hidden;
     },
+    /** Mouse look: click the 3D view to steer the camera with the mouse; Esc to stop. */
+    get mouseLook() { return mouseLook; },
+    set mouseLook(v) {
+      mouseLook = !!v;
+      if (!mouseLook && document.pointerLockElement) document.exitPointerLock?.();
+    },
+    /** True while the pointer is locked to the 3D view. */
+    get pointerLocked() { return !!document.pointerLockElement; },
     /** Force touch controls on/off (settings). */
     setTouch(on) { opts.touch = on; setTouch(on); },
     /** The touch-controls root element. */

@@ -17,6 +17,16 @@ import { buildEdges, createNav } from './nav.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+const SUN = new THREE.Color('#fff1d6'), MOON = new THREE.Color('#8fa6ff'), DUSK = new THREE.Color('#ff9a52'), WHITE = new THREE.Color('#ffffff');
+const NIGHT_SKY = new THREE.Color('#5b6cb0'), SKY_NIGHT = new THREE.Color('#1a2448'), DUSK_SKY = new THREE.Color('#ffb27a');
+const FOG_DAY = new THREE.Color('#cfe2ee'), FOG_NIGHT = new THREE.Color('#141c33'), DUSK_FOG = new THREE.Color('#e7a77a');
+
+/** 1 in daylight, 0 at night, smooth at dawn (5:45–7:00) and dusk (18:15–19:30). */
+export function daylight(hour) {
+  const s = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  return s(5.75, 7.0, hour) * (1 - s(18.25, 19.5, hour));
+}
+
 /** Kinds of collider the follow camera should not pass through. */
 export const CAMERA_BLOCKING = new Set(['wall', 'building', 'fence', 'gate', 'pillar', 'kiosk', 'ceiling', 'roof']);
 /** Kinds that only exist for the camera (above head height: rooms' ceilings and roof spaces). */
@@ -282,12 +292,59 @@ export async function buildWorld(ctx, physics) {
     ctx.bus.on('service:end', () => { inService = false; slide = 0; screen.show(0); }),
   ];
 
+  let lastHour = -1;
   const world = {
     root, spawns, seats, nav, zones, interactables,
     vehicles: traffic.list,
     surfaceAt, zoneAt,
     groundAt,
     colliders,
+    /**
+     * A vehicle model (danfo, car, keke, okada) as its own group, e.g. for the journey scenes.
+     * @param {'danfo'|'car'|'keke'|'okada'} kind @param {string} [color] body colour (cars)
+     */
+    vehicleMesh(kind, color) {
+      const g = new THREE.Group();
+      for (const [key, geo] of kits[kind] || []) {
+        const m = new THREE.Mesh(geo, mats[key]);
+        m.castShadow = true; m.receiveShadow = true;
+        if (color && key === 'paint') {
+          const c = new THREE.Color(color);
+          const g2 = geo.clone();
+          const a = g2.attributes.color;
+          if (a) for (let i = 0; i < a.count; i++) a.setXYZ(i, c.r, c.g, c.b);
+          m.geometry = g2;
+        }
+        g.add(m);
+      }
+      g.name = `vehicle:${kind}`;
+      return g;
+    },
+    /**
+     * Light the street for the hour in Lagos (0–24): bright midday sun, orange dusk, moonlit night
+     * with the lamps glowing, grey dawn.
+     */
+    setTime(hour) {
+      if (Math.abs(hour - lastHour) < 0.02) return;
+      lastHour = hour;
+      const day = daylight(hour);
+      const dusk = Math.max(0, 1 - Math.abs(hour - 18.7) / 1.1) + Math.max(0, 1 - Math.abs(hour - 6.3) / 0.9);
+      const glow = Math.min(1, dusk);
+      ctx.sun.intensity = 0.35 + day * 2.05;
+      ctx.sun.color.copy(MOON).lerp(SUN, day).lerp(DUSK, glow * 0.65);
+      ctx.hemi.intensity = 0.38 + day * 0.72;
+      ctx.hemi.color.copy(NIGHT_SKY).lerp(WHITE, day);
+      ctx.scene.environmentIntensity = 0.12 + day * 0.33;
+      // the sun's path: east in the morning, overhead at noon, west in the evening; the moon high at night
+      const a = ((hour - 6) / 12) * Math.PI;
+      if (day > 0.05) ctx.sunOffset.set(Math.cos(a) * -38, 18 + Math.max(0, Math.sin(a)) * 40, 20);
+      else ctx.sunOffset.set(-20, 55, -15);
+      sky.material.color.copy(SKY_NIGHT).lerp(WHITE, day).lerp(DUSK_SKY, glow * 0.5 * (1 - day * 0.5));
+      ctx.scene.fog.color.copy(FOG_NIGHT).lerp(FOG_DAY, day).lerp(DUSK_FOG, glow * 0.4);
+      if (ctx.scene.background?.isColor) ctx.scene.background.copy(ctx.scene.fog.color);
+      ctx.renderer.toneMappingExposure = 0.9 + day * 0.1;
+    },
+    get night() { return lastHour >= 0 && daylight(lastHour) < 0.3; },
     /** Show a lyrics slide on the projector screens (0 = welcome). */
     setLyrics(i) { slide = i; screen.show(i); },
     stats: { staticTris, instTris, textureMs: Math.round(tTex - t0), textureTimings: T.timings, buildMs: 0, seats: seats.length, navNodes: nodes.length, navEdges: edges.length, colliders: colliders.length },

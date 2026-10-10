@@ -39,10 +39,10 @@ describe('follow camera', () => {
     expect(cam.pitch).toBe(cam.maxPitch);
     input.st.zoom = 50;
     cam.update(1 / 60, V(0, 0, 0));
-    expect(cam.distance).toBe(9);
+    expect(cam.distance).toBe(cam.maxDistance);
     input.st.zoom = -50;
     cam.update(1 / 60, V(0, 0, 0));
-    expect(cam.distance).toBe(2.5);
+    expect(cam.distance).toBe(cam.minDistance);
   });
 
   it('looks at the player from behind and follows smoothly', () => {
@@ -108,5 +108,22 @@ describe('follow camera', () => {
     for (let i = 0; i < 120; i++) cam.update(1 / 60, V(0, 0, 0));
     expect(ctx.camera.fov).toBeGreaterThan(60);
     expect(cam.distance).toBe(6);
+  });
+});
+
+describe('camera views', () => {
+  it('switches views and cycles through them', async () => {
+    const THREE = await import('three');
+    const { createFollowCamera, VIEW_ORDER } = await import('./camera.js');
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    const cam = createFollowCamera({ camera });
+    expect(cam.setMode('top')).toBe('top');
+    expect(cam.pitch).toBeGreaterThan(1);
+    cam.setMode('first');
+    cam.update(0.016, new THREE.Vector3(0, 0, 0));
+    expect(camera.position.y).toBeCloseTo(1.62, 1);
+    const seen = new Set();
+    for (let i = 0; i < VIEW_ORDER.length; i++) seen.add(cam.cycleMode());
+    expect(seen.size).toBe(VIEW_ORDER.length);
   });
 });

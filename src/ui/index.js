@@ -5,7 +5,7 @@ import './ui.css';
 import './start.css';
 import './front.css';
 import '../map/map.css';
-import { h, store } from './dom.js';
+import { h, store, setChildren } from './dom.js';
 import { createStartScreen } from './start.js';
 import { createHud } from './hud.js';
 import { createDock } from './sheet.js';
@@ -108,8 +108,47 @@ export function createUI(ctx, opts) {
       help: () => dialogs.help(),
       today: () => dock.select('today'),
       earn: () => dock.select('today'),
+      view: (btn) => toggleViewMenu(btn),
     },
   });
+
+  /* ---------------------------------------------------------------- camera views (eye button) */
+  let view = store.get('amen.view', 'follow');
+  let mouseLook = store.get('amen.mouseLook', 'off') === 'on';
+  let viewMenu = null;
+  const VIEW_LIST = [['follow', '🎥', 'Behind'], ['close', '🙂', 'Close'], ['wide', '🌄', 'Wide'], ['top', '🛰️', 'From above'], ['first', '👀', 'My eyes']];
+  function setView(id) {
+    view = id;
+    store.set('amen.view', id);
+    bus?.emit('ui:view', { mode: id });
+    renderViewMenu();
+  }
+  function setMouseLook(on) {
+    mouseLook = on;
+    store.set('amen.mouseLook', on ? 'on' : 'off');
+    bus?.emit('ui:mouselook', { on });
+    if (on) dialogs.toast('Mouse look is on: click the 3D view, then move the mouse to look. Esc to stop.', { emoji: '🖱️' });
+    renderViewMenu();
+  }
+  function renderViewMenu() {
+    if (!viewMenu) return;
+    setChildren(viewMenu,
+      h('p.ac-view-title', { text: 'Camera' }),
+      ...VIEW_LIST.map(([id, emoji, label]) => h('button.ac-view-opt', { type: 'button', attrs: { role: 'menuitemradio', 'aria-checked': String(view === id) }, on: { click: () => setView(id) } }, h('span', { text: emoji }), label)),
+      h('button.ac-view-opt', { type: 'button', attrs: { role: 'menuitemcheckbox', 'aria-checked': String(mouseLook) }, on: { click: () => setMouseLook(!mouseLook) } }, h('span', { text: '🖱️' }), 'Mouse look'),
+      h('p.ac-view-hint', { text: 'Wheel or pinch to zoom · drag to turn · V to switch view' }));
+  }
+  function toggleViewMenu(btn) {
+    if (viewMenu) { closeViewMenu(); return; }
+    viewMenu = h('div.ac-view-menu', { attrs: { role: 'menu', 'aria-label': 'Camera view' } });
+    renderViewMenu();
+    el.append(viewMenu);
+    const r = btn?.getBoundingClientRect();
+    if (r) { viewMenu.style.top = `${Math.round(r.top)}px`; viewMenu.style.right = `${Math.round(window.innerWidth - r.left + 8)}px`; }
+    setTimeout(() => window.addEventListener('pointerdown', outside, true), 0);
+  }
+  function outside(e) { if (viewMenu && !viewMenu.contains(e.target) && !e.target.closest?.('.ac-eye')) closeViewMenu(); }
+  function closeViewMenu() { viewMenu?.remove(); viewMenu = null; window.removeEventListener('pointerdown', outside, true); }
 
   /* ---------------------------------------------------------------- map and front door */
   const mapView = opts.map ? createMapView({
@@ -118,6 +157,16 @@ export function createUI(ctx, opts) {
     map: opts.map,
     toast: (t, o) => dialogs.toast(t, o),
     onArrive: (go) => opts.onArrive?.(go),
+    onJourney: opts.onJourney ? (go) => {
+      hud.show(false); dock.show(false);
+      if (opts.input) { opts.input.enabled = false; opts.input.setVisible?.(false); }
+      return Promise.resolve(opts.onJourney(go)).finally(() => {
+        if (!inGame) return;
+        hud.show(true); dock.show(true);
+        if (opts.input) { opts.input.enabled = !modalOpen; opts.input.setVisible?.(true); }
+      });
+    } : undefined,
+    onSkip: () => opts.onSkipJourney?.(),
     onToggle(open) {
       if (!inGame) return;
       hud.show(!open);
@@ -279,6 +328,7 @@ export function createUI(ctx, opts) {
       return;
     }
     if (!inGame) return;
+    if ((e.key === 'v' || e.key === 'V') && !mapView?.open) { setView(VIEW_LIST[(VIEW_LIST.findIndex((x) => x[0] === view) + 1) % VIEW_LIST.length][0]); dialogs.toast(`View: ${VIEW_LIST.find((x) => x[0] === view)[2]}`, { emoji: '🎥' }); return; }
     if ((e.key === 'm' || e.key === 'M') && mapView) { if (mapView.open) mapView.close(); else mapView.show(); return; }
     if ((e.key === 'h' || e.key === 'H') && mapView && !mapView.open) { mapView.goHome(); return; }
     if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); dialogs.help(); return; }
@@ -318,6 +368,9 @@ export function createUI(ctx, opts) {
     goHome: () => mapView?.goHome(),
     showLanding,
     showHomeCard,
+    /** Saved camera view and mouse-look choice (main applies them when you enter). */
+    get view() { return view; },
+    get mouseLook() { return mouseLook; },
     toast: (text, o) => dialogs.toast(text, o),
     modal: (m) => dialogs.info(m),
     help: () => dialogs.help(),

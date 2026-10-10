@@ -42,7 +42,9 @@ export function createHud({ game, root, actions }) {
 
   const onlineSlot = h('div.ac-online-slot');
   const soundBtn = h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Mute sound', 'aria-pressed': 'false' }, on: { click: actions.sound } }, ic('volume-2'));
+  const eyeBtn = h('button.ac-iconbtn.ac-eye', { type: 'button', title: 'Camera view (V)', attrs: { 'aria-label': 'Camera view', 'aria-haspopup': 'menu' }, on: { click: () => actions.view?.(eyeBtn) } }, ic('eye'));
   const side = h('div.ac-hud-side', null, onlineSlot, h('div.ac-hud-btns', null,
+    eyeBtn,
     soundBtn,
     h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Settings' }, on: { click: actions.settings } }, ic('settings')),
     h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Controls help (?)' }, on: { click: actions.help } }, ic('circle-help'))));

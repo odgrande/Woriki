@@ -23,8 +23,10 @@ const CITIES = [['lagos', 'Lagos'], ['ph', 'Port Harcourt'], ['abuja', 'Abuja']]
  * @param {(text: string, opts?: object) => void} o.toast
  * @param {(go: object) => Promise<void>|void} o.onArrive move the player (walkable places)
  * @param {(open: boolean) => void} [o.onToggle]
+ * @param {(go: object) => Promise<void>} [o.onJourney] show the trip on the road in 3D (else a travel card)
+ * @param {() => void} [o.onSkip] skip the journey scene
  */
-export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {} }) {
+export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {}, onJourney, onSkip }) {
   let open = false;
   let mode = 'game'; // 'game' | 'landing'
   let selected = null;
@@ -165,8 +167,13 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
       if (r?.stuck) setTimeout(() => picker(to), 300);
       return;
     }
-    await travelScreen(r);
     const p = PLACE_BY_ID[to];
+    if (onJourney) {
+      // See yourself on the road with the transport you picked.
+      if (open) { open = false; el.hidden = true; hideCard(); map.hide(); onToggle(false); }
+      const banner = journeyBanner(r);
+      try { await onJourney(r); } finally { banner.remove(); }
+    } else await travelScreen(r);
     if (r.walk) {
       if (open) { open = false; el.hidden = true; hideCard(); map.hide(); onToggle(false); }
       await onArrive?.(r);
@@ -177,6 +184,18 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
       selected = p;
       renderPlace();
     }
+  }
+
+  /** Banner over the 3D journey: where you are going, how long it takes, and Skip. */
+  function journeyBanner(r) {
+    const p = PLACE_BY_ID[r.to];
+    const name = { trek: 'Trekking', bike: game.state?.items?.bike ? 'Cycling' : 'On an okada', danfo: 'In a danfo', taxi: 'In a taxi', free: 'Free ride' }[r.mode] || 'On the way';
+    const b = h('div.mv-journey', { attrs: { role: 'status' } },
+      h('span.mv-journey-emoji', { text: { trek: '🚶', bike: '🏍️', danfo: '🚐', taxi: '🚕', free: '🚗' }[r.mode] || '🚕' }),
+      h('span', null, h('b', { text: `${name} to ${p.name}` }), h('small', { text: `${p.area} · ${countdown(r.minutes)} in Lagos traffic` })),
+      h('button.ac-btn.is-sm', { type: 'button', on: { click: () => onSkip?.() } }, 'Skip'));
+    root.append(b);
+    return b;
   }
 
   /** "🚕 Taxi to Elegushi Beach · 42 min" with the vehicle crossing the screen. */

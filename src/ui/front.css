@@ -123,3 +123,12 @@
 @keyframes mv-drive { from { left: 0; } to { left: calc(100% - 70px); } }
 @media (prefers-reduced-motion: reduce) { .mv-go-vehicle { animation: none; left: 40%; } .fr-home-card, .mv-travel-card { animation: none; } }
 .amen-ui [hidden] { display: none !important; }
+
+/* banner over the 3D journey scene */
+.mv-journey {
+  position: fixed; z-index: 85; left: 50%; top: calc(14px + var(--safe-t)); transform: translateX(-50%); width: min(460px, calc(100% - 24px));
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--paper); border: var(--b); border-radius: var(--r-lg); box-shadow: var(--shadow);
+}
+.mv-journey span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.mv-journey small { color: var(--zinc-600); font-weight: 600; }
+.mv-journey-emoji { font-size: 28px; }

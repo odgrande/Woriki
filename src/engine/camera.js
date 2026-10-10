@@ -13,6 +13,16 @@ const damp = (rate, dt) => 1 - Math.exp(-rate * dt);
  * @param {{yaw?: number, pitch?: number, distance?: number, targetHeight?: number,
  *          minDistance?: number, maxDistance?: number, fovKick?: boolean}} [opts]
  */
+/** Camera views for the eye button. */
+export const VIEWS = {
+  follow: { label: 'Behind', emoji: '🎥', distance: 5.2, min: 1.6, max: 14, pitch: 0.3, height: 1.5 },
+  close: { label: 'Close', emoji: '🙂', distance: 2.0, min: 1.2, max: 4, pitch: 0.12, height: 1.62 },
+  wide: { label: 'Wide', emoji: '🌄', distance: 11, min: 6, max: 22, pitch: 0.5, height: 1.3 },
+  top: { label: 'From above', emoji: '🛰️', distance: 18, min: 8, max: 34, pitch: 1.18, minPitch: 0.9, maxPitch: 1.45, height: 0.5, autoFollow: false },
+  first: { label: 'My eyes', emoji: '👀', distance: 0, min: 0, max: 0, pitch: 0, minPitch: -1.2, maxPitch: 1.2, height: 1.62, autoFollow: false },
+};
+export const VIEW_ORDER = ['follow', 'close', 'wide', 'top', 'first'];
+
 export function createFollowCamera(ctx, input, opts = {}) {
   const camera = ctx.camera;
   const baseFov = camera.fov || 55;
@@ -44,8 +54,8 @@ export function createFollowCamera(ctx, input, opts = {}) {
     pitch: DEFAULT_PITCH,
     /** Wanted distance from the pivot (zoom), 2.5–9 m. */
     distance: startDist,
-    minDistance: opts.minDistance ?? 2.5,
-    maxDistance: opts.maxDistance ?? 9,
+    minDistance: opts.minDistance ?? 1.6,
+    maxDistance: opts.maxDistance ?? 14,
     minPitch: -0.42,
     maxPitch: 1.22,
     /** Pivot height above the target's feet. */
@@ -81,6 +91,26 @@ export function createFollowCamera(ctx, input, opts = {}) {
     behind(rotY) { cam.yaw = wrap(rotY + Math.PI); },
     /** Skip smoothing on the next update (after a teleport). */
     snap() { snapped = false; },
+    /** Current view (see VIEWS): 'follow', 'close', 'wide', 'top' or 'first'. */
+    mode: 'follow',
+    /** Switch view: distance, height and pitch limits per view. */
+    setMode(mode) {
+      const v = VIEWS[mode] || VIEWS.follow;
+      cam.mode = VIEWS[mode] ? mode : 'follow';
+      cam.minDistance = v.min; cam.maxDistance = v.max;
+      cam.distance = v.distance;
+      cam.pitch = v.pitch;
+      cam.minPitch = v.minPitch ?? -0.42;
+      cam.maxPitch = v.maxPitch ?? 1.22;
+      cam.targetHeight = v.height;
+      cam.autoFollow = v.autoFollow !== false;
+      snapped = false;
+      return cam.mode;
+    },
+    /** The next view in VIEW_ORDER (the V key). */
+    cycleMode() { return cam.setMode(VIEW_ORDER[(VIEW_ORDER.indexOf(cam.mode) + 1) % VIEW_ORDER.length]); },
+    /** First person: the character's own body should be hidden by the caller. */
+    get firstPerson() { return cam.mode === 'first'; },
 
     /**
      * @param {number} dt seconds
@@ -134,6 +164,18 @@ export function createFollowCamera(ctx, input, opts = {}) {
           cam.yaw = wrap(cam.yaw + diff * damp(strength * fade, dt));
         }
         cam.pitch += (DEFAULT_PITCH - cam.pitch) * damp(0.35, dt);
+      }
+
+      if (cam.mode === 'first') {
+        // Eyes of the character: look along yaw / pitch (pitch > 0 looks down).
+        const cpf = Math.cos(cam.pitch);
+        dir.set(Math.sin(cam.yaw) * cpf, Math.sin(cam.pitch), Math.cos(cam.yaw) * cpf);
+        camera.position.copy(pivot).addScaledVector(dir, -0.12);
+        desired.copy(pivot).addScaledVector(dir, -10);
+        camera.lookAt(desired);
+        current = 0;
+        if (Math.abs(camera.fov - 70) > 0.01) { camera.fov = 70; fov = 70; camera.updateProjectionMatrix(); }
+        return;
       }
 
       // ---- collision: pull in on walls (5 parallel rays ≈ the near plane) + mesh blockers.

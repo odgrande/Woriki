@@ -75,3 +75,22 @@ describe('home catalog and things to do', () => {
     expect(game.buyFurniture('chairs').ok).toBe(true);
   });
 });
+
+describe('real Lagos time and old saves', () => {
+  it('brings a life saved with 24-minute days back to real time', async () => {
+    const { sharedTime, weekdayOf, REAL_TIME } = await import('./clock.js');
+    const store = new Map();
+    const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+    const fast = createGame({}, { clock: 'shared', storage });
+    fast.newGame({ name: 'Old', role: 'choir' });
+    fast.state.T = sharedTime(Date.now(), 24); // far ahead of real time
+    fast.save();
+    const real = createGame({}, { clock: 'shared', realMinutesPerDay: REAL_TIME, storage });
+    const st = real.continueGame();
+    const now = sharedTime(Date.now(), REAL_TIME);
+    expect(Math.abs(st.T - now)).toBeLessThan(2);
+    expect(weekdayOf(st.T)).toBe(weekdayOf(now));
+    real.tick(1);
+    expect(real.state.T).toBeGreaterThanOrEqual(now - 1);
+  });
+});

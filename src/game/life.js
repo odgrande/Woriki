@@ -44,6 +44,10 @@ export const PLACES = [
     desc: 'The new city built on the sea. Big towers, sea breeze.' },
   { id: 'lekkibridge', emoji: '🌉', name: 'Lekki–Ikoyi Link Bridge', area: 'Ikoyi', at: [44, 21],
     desc: 'The cable bridge. Evening joggers and fine views of the lagoon.' },
+  { id: 'bodethomas', emoji: '🍲', name: 'Bode Thomas amala joints', area: 'Surulere', at: [-58, 18],
+    desc: 'Famous amala, gbegiri and ewedu spots. Long queues on Saturday afternoon, and agberos at the junction.' },
+  { id: 'ojuelegba', emoji: '🍛', name: 'Ojuelegba mama put', area: 'Ojuelegba', at: [-47, 4],
+    desc: 'Rice and stew, plantain and assorted meat by the roadside. Cheap and sweet.' },
   { id: 'mountain', emoji: '⛰️', name: 'Prayer Mountain', area: 'Ikorodu', at: [96, -84],
     desc: 'A quiet prayer ground across the lagoon. People go up to seek God.' },
 ];
@@ -126,6 +130,12 @@ export function travel(s, from, to, modeId, rng = Math.random) {
     case 'danfo': {
       if (bridge && rng() < 0.45) { minutes += 35; text = 'Go-slow on Third Mainland Bridge! The conductor and a passenger argued about ₦50 change the whole way.'; }
       else text = rng() < 0.3 ? 'The danfo was full, so you sat on the "attachment" seat. You arrived.' : '"Oshodi! Obalende! Enter with your change!" You made it.';
+      if (rng() < 0.4) {
+        // Agberos at the park collect their "owo ero" from everybody.
+        const fee = Math.min(s.naira, 100 + Math.floor(rng() * 3) * 100);
+        s.naira -= fee;
+        text += ` At the park an agbero shouted "Owo da?!" and collected ${naira(fee)}. You said "God bless you" anyway.`;
+      }
       if (rng() < 0.05) { lost = Math.min(s.naira, 1500); s.naira -= lost; text += ` Somebody "picked" ${naira(lost)} from your pocket.`; }
       break;
     }
@@ -217,6 +227,11 @@ export const ACTIVITIES = [
   { id: 'gospelfilm', place: 'theatre', emoji: '✝️', name: 'Watch a gospel film', naira: 2500, energy: -5, run: (s) => { s.faith = clamp(s.faith + 5, 0, 100); return 'A film about forgiveness. You cried small. +5 faith.'; } },
   { id: 'popcorn', place: 'theatre', emoji: '🍿', name: 'Popcorn and a drink', naira: 2500, energy: -2, run: (s) => { eat(s, 12); return 'Big popcorn, small drink, as usual.'; } },
   { id: 'horror', place: 'theatre', emoji: '👻', name: '"Blood Money" (the juju film)', naira: 3000, energy: 5, shady: true, once: true, run: (s) => { s.faith = clamp(s.faith - 4, 0, 100); return 'Money rituals and shrines for two hours. You could not sleep well. −4 faith.'; } },
+  // Popular bukas
+  { id: 'amala', place: 'bodethomas', emoji: '🍲', name: 'Amala, gbegiri, ewedu and assorted', naira: 4500, energy: -10, run: (s) => { eat(s, 55); return 'The amala was hot, the gbegiri was thick, and the assorted meat was plenty. Lagos ti o!'; } },
+  { id: 'agbero', place: 'bodethomas', emoji: '😤', name: 'Argue with the agbero', naira: 0, energy: 15, shady: true, once: true, run: (s) => { s.character = clamp(s.character - 3, 0, 100); return 'You exchanged words with an agbero over ₦200 and almost fought. Your Bible was in your bag. −3 character.'; } },
+  { id: 'mamaput', place: 'ojuelegba', emoji: '🍛', name: 'Rice, dodo and assorted meat', naira: 2500, energy: -8, run: (s) => { eat(s, 45); return 'Mama put added extra stew and called you "my pikin". You prayed over the food before eating.'; } },
+  { id: 'buyforneighbour', place: 'ojuelegba', emoji: '🤝', name: 'Buy food for a hungry boy', naira: 1500, energy: 0, once: true, run: (s) => { s.character = clamp(s.character + 4, 0, 100); s.points += 3; return 'A boy was looking at the food. You bought him a plate and told him Jesus loves him. +4 character. +3⭐'; } },
   // Trips
   { id: 'govtour', place: 'govhouse', emoji: '🏛️', name: 'Public tour (Saturdays)', naira: 0, energy: 10, once: true, days: ['Sat'], run: (s) => { s.points += 5; s.word = clamp(s.word + 1, 0, 100); return 'You saw the gardens and old pictures of Lagos. Pray for those in authority (1 Timothy 2:2). +5⭐'; } },
   { id: 'fabric', place: 'balogun', emoji: '🧵', name: 'Buy Ankara for a new outfit', naira: 12000, energy: 15, run: (s) => { s.items.outfit = true; return 'Six yards of fine Ankara. Your tailor will sew your Sunday best.'; } },

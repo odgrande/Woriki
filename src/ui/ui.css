@@ -462,3 +462,11 @@
 .ac-plan-state { font-size: 12px; color: var(--zinc-600); }
 .ac-plan p { margin: 8px 0 0; font-size: 13.5px; color: var(--zinc-600); }
 .ac-phone-seg { margin-bottom: 10px; }
+
+/* Camera view menu (eye button) */
+.ac-view-menu { position: fixed; z-index: 75; min-width: 200px; padding: 8px; background: var(--paper); border: var(--b); border-radius: var(--r-md); box-shadow: var(--shadow); display: grid; gap: 4px; }
+.ac-view-title { margin: 2px 6px 4px; font: 700 13px var(--head); text-transform: uppercase; letter-spacing: .06em; color: var(--zinc-500); }
+.ac-view-opt { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 2px solid transparent; border-radius: var(--r-sm); background: transparent; font: 600 14px var(--body); color: var(--ink); text-align: left; cursor: pointer; }
+.ac-view-opt:hover, .ac-view-opt:focus-visible { background: var(--zinc-100); outline: none; }
+.ac-view-opt[aria-checked="true"] { background: var(--yellow); border-color: var(--ink); }
+.ac-view-hint { margin: 4px 6px 2px; font-size: 12px; color: var(--zinc-500); }

@@ -196,6 +196,7 @@ export function createGame(ctx = {}, opts = {}) {
     if (mode === 'shared') {
       const T = sharedTime(Date.now(), realMinutesPerDay);
       dtMin = T - s.T;
+      if (dtMin < -1) { resync(s); return; }
       if (dtMin > 30) {
         // Back after a while (the browser was closed): life went on gently. You slept and ate a bit.
         advance(s, dtMin - 1, e, { asleep: true });
@@ -223,8 +224,28 @@ export function createGame(ctx = {}, opts = {}) {
   }
 
   /* ---------------------------------------------------------------- lifecycle */
+  /**
+   * Shared clock: a life saved under another day length (e.g. the old 24-minute days) is ahead of
+   * or far behind real Lagos time. Bring it to now, keeping how many days you have lived.
+   */
+  function resync(st) {
+    if (mode !== 'shared' || !st) return;
+    const T = sharedTime(Date.now(), realMinutesPerDay);
+    if (st.T > T + 1 || st.realMinutesPerDay !== realMinutesPerDay) {
+      const lived = Math.max(0, Math.floor(st.T / 1440) - Math.floor(st.startT / 1440));
+      st.T = T;
+      st.startT = T - lived * 1440;
+      st.doneToday = {};
+      st.pending = [];
+      st.attendance = null;
+      st.shift = null;
+      st.realMinutesPerDay = realMinutesPerDay;
+    }
+  }
+
   function begin(state, { fresh }) {
     s = state;
+    resync(s);
     lastSave = realTime;
     save();
     emit('start', s);
@@ -271,7 +292,7 @@ export function createGame(ctx = {}, opts = {}) {
       const st = readStored();
       if (!st) return null;
       const T = mode === 'shared' ? sharedTime(Date.now(), realMinutesPerDay) : st.T;
-      const sameDay = Math.floor(T / 1440) === Math.floor(st.T / 1440);
+      const sameDay = Math.floor(T / 1440) === Math.floor(st.T / 1440) && st.realMinutesPerDay === realMinutesPerDay;
       const view = { ...st, T, doneToday: sameDay ? st.doneToday : {} };
       return { naira: st.naira, points: st.points, clock: clock(view), plan: dayPlan(view), appearance: st.appearance, role: st.role, name: st.name };
     },

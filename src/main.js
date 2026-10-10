@@ -24,6 +24,8 @@ import { createUI } from './ui/index.js';
 import { finishBoot } from './ui/front.js';
 import { createLagosMap } from './map/lagos.js';
 import { createDecor } from './world/decor.js';
+import { createJourney } from './world/journey.js';
+import { randomAppearance } from './characters/index.js';
 import './main.css';
 
 const params = new URLSearchParams(location.search);
@@ -68,6 +70,8 @@ ui = createUI(ctx, {
   root: uiRoot, game, kit: kitPromise, audio, input, map: lagosMap,
   onStart: (profile) => enter(profile),
   onArrive: (go) => arrive(go),
+  onJourney: (go) => journey(go),
+  onSkipJourney: () => session?.journey?.skip(),
 });
 debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
 
@@ -115,6 +119,8 @@ async function enter(profile) {
     camera.behind(spawn.rotY || 0);
     camera.yaw += 0.65;
     camera.snap?.();
+    camera.setMode(ui.view);
+    input.mouseLook = ui.mouseLook;
 
     loading.set('Meeting the community', 0.85);
     await nextFrame();
@@ -152,9 +158,14 @@ function frame(dt, t) {
   const s = session;
   if (!s?.player) return;
   game.tick(dt);
+  const c = game.clock;
+  if (c) s.world.setTime?.(c.minute / 60);
   s.world.update?.(dt, t);
-  s.player.update(dt, t);
-  s.camera.update(dt, s.player.position, physics);
+  if (!s.travelling) {
+    s.player.update(dt, t);
+    s.camera.update(dt, s.player.position, physics);
+    s.character.object.visible = !s.camera.firstPerson;
+  }
   s.community.update(dt, t);
   s.decor.update(dt, t);
   bubbles.update();
@@ -166,6 +177,22 @@ function frame(dt, t) {
 function nextFrame() { return new Promise((r) => requestAnimationFrame(() => r())); }
 
 /* ---------------------------------------------------------------- travelling */
+/** The trip on the road (walking, okada, danfo, taxi or car); trips that are not walkable come back. */
+async function journey(go) {
+  const s = session;
+  if (!s?.player) return;
+  s.journey ||= createJourney(ctx, { world: s.world, kit: await kitPromise, createCharacter, randomAppearance });
+  const back = s.player.position.clone();
+  const heading = s.player.heading;
+  s.travelling = true;
+  try {
+    await s.journey.play({ mode: go.mode, ownBike: go.mode === 'bike' && !!game.state?.items?.bike }, s.character);
+  } finally {
+    s.travelling = false;
+    if (!go.walk) { s.player.teleport(back, heading); s.camera.behind(heading); s.camera.snap?.(); }
+  }
+}
+
 /** After a trip to a walkable place: put the player there, facing the way in. */
 async function arrive(go) {
   const s = session;
@@ -189,6 +216,7 @@ const homeScene = (() => {
       const [kit, world, decor] = await Promise.all([kitPromise, worldPromise, decorPromise]);
       if (my !== token) return;
       decor.set(saved?.home || {});
+      if (saved?.clock) world.setTime?.(saved.clock.minute / 60);
       char?.dispose?.();
       char = createCharacter(kit, saved?.appearance || {}, { detail: 'high' });
       const at = new THREE.Vector3(15.9, world.groundAt(15.9, 20.6), 20.6);
@@ -241,6 +269,8 @@ async function onScreen({ screen, saved }) {
   }
 }
 ctx.bus.on('ui:screen', onScreen);
+ctx.bus.on('ui:view', ({ mode }) => session?.camera?.setMode(mode));
+ctx.bus.on('ui:mouselook', ({ on }) => { input.mouseLook = on; });
 // createUI already showed its first screen before this listener existed.
 onScreen({ screen: game.state ? 'game' : document.querySelector('.fr-home:not([hidden])') ? 'home' : document.querySelector('.fr-landing:not([hidden])') ? 'landing' : 'start', saved: game.peek?.() });
 

@@ -90,10 +90,12 @@ export function createContext(canvas, opts = {}) {
     time: 0,
     /** Register a per-frame update. Returns an unsubscribe function. */
     onUpdate(fn) { updates.add(fn); return () => updates.delete(fn); },
+    /** Direction towards the sun (or moon), scaled to the shadow distance. */
+    sunOffset: new THREE.Vector3(30, 50, 20),
     /** Keep the sun's shadow box centred on the player. */
     setShadowFocus(v) {
       sun.target.position.copy(v);
-      sun.position.set(v.x + 30, v.y + 50, v.z + 20);
+      sun.position.copy(v).add(ctx.sunOffset);
     },
     start() {
       renderer.setAnimationLoop((now) => {
