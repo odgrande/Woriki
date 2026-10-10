@@ -6,7 +6,7 @@ import '../../src/map/map.css';
 const params = new URLSearchParams(location.search);
 const ctx = createContext(document.getElementById('world'), { quality: params.get('quality') || undefined });
 const t0 = performance.now();
-const map = createLagosMap(ctx, { root: document.getElementById('ui'), onPick: (p) => { console.log('pick', p.id); map.focus(p.id); } });
+const map = createLagosMap(ctx, { root: document.getElementById('ui'), onPick: (p) => { window.__picked = p; console.log('pick', p.type); } });
 const hour = params.get('hour') ? Number(params.get('hour')) : undefined;
 map.show({ hour, focus: params.get('focus') || undefined });
 map.setHere('home');

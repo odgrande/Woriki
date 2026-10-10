@@ -24,7 +24,7 @@
 .lm-pin.is-compact .lm-pin-name { display: none; }
 .lm-pin-badge { margin-left: 2px; padding: 2px 6px; border-radius: 999px; background: #18181b; color: #fff; font-size: 10.5px; }
 .lm-area {
-  position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap;
+  position: absolute; left: 0; top: 0; pointer-events: auto; white-space: nowrap; cursor: pointer; padding: 2px 4px; border: 0; background: none;
   font: 700 12px/1 'Space Grotesk', system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
   color: rgba(24, 24, 27, .62); text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
 }
@@ -32,3 +32,6 @@
 @media (prefers-reduced-motion: reduce) { .lm-pin { transition: none; } }
 /* [hidden] must win over the display rules above. */
 .lm-pins[hidden], .lm-pin[hidden], .lm-area[hidden] { display: none !important; }
+.lm-area:hover, .lm-area:focus-visible { color: #18181b; text-decoration: underline; outline: none; }
+.lm-pin.is-soon { background: #f4f4f5; border-style: dashed; opacity: .92; }
+.lm-pin.is-soon .lm-pin-name::after { content: ' · soon'; color: #71717a; font-weight: 700; }

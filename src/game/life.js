@@ -44,6 +44,35 @@ export const PLACES = [
     desc: 'The new city built on the sea. Big towers, sea breeze.' },
   { id: 'lekkibridge', emoji: '🌉', name: 'Lekki–Ikoyi Link Bridge', area: 'Ikoyi', at: [44, 21],
     desc: 'The cable bridge. Evening joggers and fine views of the lagoon.' },
+  { id: 'police', emoji: '🚓', name: 'Police Station, Sabo', area: 'Yaba', at: [-38, -9],
+    desc: 'Where you report a crime, bail a friend or get a police report. Some officers expect "something".' },
+  { id: 'luth', emoji: '🏥', name: 'LUTH (Teaching Hospital)', area: 'Idi-Araba', at: [-50, -4],
+    desc: 'Lagos University Teaching Hospital. Visit the sick, pray with them, donate blood.' },
+  { id: 'orphanage', emoji: '🧸', name: 'Hope Children\'s Home', area: 'Ikeja', at: [-80, -46],
+    desc: 'A home for children without parents. "Pure religion… is this, To visit the fatherless" (James 1:27).' },
+  { id: 'radio', emoji: '📻', name: 'Gospel radio station', area: 'Ikeja', at: [-76, -58],
+    desc: 'Share your testimony live on air on Sunday Praise Hour.' },
+  { id: 'betting', emoji: '🎰', name: 'Betting shop', area: 'Ojuelegba', at: [-45, 9],
+    desc: 'Everybody is "one game away" from a jackpot. The devil is very busy here.' },
+  { id: 'lounge', emoji: '🍸', name: 'Lounge on the Island', area: 'Victoria Island', at: [30, 44],
+    desc: 'Loud music, expensive drinks and "big boys". A place many Christians avoid.' },
+  { id: 'owambe', emoji: '💃', name: 'Event centre (owambe)', area: 'Surulere', at: [-64, 22],
+    desc: 'Weddings and parties every Saturday. A church member is getting married today!' },
+  // Coming soon: on the map already, opening in later updates.
+  { id: 'camp', emoji: '⛺', name: 'Prayer City camp', area: 'Lagos–Ibadan Expressway', at: [-110, -100], soon: true,
+    desc: 'Coming soon: the monthly all-night Holy Ghost service with millions of worshippers, camp meetings and conventions.' },
+  { id: 'airport', emoji: '✈️', name: 'Murtala Muhammed Airport', area: 'Ikeja', at: [-92, -78], soon: true,
+    desc: 'Coming soon: mission trips abroad and welcoming visiting ministers.' },
+  { id: 'bibleschool', emoji: '🎓', name: 'Bible school campus', area: 'Ojota', at: [-100, -38], soon: true,
+    desc: 'Coming soon: walk to your lectures, write exams in the hall, graduate in a gown.' },
+  { id: 'stadium', emoji: '🏟️', name: 'National Stadium', area: 'Surulere', at: [-55, 12], soon: true,
+    desc: 'Coming soon: the big gospel concert and the city-wide crusade.' },
+  { id: 'mile12', emoji: '🥬', name: 'Mile 12 Market', area: 'Ketu', at: [-58, -84], soon: true,
+    desc: 'Coming soon: buy food in bulk for the church harvest and the hospitality unit.' },
+  { id: 'lcc', emoji: '🐒', name: 'Lekki Conservation Centre', area: 'Lekki', at: [112, 38], soon: true,
+    desc: 'Coming soon: the canopy walk for church youth outings and couples\' retreats.' },
+  { id: 'churchland', emoji: '🏗️', name: 'Land for your church', area: 'Ajah', at: [140, 36], soon: true,
+    desc: 'Coming soon: pastors buy land and build their own church building, block by block.' },
   { id: 'bodethomas', emoji: '🍲', name: 'Bode Thomas amala joints', area: 'Surulere', at: [-58, 18],
     desc: 'Famous amala, gbegiri and ewedu spots. Long queues on Saturday afternoon, and agberos at the junction.' },
   { id: 'ojuelegba', emoji: '🍛', name: 'Ojuelegba mama put', area: 'Ojuelegba', at: [-47, 4],
@@ -140,6 +169,7 @@ export function travel(s, from, to, modeId, rng = Math.random) {
       break;
     }
     case 'taxi':
+      if (rng() < 0.12) { const fee = Math.min(s.naira, 500); s.naira -= fee; text = `Police checkpoint at the junction: the officer asked the driver for "something for the boys" and the driver added ${naira(fee)} to your fare.`; break; }
       text = bridge && rng() < 0.3 ? 'Small go-slow on the bridge, but the AC was cold and the driver played worship songs.' : 'Smooth ride. The driver asked you to pray for his family.';
       break;
     case 'free': {
@@ -227,6 +257,29 @@ export const ACTIVITIES = [
   { id: 'gospelfilm', place: 'theatre', emoji: '✝️', name: 'Watch a gospel film', naira: 2500, energy: -5, run: (s) => { s.faith = clamp(s.faith + 5, 0, 100); return 'A film about forgiveness. You cried small. +5 faith.'; } },
   { id: 'popcorn', place: 'theatre', emoji: '🍿', name: 'Popcorn and a drink', naira: 2500, energy: -2, run: (s) => { eat(s, 12); return 'Big popcorn, small drink, as usual.'; } },
   { id: 'horror', place: 'theatre', emoji: '👻', name: '"Blood Money" (the juju film)', naira: 3000, energy: 5, shady: true, once: true, run: (s) => { s.faith = clamp(s.faith - 4, 0, 100); return 'Money rituals and shrines for two hours. You could not sleep well. −4 faith.'; } },
+  // Police station: distractions and choices
+  { id: 'reportcrime', place: 'police', emoji: '📝', name: 'Report your stolen phone', naira: 0, energy: 15, once: true, run: (s) => { s.points += 1; return 'You wrote a statement and got a police report. The officer asked for "bail" money for the biro. You smiled and said God bless you.'; } },
+  { id: 'bailfriend', place: 'police', emoji: '🔓', name: 'Bail Bro. Emeka (arrested at a checkpoint)', naira: 20000, energy: 20, once: true, run: (s) => { s.character = clamp(s.character + 4, 0, 100); s.testimonies += 1; return 'Bro. Emeka was arrested for "wandering". You paid the bail and took him home. He cried and thanked God for you. +4 character.'; } },
+  { id: 'preachcell', place: 'police', emoji: '📖', name: 'Pray with the people in the cell', naira: 0, energy: 20, once: true, run: (s) => { s.souls += 1; s.faith = clamp(s.faith + 4, 0, 100); return 'The officer let you pray with the people in the cell. One young man gave his life to Christ. +1 soul.'; } },
+  { id: 'roger', place: 'police', emoji: '💸', name: 'Pay "something" to skip the queue', naira: 5000, energy: 0, shady: true, once: true, run: (s) => fall(s, 'bribery at the police station', 5) },
+  // LUTH
+  { id: 'visitsick', place: 'luth', emoji: '🙏', name: 'Visit and pray for the sick', naira: 0, energy: 20, once: true, run: (s) => { s.faith = clamp(s.faith + 5, 0, 100); s.character = clamp(s.character + 3, 0, 100); s.points += 4; return '"I was sick, and ye visited me" (Matthew 25:36). You prayed in the children\'s ward. A mother hugged you.'; } },
+  { id: 'blood', place: 'luth', emoji: '🩸', name: 'Donate blood', naira: 0, energy: 30, once: true, run: (s) => { s.character = clamp(s.character + 5, 0, 100); s.points += 5; return 'You donated a pint of blood for a woman in labour. The nurse gave you Malta and biscuits. +5 character.'; } },
+  { id: 'paybill', place: 'luth', emoji: '💊', name: 'Pay a stranger\'s hospital bill', naira: 15000, energy: 5, once: true, run: (s) => { s.character = clamp(s.character + 6, 0, 100); s.points += 8; return 'A young man was crying at the pharmacy. You paid for his mother\'s drugs. "Who are you?" "Just a child of God."'; } },
+  // Hope Children's Home
+  { id: 'orphanvisit', place: 'orphanage', emoji: '🎁', name: 'Visit with gifts and food', naira: 10000, energy: 20, once: true, run: (s) => { s.character = clamp(s.character + 5, 0, 100); s.faith = clamp(s.faith + 3, 0, 100); s.points += 8; return 'You brought rice, biscuits and Bibles. The children sang "Jesus loves me" for you.'; } },
+  { id: 'teachkids', place: 'orphanage', emoji: '✏️', name: 'Teach the children a Bible story', naira: 0, energy: 15, once: true, run: (s) => { s.word = clamp(s.word + 2, 0, 100); s.points += 3; return 'You told them about David and Goliath. Little Tobi wants to be a "giant killer" now.'; } },
+  // Gospel radio
+  { id: 'onair', place: 'radio', emoji: '🎙️', name: 'Share your testimony on air', naira: 0, energy: 15, once: true, days: ['Sun', 'Sat'], run: (s) => { s.points += 10; s.fame = clamp((s.fame || 0) + 3, 0, 100); s.testimonies += 1; return 'You shared your testimony on Sunday Praise Hour. Callers phoned in to thank God with you. +10⭐'; } },
+  // Betting shop (temptation)
+  { id: 'betslip', place: 'betting', emoji: '🎰', name: 'Stake ₦5,000 on "sure odds"', naira: 5000, energy: 5, shady: true, run: (s, rng) => { if (rng() < 0.15) { s.naira += 30000; s.convicted = true; return 'You won ₦30,000! Your friends are cheering, but your spirit is not at peace. You feel convicted.'; } return fall(s, 'gambling: the "sure odds" lost', 4); } },
+  { id: 'witnessbet', place: 'betting', emoji: '💬', name: 'Talk to the boys about Jesus', naira: 0, energy: 20, once: true, run: (s) => { s.souls += 1; s.character = clamp(s.character + 2, 0, 100); return 'They laughed at first, but one of them, Kola, asked for your number. He wants to come to church on Sunday.'; } },
+  // Lounge (temptation)
+  { id: 'clubnight', place: 'lounge', emoji: '🍾', name: 'Party till morning', naira: 25000, energy: 30, shady: true, once: true, run: (s) => fall(s, 'a night of drinking and "vibes" at the lounge', 9) },
+  { id: 'mocktail', place: 'lounge', emoji: '🥤', name: 'Have a mocktail and leave early', naira: 4000, energy: 5, run: (s) => { s.character = clamp(s.character + 1, 0, 100); return 'You came for a friend\'s birthday, had a Chapman and left before things got rough. Wisdom! +1 character.'; } },
+  // Owambe
+  { id: 'wedding', place: 'owambe', emoji: '💒', name: 'Attend Sis. Funke\'s wedding', naira: 3000, energy: 15, once: true, days: ['Sat'], run: (s) => { s.hunger = clamp(s.hunger + 40, 0, 100); s.points += 4; return 'A beautiful church wedding, then jollof, small chops and dancing at the reception. +4⭐'; } },
+  { id: 'spraymoney', place: 'owambe', emoji: '💵', name: 'Spray ₦20,000 to "show yourself"', naira: 20000, energy: 5, shady: true, once: true, run: (s) => { s.character = clamp(s.character - 2, 0, 100); s.fame = clamp((s.fame || 0) + 2, 0, 100); return 'Everybody saw you spraying crisp notes. Pride feels sweet, but your rent is due next week. −2 character.'; } },
   // Popular bukas
   { id: 'amala', place: 'bodethomas', emoji: '🍲', name: 'Amala, gbegiri, ewedu and assorted', naira: 4500, energy: -10, run: (s) => { eat(s, 55); return 'The amala was hot, the gbegiri was thick, and the assorted meat was plenty. Lagos ti o!'; } },
   { id: 'agbero', place: 'bodethomas', emoji: '😤', name: 'Argue with the agbero', naira: 0, energy: 15, shady: true, once: true, run: (s) => { s.character = clamp(s.character - 3, 0, 100); return 'You exchanged words with an agbero over ₦200 and almost fought. Your Bible was in your bag. −3 character.'; } },

@@ -4,6 +4,7 @@
 import { h, ic, setChildren } from './dom.js';
 import { naira } from '../game/content.js';
 import { PLACE_BY_ID, distanceKm } from '../game/life.js';
+import { drawPoster } from '../map/posters.js';
 import { countdown } from '../game/clock.js';
 
 const CHIPS = [
@@ -13,7 +14,6 @@ const CHIPS = [
   ['gov', '🏛️', 'Gov'],
   ['names', '🏷️', 'Names'],
 ];
-const CITIES = [['lagos', 'Lagos'], ['ph', 'Port Harcourt'], ['abuja', 'Abuja']];
 
 /**
  * @param {object} o
@@ -25,8 +25,9 @@ const CITIES = [['lagos', 'Lagos'], ['ph', 'Port Harcourt'], ['abuja', 'Abuja']]
  * @param {(open: boolean) => void} [o.onToggle]
  * @param {(go: object) => Promise<void>} [o.onJourney] show the trip on the road in 3D (else a travel card)
  * @param {() => void} [o.onSkip] skip the journey scene
+ * @param {() => void} [o.onAds] open the phone's Billboards app
  */
-export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {}, onJourney, onSkip }) {
+export function createMapView({ root, game, map, toast, onArrive, onToggle = () => {}, onJourney, onSkip, onAds }) {
   let open = false;
   let mode = 'game'; // 'game' | 'landing'
   let selected = null;
@@ -43,13 +44,10 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
     });
     return b;
   }));
-  const cities = h('div.mv-cities', { attrs: { role: 'tablist', 'aria-label': 'City' } }, CITIES.map(([id, label]) => h('button.mv-city', {
-    type: 'button', attrs: { role: 'tab', 'aria-selected': String(id === 'lagos') },
-    on: { click: () => { if (id !== 'lagos') toast(`${label} is coming soon. Pastors will open branches there first.`, { emoji: '🚧' }); } },
-  }, label)));
+  const title = h('div.mv-cities', null, h('span.mv-city', { text: '📍 Lagos', attrs: { 'aria-current': 'true' } }), h('small.mv-hint', { text: 'Tap anything on the map' }));
   const walkBtn = h('button.ac-btn.is-yellow.mv-walk', { type: 'button', on: { click: () => walkYaba() } }, '🚶', 'Walk Yaba');
   const closeBtn = h('button.ac-iconbtn.mv-close', { type: 'button', attrs: { 'aria-label': 'Close map' }, on: { click: () => close() } }, ic('x'));
-  const top = h('div.mv-top', null, cities, closeBtn);
+  const top = h('div.mv-top', null, title, closeBtn);
   const card = h('section.mv-card', { hidden: true, attrs: { 'aria-live': 'polite' } });
   const el = h('div.mv', { hidden: true }, top, h('div.mv-row', null, chips, walkBtn), card);
   root.append(el);
@@ -68,7 +66,7 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
     map.show({ focus: o.focus || (mode === 'game' ? (here || 'grace') : null), dist: o.dist ?? 70 });
     if (mode === 'landing') map.tour(true);
     else map.tour(false);
-    if (o.place) pick(PLACE_BY_ID[o.place]);
+    if (o.place) pick({ type: 'place', place: PLACE_BY_ID[o.place] });
     else hideCard();
     onToggle(true);
   }
@@ -86,13 +84,55 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
   function hideCard() { card.hidden = true; selected = null; }
 
   /* ---------------------------------------------------------------- places */
-  function pick(p) {
-    if (!p) return;
+  /**
+   * Something on the map was tapped: a place pin or building, a billboard, a neighbourhood,
+   * a bridge, a road, the lagoon… Every tap shows a card.
+   * @param {{type: string, place?: object, name?: string}} info (a bare place object also works)
+   */
+  function pick(info) {
+    if (!info) return;
+    if (!info.type) info = { type: 'place', place: info };
     map.tour(false);
-    map.focus(p.id, { dist: 45 });
-    selected = p;
-    if (mode === 'landing') { landingPick?.(p); return; }
-    renderPlace();
+    if (info.type === 'place') {
+      const p = info.place;
+      if (!p) return;
+      map.focus(p.id, { dist: 45 });
+      selected = p;
+      if (mode === 'landing') { landingPick?.(info); return; }
+      renderPlace();
+      return;
+    }
+    selected = null;
+    if (mode === 'landing' && info.type !== 'billboard') { landingPick?.(info); return; }
+    renderInfo(info);
+  }
+
+  /** Cards for things that are not places: billboards, areas, bridges, roads, water. */
+  function renderInfo(info) {
+    const head = (emoji, title, sub) => h('div.mv-card-head', null,
+      h('span.mv-card-emoji', { text: emoji, attrs: { 'aria-hidden': 'true' } }),
+      h('div', null, h('h3', { text: title }), sub ? h('p', { text: sub }) : null),
+      h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Close' }, on: { click: hideCard } }, ic('x')));
+    if (info.type === 'billboard') {
+      const c = h('canvas.mv-poster', { width: 512, height: 224, attrs: { 'aria-label': `Poster: ${info.poster?.title || ''}` } });
+      drawPoster(c.getContext('2d'), 0, 0, 512, 224, { ...info.poster, booked: info.poster?.booked });
+      setChildren(card,
+        head('🪧', info.poster?.title || 'Billboard', info.poster?.church || ''),
+        c,
+        h('p.mv-desc', { text: `${info.poster?.sub || ''}. Churches across Lagos put their programmes on these boards.` }),
+        mode === 'game' ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => { close(); onAds?.(); } } }, '📣 Put your church programme on a billboard') : null);
+    } else if (info.type === 'area') {
+      const places = (info.places || []).map((id) => PLACE_BY_ID[id]).filter(Boolean);
+      setChildren(card,
+        head(/Lagoon|Ocean/.test(info.name) ? '🌊' : info.house ? '🏘️' : '📍', info.name, info.house ? 'Houses and families: neighbours to invite to church' : 'Lagos'),
+        h('p.mv-desc', { text: info.text }),
+        places.length ? h('div.mv-acts', null, places.map((p) => h('button.mv-act.is-link', { type: 'button', on: { click: () => pick({ type: 'place', place: p }) } },
+          h('span.mv-act-ic', { text: p.emoji }), h('span.mv-act-body', null, h('b', { text: p.name }), h('small', { text: p.soon ? 'Coming soon' : p.desc.slice(0, 80) })), ic('chevron-right')))) : null,
+        info.house && mode === 'game' ? h('p.ac-note', { text: 'Every house is a family God loves. Invite your neighbours: use "Invite Someone to Church" on your Today tab.' }) : null);
+    } else {
+      setChildren(card, head(info.emoji || '📍', info.title || 'Lagos'), h('p.mv-desc', { text: info.text || '' }));
+    }
+    card.hidden = false;
   }
 
   function renderPlace() {
@@ -109,6 +149,7 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
         h('div', null, h('h3', { text: p.name }), h('p', { text: `${p.area}${here ? ' · you are here' : ` · ${km} km away`}` })),
         h('button.ac-iconbtn', { type: 'button', attrs: { 'aria-label': 'Close' }, on: { click: hideCard } }, ic('x'))),
       h('p.mv-desc', { text: p.desc }),
+      p.soon ? h('p.mv-soon', null, h('b', { text: '🚧 Coming soon. ' }), 'We are building Amen City step by step. This place opens in a coming update.') : null,
       isChurch && s ? churchLine() : null,
       acts.length ? h('div.mv-acts', null, acts.map((a) => h(`div.mv-act${a.shady ? '.is-shady' : ''}`, null,
         h('span.mv-act-ic', { text: a.emoji, attrs: { 'aria-hidden': 'true' } }),
@@ -118,7 +159,7 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
           type: 'button', class: here && a.ok && !a.shady ? 'is-green' : '', disabled: !here || !a.ok,
           on: { click: () => { const r = game.activity(a.id); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); renderPlace(); } },
         }, here ? 'Do' : 'Go first')))) : null,
-      here
+      p.soon ? null : here
         ? (game.trip ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker('home') } }, '🏠', 'Go home') : p.walk ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: close } }, 'Back to the street') : null)
         : h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => picker(p.id) } }, 'Go here', ic('arrow-right', { size: 18 })));
     card.hidden = false;

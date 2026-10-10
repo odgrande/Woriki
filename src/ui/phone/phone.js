@@ -367,7 +367,7 @@ export function createPhone({ root, game, bus, toast, actions = {}, onBadge = ()
     return [
       header('Rides'),
       h('p.ph-note', { text: 'Where are you going? Pick a place, then choose bike, danfo, taxi, a free ride or trek.' }),
-      h('div.ph-list', null, PLACES.filter((p) => p.id !== here).map((p) => h('button.ph-row', { type: 'button', on: { click: () => { close(); actions.travel?.(p.id); } } },
+      h('div.ph-list', null, PLACES.filter((p) => p.id !== here && !p.soon).map((p) => h('button.ph-row', { type: 'button', on: { click: () => { close(); actions.travel?.(p.id); } } },
         h('span.ph-avatar', { text: p.emoji }), h('span.ph-row-body', null, h('b', { text: p.name }), h('small', { text: `${p.area} · ${distanceKm(here, p.id)} km` }))))),
     ];
   }

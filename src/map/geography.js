@@ -158,3 +158,29 @@ export function housePlots(count, seed = 7, avoid = []) {
   }
   return out;
 }
+
+/** What you see when you tap a neighbourhood, the water or a bridge on the map. */
+export const AREA_INFO = {
+  Yaba: 'Home of Grace Assembly, UNILAG and the tech hubs of "Yabacon Valley". Busy markets, buses and students everywhere.',
+  Surulere: 'The National Stadium, Bode Thomas amala joints and owambe parties every Saturday.',
+  Ikeja: 'The state capital: the Secretariat in Alausa, Computer Village, the airport and the gospel radio.',
+  Oshodi: 'The busiest bus interchange in Lagos. Evangelism here means shouting over the danfo conductors.',
+  'Ebute Metta': 'Old Lagos: railway quarters, Otto and the approach to Carter and Eko bridges.',
+  Apapa: 'The ports and the trucks. The go-slow to Apapa is legendary.',
+  'Lagos Island': 'Marina, Broad Street, Balogun Market and Tafawa Balewa Square, where the big crusades happen.',
+  Ikoyi: 'Quiet streets, old money and big churches. The Lekki–Ikoyi Link Bridge starts here.',
+  'Victoria Island': 'Banks, towers, lounges and the sea breeze. Eko Atlantic is being built on the ocean.',
+  Lekki: 'New estates, the toll gate, Elegushi Beach and the Conservation Centre. Mega churches on every road.',
+  Akoka: 'UNILAG by the lagoon. Campus fellowships fill the halls on Thursday nights.',
+  'Lagos Lagoon': 'The lagoon joins the mainland and the islands. Ferries cross it, and Makoko\'s canoes fish in it.',
+  'Atlantic Ocean': 'The ocean along Lagos\'s coast: Elegushi, Eko Atlantic and the beaches. Pray by the sea.',
+  Ikorodu: 'Across the lagoon. Quiet prayer grounds on the hills, and the road to the prayer mountain.',
+};
+
+/** Bridges and main roads, for their cards on the map. */
+export const ROUTE_INFO = {
+  'third-mainland': 'Third Mainland Bridge, 11.8 km over the lagoon. It joins the mainland to Lagos Island, and the go-slow is legendary. Pray before you enter a danfo here.',
+  carter: 'Carter Bridge, the old gateway from Ebute Metta to Lagos Island and Idumota.',
+  eko: 'Eko Bridge, from Ebute Metta and Apapa Road to Lagos Island.',
+  'lekki-ikoyi': 'Lekki–Ikoyi Link Bridge: a cable bridge with a tall pylon. Joggers go up and down it in the evening.',
+};

@@ -8,9 +8,10 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LAND, BEACHES, BRIDGES, ROADS, AREAS, TOWERS, BILLBOARDS, BOUNDS, housePlots, landAt, distToPolyline, rng32 } from './geography.js';
+import { LAND, BEACHES, BRIDGES, ROADS, AREAS, TOWERS, BILLBOARDS, BOUNDS, AREA_INFO, ROUTE_INFO, housePlots, landAt, distToPolyline, rng32 } from './geography.js';
 import { PLACES, PLACE_BY_ID } from '../game/life.js';
 import { defaultPosters, drawPoster } from './posters.js';
+import { paintGround, paintWater, cloudTexture, worldUV } from './paint.js';
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const LAND_Y = 0.5;
@@ -59,16 +60,22 @@ export function createLagosMap(ctx, opts) {
 
   /* ---------------------------------------------------------------- water */
   const waterTex = rippleTexture(128);
-  waterTex.repeat.set(70, 70);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600).rotateX(-Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: '#2a76ad', roughness: 0.22, metalness: 0.05, normalMap: waterTex, normalScale: new THREE.Vector2(0.45, 0.45) }));
+  waterTex.repeat.set(90, 90);
+  const waterGeo = worldUV(new THREE.PlaneGeometry(1600, 1600, 1, 1).rotateX(-Math.PI / 2));
+  const water = new THREE.Mesh(waterGeo,
+    new THREE.MeshStandardMaterial({ map: paintWater(), roughness: 0.18, metalness: 0.08, normalMap: waterTex, normalScale: new THREE.Vector2(0.5, 0.5) }));
   water.receiveShadow = shadows;
+  water.userData.pick = { type: 'water' };
   scene.add(water);
+  // the normal map tiles on its own UVs: give the water a second set in metres
+  {
+    const p = waterGeo.attributes.position, uv2 = new Float32Array(p.count * 2);
+    for (let i = 0; i < p.count; i++) { uv2[i * 2] = p.getX(i) / 18; uv2[i * 2 + 1] = p.getZ(i) / 18; }
+    waterGeo.setAttribute('uv1', new THREE.BufferAttribute(uv2, 2));
+    water.material.normalMap.channel = 1;
+    waterTex.repeat.set(1, 1);
+  }
   anim.push((dt) => { waterTex.offset.x += dt * 0.02; waterTex.offset.y += dt * 0.012; });
-  // Ocean is deeper blue: a big tinted plane south of the coast.
-  const ocean = new THREE.Mesh(new THREE.PlaneGeometry(1600, 700).rotateX(-Math.PI / 2).translate(0, 0.05, 52 + 350),
-    new THREE.MeshStandardMaterial({ color: '#1d5f96', roughness: 0.25, normalMap: waterTex, normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, opacity: 0.85 }));
-  scene.add(ocean);
   // White surf line along the ocean beaches.
   const surf = new THREE.Mesh(ribbonGeo([[-260, 53.4], [-60, 53.4], [-37, 49.6], [8, 61.6], [33, 61.6], [60, 55], [100, 57.6], [160, 58.4], [260, 58]], 1.2, 0.12, false),
     new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false }));
@@ -76,31 +83,41 @@ export function createLagosMap(ctx, opts) {
   anim.push((dt, t) => { surf.material.opacity = 0.35 + Math.sin(t * 1.4) * 0.2; });
 
   /* ---------------------------------------------------------------- land */
+  const groundTex = paintGround(quality);
+  const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.97 });
+  const sideMat = new THREE.MeshStandardMaterial({ color: '#8a7a5a', roughness: 1 });
+  const landMeshes = [];
   for (const L of LAND) {
     const shape = new THREE.Shape(L.pts.map(([x, z]) => new THREE.Vector2(x, -z)));
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: LAND_Y, bevelEnabled: false, curveSegments: 1 }).rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: L.color, roughness: 0.95 }));
+    const geo = worldUV(new THREE.ExtrudeGeometry(shape, { depth: LAND_Y, bevelEnabled: false, curveSegments: 1 }).rotateX(-Math.PI / 2));
+    const m = new THREE.Mesh(geo, [groundMat, sideMat]);
     m.receiveShadow = shadows;
+    m.userData.pick = { type: 'land', land: L.id };
+    landMeshes.push(m);
     scene.add(m);
-  }
-  for (const B of BEACHES) {
-    const shape = new THREE.Shape(B.pts.map(([x, z]) => new THREE.Vector2(x, -z)));
-    const geo = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, LAND_Y + 0.02, 0);
-    scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#ead9a8', roughness: 1 })));
-  }
-  // Green patches: parks, swamps and estates.
-  {
-    const g = [];
-    for (const [x, z, r] of [[-28, -20, 5], [-24, -54, 6], [36, 20, 5], [-60, 6, 4], [110, 40, 8], [-90, -70, 10], [140, -80, 14], [70, -96, 12], [-110, 20, 9]]) {
-      if (!landAt(x, z)) continue;
-      g.push(new THREE.CircleGeometry(r, 18).rotateX(-Math.PI / 2).translate(x, LAND_Y + 0.015, z));
-    }
-    scene.add(new THREE.Mesh(mergeGeometries(g), new THREE.MeshStandardMaterial({ color: '#7f9a55', roughness: 1 })));
   }
 
   /* ---------------------------------------------------------------- roads and bridges */
-  const roadMat = new THREE.MeshStandardMaterial({ color: '#3f4045', roughness: 0.9 });
-  scene.add(new THREE.Mesh(mergeGeometries(ROADS.map((r) => ribbonGeo(r.pts, r.w, LAND_Y + 0.04, true))), roadMat));
+  const roadMat = new THREE.MeshStandardMaterial({ color: '#45464b', roughness: 0.88 });
+  const roadMesh = new THREE.Mesh(mergeGeometries(ROADS.map((r) => ribbonGeo(r.pts, r.w, LAND_Y + 0.04, true))), roadMat);
+  roadMesh.userData.pick = { type: 'road' };
+  scene.add(roadMesh);
+  // dashed white centre lines on the wide roads, yellow edge lines
+  {
+    const dashes = [], edges = [];
+    for (const r of ROADS) {
+      if (r.w < 0.95) continue;
+      const curve = new THREE.CatmullRomCurve3(r.pts.map(([x, z]) => V3(x, LAND_Y + 0.05, z)), false, 'centripetal');
+      const len = curve.getLength();
+      for (let d = 0; d < len - 1; d += 1.6) {
+        const a = curve.getPointAt(d / len), b = curve.getPointAt(Math.min(1, (d + 0.8) / len));
+        dashes.push(ribbonGeo([[a.x, a.z], [b.x, b.z]], 0.06, LAND_Y + 0.05, false));
+      }
+      for (const side of [-1, 1]) edges.push(ribbonGeo(r.pts, 0.05, LAND_Y + 0.05, true, side * (r.w / 2 - 0.08)));
+    }
+    if (dashes.length) scene.add(new THREE.Mesh(mergeGeometries(dashes), new THREE.MeshBasicMaterial({ color: '#e5e5e5' })));
+    if (edges.length) scene.add(new THREE.Mesh(mergeGeometries(edges), new THREE.MeshBasicMaterial({ color: '#d6b84a' })));
+  }
   const bridgeCurves = {};
   {
     const decks = [], walls = [], pillars = [];
@@ -131,64 +148,117 @@ export function createLagosMap(ctx, opts) {
     const wall = new THREE.Mesh(mergeGeometries(walls), new THREE.MeshStandardMaterial({ color: '#d6d3cb', roughness: 0.8 }));
     const pil = new THREE.Mesh(mergeGeometries(pillars), new THREE.MeshStandardMaterial({ color: '#b9b4a7', roughness: 0.9 }));
     deck.castShadow = pil.castShadow = shadows;
+    deck.userData.pick = { type: 'bridge' };
+    pil.userData.pick = { type: 'bridge' };
     scene.add(deck, wall, pil);
   }
 
   /* ---------------------------------------------------------------- houses */
   const landmarkSpots = [...PLACES.map((p) => [p.at[0], p.at[1], 2.6]), [-41, 21, 6], [-7, 32, 4.5], [8, 30, 4], [-55, 12, 5], [-27, -16, 4]];
   const plots = housePlots({ low: 1300, medium: 2400, high: 3600 }[quality] || 2400, 11, landmarkSpots);
-  const WALLS = ['#efe6d2', '#e8d9b5', '#d9c7a4', '#f2f0ea', '#e2cfa8', '#cfd8c4', '#f0d9c7'];
-  const ROOFS = ['#8a4b2d', '#8d939a', '#a33a2a', '#2e5f8a', '#3f6b45', '#9b5a33', '#6f7479', '#b4542f'];
+  const WALLS = ['#e9e0cb', '#e2d3b0', '#d6c4a0', '#efece4', '#dcc9a2', '#cdd3c0', '#e8d2bf', '#d9cdb8', '#c9b796'];
+  const ROOFS = ['#7a4a32', '#8b5a3c', '#6d4c3d', '#9a9fa4', '#a3a7ab', '#2f5d8a', '#466b4a', '#9a3b2c', '#7d5038', '#8a8f94'];
+  const houses = [];
   {
-    const body = new THREE.BoxGeometry(1, 0.7, 1).translate(0, 0.35, 0);
-    const roof = new THREE.ConeGeometry(0.78, 0.45, 4, 1).rotateY(Math.PI / 4).translate(0, 0.92, 0);
-    const walls = new THREE.InstancedMesh(body, new THREE.MeshStandardMaterial({ roughness: 0.9 }), plots.length);
-    const roofs = new THREE.InstancedMesh(roof, new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.15 }), plots.length);
+    // Three kinds of Lagos houses: zinc-roofed bungalows, "face-me-I-face-you" long houses,
+    // and two/three-storey flats with flat roofs and black or blue water tanks on top.
+    const bungalow = { body: new THREE.BoxGeometry(1, 0.7, 1).translate(0, 0.35, 0), roof: new THREE.ConeGeometry(0.78, 0.45, 4, 1).rotateY(Math.PI / 4).translate(0, 0.92, 0) };
+    const long = { body: new THREE.BoxGeometry(2, 0.7, 0.95).translate(0, 0.35, 0), roof: new THREE.CylinderGeometry(0.62, 0.62, 2.1, 3, 1).rotateZ(Math.PI / 2).rotateX(Math.PI / 6 * 3).scale(1, 0.55, 0.85).translate(0, 0.85, 0) };
+    const flats = { body: new THREE.BoxGeometry(1.1, 1, 1.1).translate(0, 0.5, 0), roof: new THREE.BoxGeometry(1.18, 0.08, 1.18).translate(0, 1.0, 0) };
+    const kinds = [bungalow, long, flats].map((k) => ({ ...k, list: [] }));
+    for (const p of plots) {
+      const dense = p.land !== 'mainland' || rand() < 0.4;
+      const k = rand() < (dense ? 0.32 : 0.14) ? 2 : rand() < 0.22 ? 1 : 0;
+      kinds[k].list.push(p);
+    }
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), c = new THREE.Color();
-    plots.forEach((p, i) => {
-      const tall = p.land === 'mainland' && rand() < 0.12 ? 1.8 : 1;
-      q.setFromAxisAngle(V3(0, 1, 0), p.r);
-      sc.set(p.s * (0.9 + rand() * 0.6), p.s * tall, p.s);
-      m.compose(V3(p.x, LAND_Y, p.z), q, sc);
-      walls.setMatrixAt(i, m);
-      roofs.setMatrixAt(i, m);
-      walls.setColorAt(i, c.set(WALLS[Math.floor(rand() * WALLS.length)]));
-      roofs.setColorAt(i, c.set(ROOFS[Math.floor(rand() * ROOFS.length)]));
-    });
-    walls.castShadow = roofs.castShadow = shadows;
-    walls.receiveShadow = shadows;
-    scene.add(walls, roofs);
+    const tanks = [];
+    for (const [ki, k] of kinds.entries()) {
+      if (!k.list.length) continue;
+      const walls = new THREE.InstancedMesh(k.body, new THREE.MeshStandardMaterial({ roughness: 0.92 }), k.list.length);
+      const roofs = new THREE.InstancedMesh(k.roof, new THREE.MeshStandardMaterial({ roughness: ki === 2 ? 0.95 : 0.6, metalness: ki === 2 ? 0 : 0.2 }), k.list.length);
+      k.list.forEach((p, i) => {
+        const storeys = ki === 2 ? 1.4 + Math.floor(rand() * 3) * 0.7 : 1;
+        q.setFromAxisAngle(V3(0, 1, 0), p.r);
+        sc.set(p.s * (0.9 + rand() * 0.4), p.s * storeys, p.s);
+        m.compose(V3(p.x, LAND_Y, p.z), q, sc);
+        walls.setMatrixAt(i, m);
+        if (ki === 2) {
+          // flat roof slab sits on top of the storeys
+          const top = new THREE.Matrix4().compose(V3(p.x, LAND_Y + p.s * storeys - p.s, p.z), q, V3(sc.x, p.s, sc.z));
+          roofs.setMatrixAt(i, top);
+          if (rand() < 0.65) tanks.push([p.x + (rand() - 0.5) * 0.4 * p.s, LAND_Y + p.s * storeys + 0.04, p.z + (rand() - 0.5) * 0.4 * p.s, p.s, rand() < 0.6]);
+        } else roofs.setMatrixAt(i, m);
+        walls.setColorAt(i, c.set(WALLS[Math.floor(rand() * WALLS.length)]));
+        roofs.setColorAt(i, c.set(ki === 2 ? '#bdb6a8' : ROOFS[Math.floor(rand() * ROOFS.length)]));
+      });
+      walls.castShadow = roofs.castShadow = shadows;
+      walls.receiveShadow = shadows;
+      walls.userData.pick = roofs.userData.pick = { type: 'house', list: k.list };
+      houses.push(walls, roofs);
+      scene.add(walls, roofs);
+    }
+    if (tanks.length) {
+      const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 10).translate(0, 0.15, 0), new THREE.MeshStandardMaterial({ roughness: 0.5 }), tanks.length);
+      tanks.forEach(([x, y, z, s0, black], i) => { m.makeScale(s0, s0, s0).setPosition(x, y, z); tm.setMatrixAt(i, m); tm.setColorAt(i, c.set(black ? '#1f1f22' : '#2b5fa8')); });
+      tm.castShadow = shadows;
+      scene.add(tm);
+    }
   }
 
-  /* ---------------------------------------------------------------- trees */
+  /* ---------------------------------------------------------------- trees: bushy trees and palms */
   {
     const n = { low: 500, medium: 900, high: 1400 }[quality] || 900;
-    const crown = new THREE.IcosahedronGeometry(0.6, 0).translate(0, 1.05, 0);
-    const trunk = new THREE.CylinderGeometry(0.07, 0.09, 0.8, 5).translate(0, 0.4, 0);
     const flat = (g) => (g.index ? g.toNonIndexed() : g);
-    const tree = mergeGeometries([crown, trunk].map(flat));
-    const colors = [];
-    const cA = new THREE.Color('#4b7a3a'), cT = new THREE.Color('#6b4a2d');
-    const crownCount = flat(crown).attributes.position.count;
-    for (let i = 0; i < tree.attributes.position.count; i++) { const cc = i < crownCount ? cA : cT; colors.push(cc.r, cc.g, cc.b); }
-    tree.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    const im = new THREE.InstancedMesh(tree, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }), n);
+    const colored = (parts) => {
+      const geos = parts.map(([g, col]) => { const f = flat(g); const cc = new THREE.Color(col); const arr = []; for (let i = 0; i < f.attributes.position.count; i++) arr.push(cc.r, cc.g, cc.b); f.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3)); f.deleteAttribute('uv'); return f; });
+      return mergeGeometries(geos);
+    };
+    const bushy = colored([
+      [new THREE.IcosahedronGeometry(0.55, 1).scale(1, 0.85, 1).translate(0, 1.05, 0), '#4b7a3a'],
+      [new THREE.IcosahedronGeometry(0.4, 1).translate(0.35, 0.9, 0.1), '#56853f'],
+      [new THREE.CylinderGeometry(0.06, 0.09, 0.8, 5).translate(0, 0.4, 0), '#6b4a2d'],
+    ]);
+    const palm = colored([
+      [new THREE.CylinderGeometry(0.04, 0.07, 1.8, 5).translate(0, 0.9, 0), '#7a6145'],
+      [new THREE.ConeGeometry(0.75, 0.35, 7, 1, true).rotateX(Math.PI).translate(0, 1.85, 0), '#3f6e2f'],
+      [new THREE.ConeGeometry(0.55, 0.25, 7, 1, true).rotateX(Math.PI).rotateY(0.4).translate(0, 1.95, 0), '#4f8a3a'],
+    ]);
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide });
+    const ims = [new THREE.InstancedMesh(bushy, mat, n), new THREE.InstancedMesh(palm, mat, Math.round(n * 0.6))];
+    const counts = [0, 0];
     const m = new THREE.Matrix4(), c = new THREE.Color();
-    let k = 0, tries = 0;
-    while (k < n && tries < n * 20) {
+    let tries = 0;
+    while (counts[0] + counts[1] < n * 1.5 && tries < n * 30) {
       tries++;
       const x = BOUNDS.minX + rand() * (BOUNDS.maxX - BOUNDS.minX);
       const z = BOUNDS.minZ + rand() * (BOUNDS.maxZ - BOUNDS.minZ);
       if (!landAt(x, z)) continue;
-      const s = 0.7 + rand() * 0.9;
-      m.makeScale(s, s, s).setPosition(x, LAND_Y, z);
-      im.setMatrixAt(k, m);
-      im.setColorAt(k, c.setHSL(0.24 + rand() * 0.08, 0.35, 0.55 + rand() * 0.25));
-      k++;
+      const isPalm = rand() < 0.38 || z > 40;
+      const k = isPalm ? 1 : 0;
+      if (counts[k] >= ims[k].instanceMatrix.count) continue;
+      const s0 = 0.7 + rand() * 0.8;
+      m.makeRotationY(rand() * 6.28).scale(V3(s0, s0, s0)).setPosition(x, LAND_Y, z);
+      ims[k].setMatrixAt(counts[k], m);
+      ims[k].setColorAt(counts[k], c.setHSL(0.25 + rand() * 0.06, 0.25, 0.75 + rand() * 0.25));
+      counts[k]++;
     }
-    im.count = k;
-    im.castShadow = shadows;
-    scene.add(im);
+    ims.forEach((im, k) => { im.count = counts[k]; im.castShadow = shadows; scene.add(im); });
+  }
+
+  /* ---------------------------------------------------------------- clouds */
+  const clouds = new THREE.Group();
+  scene.add(clouds);
+  {
+    const cm = new THREE.SpriteMaterial({ map: cloudTexture(), transparent: true, depthWrite: false, opacity: 0.85, fog: false });
+    for (let i = 0; i < 14; i++) {
+      const sp = new THREE.Sprite(cm);
+      sp.position.set(BOUNDS.minX + rand() * (BOUNDS.maxX - BOUNDS.minX), 55 + rand() * 25, BOUNDS.minZ + rand() * (BOUNDS.maxZ - BOUNDS.minZ));
+      sp.scale.set(28 + rand() * 30, 16 + rand() * 12, 1);
+      sp.raycast = () => {};
+      clouds.add(sp);
+    }
+    anim.push((dt) => { for (const c of clouds.children) { c.position.x += dt * 1.2; if (c.position.x > BOUNDS.maxX + 40) c.position.x = BOUNDS.minX - 40; } });
   }
 
   /* ---------------------------------------------------------------- towers */
@@ -216,6 +286,7 @@ export function createLagosMap(ctx, opts) {
       im.setColorAt(i, c.set(tints[i % tints.length]));
     });
     im.castShadow = shadows;
+    im.userData.pick = { type: 'tower' };
     scene.add(im);
   }
 
@@ -320,6 +391,17 @@ export function createLagosMap(ctx, opts) {
     }
   }
 
+  // Every landmark mesh knows which place it belongs to (for taps on the map).
+  lm.updateMatrixWorld(true);
+  for (const mesh of lm.children) {
+    mesh.geometry.computeBoundingSphere();
+    const c = mesh.geometry.boundingSphere.center.clone().applyMatrix4(mesh.matrixWorld);
+    let best = null, bd = 9;
+    for (const p of PLACES) { const d = Math.hypot(p.at[0] - c.x, p.at[1] - c.z); if (d < bd) { bd = d; best = p; } }
+    if (best) mesh.userData.pick = { type: 'place', id: best.id };
+    else if (Math.hypot(c.x - 66, c.z - 35.5) < 4) mesh.userData.pick = { type: 'info', title: 'Lekki Toll Gate', emoji: '🚧', text: 'The toll gate on the Lekki–Epe Expressway. Have your change ready, or your tag.' };
+  }
+
   /* ---------------------------------------------------------------- billboards (church posters) */
   // All posters live in one canvas atlas (8 × 8 cells) so dozens of boards cost two draw calls.
   const boards = new THREE.Group();
@@ -334,7 +416,9 @@ export function createLagosMap(ctx, opts) {
   const spots = billboardSpots(rand);
   const posters = defaultPosters(spots.length, 4);
   posters[1] = { title: 'AMEN CITY', sub: 'Pray · Serve · Live · Join free', church: 'Lagos', theme: 'gold', motif: 'cross' };
-  const drawCell = (i, p) => drawPoster(ag, (i % COLS) * CW, Math.floor(i / COLS) * CH, CW, CH, p);
+  const shown = [];
+  const drawCell = (i, p) => { shown[i] = p; drawPoster(ag, (i % COLS) * CW, Math.floor(i / COLS) * CH, CW, CH, p); };
+  const currentPoster = (i) => shown[i] || posters[i];
   posters.forEach((p, i) => drawCell(i, p));
   {
     const faces = [], frames = [];
@@ -346,10 +430,16 @@ export function createLagosMap(ctx, opts) {
       const uv = face.attributes.uv;
       uv.setXY(0, u0, v1); uv.setXY(1, u1, v1); uv.setXY(2, u0, v0); uv.setXY(3, u1, v0);
       faces.push(face.applyMatrix4(m));
+      // the same poster on the back, so boards read from both directions
+      const back = new THREE.PlaneGeometry(W, H).rotateY(Math.PI).translate(0, Yb, -0.08);
+      const ub = back.attributes.uv;
+      ub.setXY(0, u0, v1); ub.setXY(1, u1, v1); ub.setXY(2, u0, v0); ub.setXY(3, u1, v0);
+      faces.push(back.applyMatrix4(m));
       frames.push(new THREE.BoxGeometry(W + 0.2, H + 0.2, 0.12).translate(0, Yb, 0).applyMatrix4(m));
       for (const sx of [-1.2, 1.2]) frames.push(new THREE.CylinderGeometry(0.08, 0.1, Yb - H / 2, 6).translate(sx, (Yb - H / 2) / 2, 0).applyMatrix4(m));
     });
     const faceMesh = new THREE.Mesh(mergeGeometries(faces), new THREE.MeshStandardMaterial({ map: atlasTex, roughness: 0.55, emissive: '#ffffff', emissiveMap: atlasTex, emissiveIntensity: 0.18 }));
+    faceMesh.userData.pick = { type: 'billboard' };
     const frameMesh = new THREE.Mesh(mergeGeometries(frames), std('#374151'));
     frameMesh.castShadow = shadows;
     boards.add(faceMesh, frameMesh);
@@ -508,7 +598,7 @@ export function createLagosMap(ctx, opts) {
   for (const p of PLACES) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = `lm-pin${p.walk ? ' is-walk' : ''}${p.gov ? ' is-gov' : ''}${p.id === 'grace' ? ' is-church' : ''}`;
+    el.className = `lm-pin${p.walk ? ' is-walk' : ''}${p.gov ? ' is-gov' : ''}${p.soon ? ' is-soon' : ''}${p.id === 'grace' ? ' is-church' : ''}`;
     el.dataset.place = p.id;
     const e = document.createElement('span');
     e.className = 'lm-pin-emoji';
@@ -518,12 +608,14 @@ export function createLagosMap(ctx, opts) {
     n.textContent = p.name;
     el.append(e, n);
     el.setAttribute('aria-label', `${p.name}, ${p.area}`);
-    el.addEventListener('click', () => opts.onPick?.(p));
+    el.addEventListener('click', () => opts.onPick?.({ type: 'place', place: p }));
     pinRoot.append(el);
     pins.push({ p, el, pos: V3(p.at[0], LAND_Y + (p.id === 'mountain' ? 4.5 : 2.4), p.at[1]) });
   }
   const areaLabels = AREAS.map(([name, x, z]) => {
-    const el = document.createElement('span');
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.addEventListener('click', () => opts.onPick?.(areaPick(name)));
     el.className = `lm-area${/Lagoon|Ocean/.test(name) ? ' is-water' : ''}`;
     el.textContent = name;
     pinRoot.append(el);
@@ -549,6 +641,68 @@ export function createLagosMap(ctx, opts) {
       a.el.hidden = !vis;
       if (vis) a.el.style.transform = `translate(${((tmp.x + 1) / 2) * w}px, ${((1 - tmp.y) / 2) * h}px) translate(-50%, -50%)`;
     }
+  }
+
+  /* ---------------------------------------------------------------- taps on the map */
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let down = null;
+  const canvas = ctx.renderer.domElement;
+  const onDown = (e) => { if (isOpen) down = { x: e.clientX, y: e.clientY, t: performance.now() }; };
+  const onUp = (e) => {
+    if (!isOpen || !down) return;
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+    const quick = performance.now() - down.t < 450;
+    down = null;
+    if (moved > 7 || !quick) return;
+    const rect = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(scene.children, true).filter((h) => pickOf(h.object) && h.object.visible !== false);
+    const hit = hits.find((h) => pickOf(h.object).type !== 'water' && pickOf(h.object).type !== 'land') || hits[0];
+    if (!hit) return;
+    const info = describe(hit);
+    if (info) { opts.onPick?.(info); map.tour(false); }
+  };
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointerup', onUp);
+  function pickOf(o) { while (o) { if (o.userData?.pick) return o.userData.pick; o = o.parent; } return null; }
+  /** Turn a ray hit into something to show: a place, a billboard poster, a neighbourhood, a bridge… */
+  function describe(hit) {
+    const pk = pickOf(hit.object);
+    const { x, z } = hit.point;
+    if (pk.type === 'place') return { type: 'place', place: PLACE_BY_ID[pk.id] };
+    if (pk.type === 'info') return pk;
+    if (pk.type === 'billboard') {
+      const i = Math.floor(hit.faceIndex / 4); // front and back: 4 triangles per board
+      return { type: 'billboard', index: i, poster: currentPoster(i), booked: Object.values(AD_BOARD).includes(i) };
+    }
+    if (pk.type === 'bridge') {
+      let best = BRIDGES[0], bd = Infinity;
+      for (const b of BRIDGES) { const d = distToPolyline(b.pts, x, z); if (d < bd) { bd = d; best = b; } }
+      return { type: 'info', emoji: '🌉', title: best.name, text: ROUTE_INFO[best.id] || '' };
+    }
+    if (pk.type === 'road') {
+      let best = ROADS[0], bd = Infinity;
+      for (const r of ROADS) { const d = distToPolyline(r.pts, x, z); if (d < bd) { bd = d; best = r; } }
+      return { type: 'info', emoji: '🛣️', title: best.name, text: `${best.name}: danfos, okadas, hawkers in the go-slow, and church billboards along the way. ${nearestArea(x, z)} is nearby.` };
+    }
+    if (pk.type === 'water') {
+      if (z > 50) return areaPick('Atlantic Ocean');
+      if (Math.hypot(x - PLACE_BY_ID.makoko.at[0], z - PLACE_BY_ID.makoko.at[1]) < 8) return { type: 'place', place: PLACE_BY_ID.makoko };
+      return areaPick('Lagos Lagoon');
+    }
+    if (pk.type === 'tower') return { type: 'info', emoji: '🏢', title: `Towers of ${nearestArea(x, z)}`, text: 'Banks, offices and churches that meet in hotel halls on Sunday. Workers pour out at 5pm into the go-slow.' };
+    return areaPick(nearestArea(x, z), pk.type === 'house');
+  }
+  function nearestArea(x, z) {
+    let best = AREAS[0][0], bd = Infinity;
+    for (const [name, ax, az] of AREAS) { if (/Lagoon|Ocean/.test(name)) continue; const d = Math.hypot(ax - x, az - z); if (d < bd) { bd = d; best = name; } }
+    return best;
+  }
+  function areaPick(name, house = false) {
+    const nearby = PLACES.filter((p) => p.area === name || p.area.startsWith(name)).map((p) => p.id);
+    return { type: 'area', name, house, text: AREA_INFO[name] || `${name}, Lagos.`, places: nearby };
   }
 
   /* ---------------------------------------------------------------- layers */
@@ -660,6 +814,8 @@ export function createLagosMap(ctx, opts) {
     applyTime,
     dispose() {
       map.hide();
+      canvas.removeEventListener('pointerdown', onDown);
+      canvas.removeEventListener('pointerup', onUp);
       controls.dispose();
       pinRoot.remove();
       scene.traverse((o) => { o.geometry?.dispose(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach((x) => { x.map?.dispose(); x.dispose(); }); });

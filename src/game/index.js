@@ -368,6 +368,7 @@ export function createGame(ctx = {}, opts = {}) {
       if (from === to) return { ok: false, reason: 'You are already here' };
       const place = PLACE_BY_ID[to];
       if (!place) return { ok: false, reason: 'Unknown place' };
+      if (place.soon) return { ok: false, reason: `${place.name} is coming soon.` };
       return run((e) => {
         if (s.attendance) endService(s, e, { silent: false });
         const before = { ...s };

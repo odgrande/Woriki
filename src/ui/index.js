@@ -168,6 +168,7 @@ export function createUI(ctx, opts) {
       });
     } : undefined,
     onSkip: () => opts.onSkipJourney?.(),
+    onAds: () => phone.show('ads'),
     onToggle(open) {
       if (!inGame) return;
       hud.show(!open);
@@ -177,10 +178,15 @@ export function createUI(ctx, opts) {
     },
   }) : null;
   if (mapView) {
-    mapView.onLandingPick = (p) => dialogs.info({
-      emoji: p.emoji, title: p.name, text: `${p.area}. ${p.desc}\n\nSign up free to go there, worship at Grace Assembly and live your Lagos life.`,
-      ok: 'Sign up free', onOk: () => signUp(),
-    });
+    mapView.onLandingPick = (info) => {
+      const p = info.place;
+      dialogs.info({
+        emoji: p ? p.emoji : info.emoji || '📍',
+        title: p ? p.name : info.name || info.title || 'Lagos',
+        text: `${p ? `${p.area}. ${p.desc}` : info.text || ''}\n\nSign up free to go there, worship at Grace Assembly and live your Lagos life.`,
+        ok: 'Sign up free', onOk: () => signUp(),
+      });
+    };
   }
 
   const front = createFront({
