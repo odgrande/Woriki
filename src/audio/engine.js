@@ -18,16 +18,16 @@ export function glide(param, value, ac, tau = 0.05) {
   } catch { param.value = value; }
 }
 
-/** Generated stereo room impulse response (early reflections + frequency-dependent tail). */
-function makeImpulse(ac, t60) {
+/** Generated room impulse response (early reflections + frequency-dependent tail). */
+function makeImpulse(ac, t60, channels = 2) {
   const sr = ac.sampleRate;
   const n = Math.floor(sr * t60 * 1.05);
-  const buf = ac.createBuffer(2, n, sr);
+  const buf = ac.createBuffer(channels, n, sr);
   let seed = 12345;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 * 2 - 1; };
   const pre = Math.floor(0.012 * sr);
   const kD = -6.9 / (t60 * sr), kB = -6.9 / (t60 * 0.4 * sr);
-  for (let c = 0; c < 2; c++) {
+  for (let c = 0; c < channels; c++) {
     const d = buf.getChannelData(c);
     let lp = 0, lp2 = 0;
     for (let i = pre; i < n; i++) {
@@ -49,7 +49,7 @@ function makeImpulse(ac, t60) {
  * @param {BaseAudioContext} ac
  * @param {{quality?: 'low'|'medium'|'high', baker: ReturnType<import('./baker.js').createBaker>}} opts
  */
-export function createEngine(ac, { quality = 'medium', baker }) {
+export function createEngine(ac, { quality = 'medium', baker, reverb = true }) {
   const low = quality === 'low';
   const now = () => ac.currentTime;
 
@@ -86,14 +86,18 @@ export function createEngine(ac, { quality = 'medium', baker }) {
   musicVol.connect(musicFilter);
   buses.music = musicVol;
 
-  // reverb
+  // reverb: one shared convolver. Low tier: shorter mono room (half the convolution work,
+  // and cheap phones mostly have a single speaker anyway).
   const reverbIn = ac.createGain();
   reverbIn.gain.value = 1;
+  if (low) { reverbIn.channelCount = 1; reverbIn.channelCountMode = 'explicit'; }
   const convolver = ac.createConvolver();
-  convolver.buffer = makeImpulse(ac, low ? 1.3 : quality === 'high' ? 2.3 : 1.9);
+  convolver.buffer = makeImpulse(ac, low ? 1.2 : quality === 'high' ? 2.3 : 1.7, low ? 1 : 2);
   const reverbOut = mk(0.9);
-  reverbIn.connect(convolver);
-  convolver.connect(reverbOut);
+  if (reverb) {
+    reverbIn.connect(convolver);
+    convolver.connect(reverbOut);
+  }
   const musicReverb = ac.createGain();
   musicReverb.gain.value = 0.25;
   musicFilter.connect(musicReverb);
@@ -332,13 +336,16 @@ export function createEngine(ac, { quality = 'medium', baker }) {
     music.pump(t, horizon);
   };
 
-  /** Bake everything a set of features needs. */
-  engine.preload = (what = ['footsteps', 'sfx']) => {
+  /**
+   * Bake everything a set of features needs: 'footsteps', 'sfx', 'music' and ambience names.
+   * priority: 0 = background, 1 = soon, 2 = now.
+   */
+  engine.preload = (what = ['footsteps', 'sfx'], priority = 1) => {
     const jobs = [];
-    if (what.includes('footsteps')) for (const s of SURFACES) for (const run of [false, true]) jobs.push(baker.load('footsteps', { surface: s, run }));
-    if (what.includes('sfx')) for (const def of Object.values(SOUNDS)) { jobs.push(baker.load(def.recipe, def.args)); if (def.moving) jobs.push(baker.load(def.moving.recipe, def.moving.args)); }
-    for (const a of what) if (ambience.recipes[a]) for (const [r, args] of ambience.recipes[a]) jobs.push(baker.load(r, args));
-    if (what.includes('music')) jobs.push(music.load());
+    if (what.includes('footsteps')) for (const s of SURFACES) for (const run of [false, true]) jobs.push(baker.load('footsteps', { surface: s, run }, priority));
+    if (what.includes('sfx')) for (const def of Object.values(SOUNDS)) { jobs.push(baker.load(def.recipe, def.args, priority)); if (def.moving) jobs.push(baker.load(def.moving.recipe, def.moving.args, priority)); }
+    for (const a of what) if (ambience.recipes[a]) for (const [r, args] of ambience.recipes[a]) jobs.push(baker.load(r, args, priority));
+    if (what.includes('music')) jobs.push(music.load(priority));
     return Promise.all(jobs);
   };
 

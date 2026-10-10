@@ -180,7 +180,7 @@ export function createRemotes(ctx, { net, kit = null, bubbles = null, root, pare
     const nowS = local / 1000;
     // Positions follow wall-clock time (the engine clamps dt to 50 ms, which would
     // make remotes lag and over-estimate speed after a frame hitch).
-    const wdt = Math.min(0.5, Math.max(1e-3, (local - (lastLocal || local - dt * 1000)) / 1000));
+    const wdt = Math.min(2, Math.max(1e-3, (local - (lastLocal || local - dt * 1000)) / 1000));
     lastLocal = local;
     camera.getWorldPosition(camPos);
 

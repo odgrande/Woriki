@@ -33,6 +33,7 @@ export function createFollowCamera(ctx, input, opts = {}) {
   // Portrait phones see less around the player: start a little further out.
   const startDist = opts.distance ?? ((camera.aspect || 1) < 0.8 ? 6 : 5.2);
   let current = startDist; // distance after collision / smoothing
+  let lift = 0; // extra pitch used to rise over walls behind the player
   let fov = baseFov;
   let speedAvg = 0;
 
@@ -135,35 +136,51 @@ export function createFollowCamera(ctx, input, opts = {}) {
         cam.pitch += (DEFAULT_PITCH - cam.pitch) * damp(0.35, dt);
       }
 
-      // ---- desired position
-      const cp = Math.cos(cam.pitch);
-      offset.set(Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), Math.cos(cam.yaw) * cp);
-      let want = cam.distance;
-
-      // ---- collision: pull in on walls (5 parallel rays ≈ the near plane) + mesh blockers
-      if (physics) {
-        dir.copy(offset).normalize();
+      // ---- collision: pull in on walls (5 parallel rays ≈ the near plane) + mesh blockers.
+      // In tight spots (a wall right behind you) also try looking down from higher up and keep
+      // whichever angle leaves the camera farther away, so it never ends up in your face.
+      const corners = [[0, 0], [0.22, 0.14], [-0.22, 0.14], [0.22, -0.14], [-0.22, -0.14]];
+      const clearance = (pitch, wantDist) => {
+        const cpp = Math.cos(pitch);
+        dir.set(Math.sin(cam.yaw) * cpp, Math.sin(pitch), Math.cos(cam.yaw) * cpp).normalize();
         side.set(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
         up.crossVectors(side, dir).normalize();
-        let hit = want;
-        const corners = [[0, 0], [0.22, 0.14], [-0.22, 0.14], [0.22, -0.14], [-0.22, -0.14]];
+        let hit = wantDist;
         if (typeof physics.raycast === 'function') {
           for (const [sx, sy] of corners) {
             origin.copy(pivot).addScaledVector(side, sx).addScaledVector(up, sy);
-            const t = physics.raycast(origin, dir, want + 0.3, { camera: true });
+            const t = physics.raycast(origin, dir, wantDist + 0.3, { camera: true });
             if (t - 0.3 < hit) hit = t - 0.3;
           }
         }
         if (physics.blockers?.length) {
           raycaster.set(pivot, dir);
           raycaster.near = 0;
-          raycaster.far = want + 0.3;
+          raycaster.far = wantDist + 0.3;
           hits.length = 0;
           raycaster.intersectObjects(physics.blockers, true, hits);
           if (hits.length) hit = Math.min(hit, hits[0].distance - 0.3);
         }
+        return hit;
+      };
+      let want = cam.distance;
+      let liftTarget = 0;
+      if (physics) {
+        let hit = clearance(cam.pitch, want);
+        if (hit < Math.min(1.8, want)) {
+          for (const extra of [0.35, 0.7, 1.0]) {
+            const p2 = Math.min(cam.maxPitch ?? 1.3, cam.pitch + extra);
+            const h2 = clearance(p2, want);
+            if (h2 > hit + 0.4) { hit = h2; liftTarget = p2 - cam.pitch; }
+            if (hit >= Math.min(1.8, want)) break;
+          }
+        }
         want = Math.max(0.45, Math.min(want, hit));
       }
+      lift += (liftTarget - lift) * damp(liftTarget > lift ? 6 : 2.5, dt);
+      const pitchNow = cam.pitch + lift;
+      const cp = Math.cos(pitchNow);
+      offset.set(Math.sin(cam.yaw) * cp, Math.sin(pitchNow), Math.cos(cam.yaw) * cp);
       // pull in at once, ease back out
       if (want < current) current = want;
       else current += (want - current) * damp(3.2, dt);

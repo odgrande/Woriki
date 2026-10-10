@@ -54,20 +54,16 @@ export function slotAt(bar, step) {
  * @param {number} hi
  */
 export function voiceChord(pcs, prev, lo, hi) {
-  const pc = pcs.map((p) => ((p % 12) + 12) % 12);
+  const pc = [...new Set(pcs.map((p) => ((p % 12) + 12) % 12))];
   const n = pc.length;
   let best = null, bestCost = Infinity;
-  for (let rot = 0; rot < n; rot++) {
-    const order = pc.slice(rot).concat(pc.slice(0, rot));
-    for (let base = lo - 12; base <= hi; base++) {
-      if (((base % 12) + 12) % 12 !== order[0]) continue;
-      const v = [base];
-      for (let k = 1; k < n; k++) {
-        let m = v[k - 1] + 1;
-        while (((m % 12) + 12) % 12 !== order[k]) m++;
-        v.push(m);
-      }
-      if (v[0] < lo || v[n - 1] > hi) continue;
+  // every inversion in close position: pick the bottom pitch class, stack the others upward
+  for (const bottom of pc) {
+    const order = [bottom, ...pc.filter((p) => p !== bottom).sort((a, b) => ((a - bottom + 12) % 12) - ((b - bottom + 12) % 12))];
+    for (let base = lo; base <= hi; base++) {
+      if (((base % 12) + 12) % 12 !== bottom) continue;
+      const v = order.map((p) => base + ((p - bottom + 12) % 12));
+      if (v[n - 1] > hi) continue;
       let cost;
       if (prev && prev.length === n) cost = v.reduce((s, m, k) => s + Math.abs(m - prev[k]), 0);
       else cost = Math.abs((v[0] + v[n - 1]) / 2 - (lo + hi) / 2);
@@ -93,7 +89,7 @@ function voiceAll(lo, hi, colour) {
 }
 
 export const VOICINGS = {
-  ep: voiceAll(62, 81, true),
+  ep: voiceAll(66, 84, true),
   organ: voiceAll(52, 67, false),
   choir: voiceAll(57, 74, false),
 };

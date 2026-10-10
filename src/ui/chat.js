@@ -152,8 +152,12 @@ export function createChatUI(ctx, { net, root, input = null, roomLabel }) {
 
   function addLine(m, { scroll = true } = {}) {
     const stick = nearBottom();
-    const li = el('li', `msg${m.self ? ' self' : ''}`);
+    const prev = log.lastElementChild;
+    // Consecutive lines from the same person within two minutes share one header.
+    const cont = prev && prev.dataset.id === m.id && !prev.classList.contains('sys') && m.ts - Number(prev.dataset.ts || 0) < 120_000;
+    const li = el('li', `msg${m.self ? ' self' : ''}${cont ? ' cont' : ''}`);
     li.dataset.id = m.id;
+    li.dataset.ts = String(m.ts || Date.now());
     const meta = el('div', 'msg-meta');
     if (m.self) meta.appendChild(el('span', 'msg-you', 'You'));
     else {
@@ -163,9 +167,11 @@ export function createChatUI(ctx, { net, root, input = null, roomLabel }) {
       who.title = `${m.name} — report or block`;
       meta.appendChild(who);
     }
-    const role = el('span', 'msg-role', ROLE_LABEL[m.role] || 'Visitor');
-    role.style.setProperty('--role', ROLE_COLOR[m.role] || '#f4f4f5');
-    meta.appendChild(role);
+    if (!m.self) {
+      const role = el('span', 'msg-role', ROLE_LABEL[m.role] || 'Visitor');
+      role.style.setProperty('--role', ROLE_COLOR[m.role] || '#f4f4f5');
+      meta.appendChild(role);
+    }
     const time = el('time', 'msg-time', clock(m.ts));
     time.dateTime = new Date(m.ts || Date.now()).toISOString();
     meta.appendChild(time);

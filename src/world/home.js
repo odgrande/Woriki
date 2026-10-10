@@ -69,6 +69,8 @@ export function buildHome(W) {
   // veranda pillars + roof
   for (const x of [hx0 + 0.2, 16.6, 20.6, hx1 - 0.2]) { B.box('plaster', x, fy + HOUSE.h / 2, ver + 0.2, 0.3, HOUSE.h, 0.3, { color: '#f4ecd9' }); W.collide(x - 0.15, 0, ver + 0.05, x + 0.15, top, ver + 0.35, 'pillar'); }
   hipRoof(W, hx0, ver, hx1, hz1, top, 2.0, { color: '#8a9093', overhang: 0.6 });
+  W.collide(hx0, top - 0.25, hz0, hx1, top - 0.15, hz1, 'ceiling');
+  W.collide(hx0, top, ver, hx1, top + 1.0, hz1, 'roof');
   // satellite dish and AC-less house: louvres + burglar bars
   W.inst('dish', mat(hx1 + 0.15, top - 0.6, 19.5, Math.PI / 2 + 0.6));
 

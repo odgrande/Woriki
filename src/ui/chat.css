@@ -16,7 +16,7 @@
 .chat > :not(.chat-feed) { pointer-events: auto; }
 .chat .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .chat svg.lucide { width: 18px; height: 18px; stroke-width: 2; flex-shrink: 0; }
-.chat button { font: inherit; color: inherit; cursor: pointer; }
+.chat :where(button) { font: inherit; color: inherit; cursor: pointer; }
 .chat :focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
 
 /* ---------- closed: recent lines + button ---------- */
@@ -103,6 +103,8 @@
 }
 .msg[hidden] { display: none; }
 .msg.self { align-self: flex-end; background: var(--yellow); border-radius: 12px 12px 4px 12px; }
+.msg.cont { margin-top: -4px; padding-top: 5px; }
+.msg.cont .msg-meta { display: none; }
 .msg.sys {
   align-self: center; max-width: 100%; padding: 0 8px; background: none; border: 0; box-shadow: none;
   font-size: 12px; font-weight: 600; color: var(--zinc-500); text-align: center;
@@ -133,10 +135,12 @@
 .chat-notice[hidden] { display: none; }
 
 .chat-quick {
-  display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px 10px; border-top: 2px dashed var(--zinc-300);
+  display: flex; gap: 8px; overflow-x: auto; padding: 8px 40px 10px 12px; border-top: 2px dashed var(--zinc-300);
   scrollbar-width: none; overscroll-behavior-x: contain;
 }
 .chat-quick::-webkit-scrollbar { display: none; }
+/* fade at the right edge hints that the phrases scroll */
+.chat-quick { mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
 .chat-phrase {
   flex-shrink: 0; min-height: 40px; padding: 0 14px; white-space: nowrap;
   background: #fff; border: 2px solid var(--ink); border-radius: 9999px; box-shadow: 2px 2px 0 var(--ink);

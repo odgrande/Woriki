@@ -139,10 +139,10 @@ export function carPass({ kind = 'car', count = 2, seed = 17 } = {}) {
       sr, dur, stereo: true,
       fire: (t) => base * (1 + 0.03 * Math.sin(t * 0.9 + v)),
       res: danfo
-        ? [[85, 1.8, 1], [240, 2.5, 0.7], [700, 2, 0.35], [1600, 2, 0.15]]
-        : [[72, 1.6, 0.8], [215, 2.2, 0.5], [620, 1.8, 0.2]],
+        ? [[85, 1.8, 0.7], [240, 2.5, 0.7], [700, 2, 0.45], [1600, 2, 0.2]]
+        : [[72, 1.6, 0.45], [215, 2.2, 0.45], [620, 1.8, 0.25], [1400, 2, 0.08]],
       noise: danfo ? 0.6 : 0.25, ampJitter: danfo ? 0.3 : 0.1, timeJitter: danfo ? 0.03 : 0.01,
-      pulseDecay: danfo ? 0.3 : 0.55, tire: danfo ? 0.35 : 0.5, clatter: danfo ? 0.5 : 0,
+      pulseDecay: danfo ? 0.3 : 0.55, tire: danfo ? 0.8 : 1.3, clatter: danfo ? 0.6 : 0,
       motion: passMotion({ v: rand(r, 7, 11), d: rand(r, 6, 11), tc: dur / 2, dir: v % 2 ? -1 : 1, dur, lpNear: 9000, fadeIn: 1.2 }),
     });
     fades(snd, 0.05, 0.4);
@@ -197,20 +197,22 @@ export function horn({ seed = 19 } = {}) {
  * The neighbour's small 2-stroke petrol generator ("I better pass my neighbour"),
  * a seamless loop with governor hunting and cycle-to-cycle variation.
  */
-export function generator({ seconds = 4, seed = 23 } = {}) {
+export function generator({ seconds = 4, seed = 23, fire = 50, sr = 16000 } = {}) {
   const r = rng(seed);
-  const sr = 16000, xf = 0.3;
+  const xf = 0.3;
+  // keep a whole number of firing cycles in the loop so it repeats seamlessly
+  const f0 = Math.round(fire * seconds) / seconds;
   const snd = renderEngine(r, {
     sr, dur: seconds + xf,
-    fire: (t) => 50 * (1 + 0.015 * Math.sin(TAU * 0.5 * t)),
-    res: [[160, 3, 1], [480, 4, 0.6], [1300, 3, 0.35], [3000, 2, 0.18]],
-    noise: 0.45, ampJitter: 0.25, timeJitter: 0.04, pulseDecay: 0.22, periodic: Math.round(50 * seconds),
+    fire: (t) => f0 * (1 + 0.015 * Math.sin(TAU * 0.5 * t)),
+    res: [[160, 3, 1], [480, 4, 0.6], [1300, 3, 0.35], [3000, 2, 0.18]].filter(([f]) => f < sr * 0.45),
+    noise: 0.45, ampJitter: 0.25, timeJitter: 0.04, pulseDecay: 0.22, periodic: Math.round(f0 * seconds),
   });
-  // alternator whine and casing hum
+  // alternator whine and casing hum (mains-locked: 2× and 6× the firing rate)
   const ch = snd.channels[0];
   for (let i = 0; i < ch.length; i++) {
     const t = i / sr;
-    ch[i] += 0.03 * Math.sin(TAU * 100 * t) + 0.012 * Math.sin(TAU * 300 * t + 1);
+    ch[i] += 0.03 * Math.sin(TAU * 2 * f0 * t) + 0.012 * Math.sin(TAU * 6 * f0 * t + 1);
   }
   loopify(snd, xf);
   return [normalize(snd, 0.8)];

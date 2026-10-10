@@ -75,8 +75,11 @@ export function createPreview(canvas, { getKit, quality = 'medium', onState = ()
     camera.aspect = aspect;
     // Fit ~2.45 m vertically (head room under the title bar) and ~1.5 m horizontally.
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const dist = Math.max(2.6 / (2 * tan), 1.5 / (2 * tan * aspect));
-    target.y = 0.84; // feet sit ~20% above the bottom edge, clear of the name tag
+    // Squarer stages (phones) leave room for the title bar above the head and the
+    // name tag below the feet.
+    const fit = aspect < 1.3 ? 2.95 : 2.6;
+    const dist = Math.max(fit / (2 * tan), 1.5 / (2 * tan * aspect));
+    target.y = aspect < 1.3 ? 1.0 : 0.86;
     camera.position.set(0, target.y + dist * 0.06, dist);
     camera.lookAt(target);
     camera.updateProjectionMatrix();

@@ -88,15 +88,15 @@ function talker(out, r, { female = false, pan = 0, gain = 1, start = 0, end, sho
  * Crowd / hawker chatter loop (stereo). Several talkers at different distances.
  * @param {{seconds?: number, talkers?: number, seed?: number}} o
  */
-export function babble({ seconds = 8, talkers = 6, seed = 43 } = {}) {
+export function babble({ seconds = 8, talkers = 6, seed = 43, sr = 16000, loop = true } = {}) {
   const r = rng(seed);
-  const sr = 16000, xf = 0.5;
+  const xf = loop ? 0.5 : 0;
   const out = makeSound(sr, seconds + xf, 2);
   for (let k = 0; k < talkers; k++) {
     const dist = rand(r, 0.35, 1);
-    talker(out, r, { female: r() < 0.5, pan: rand(r, -0.85, 0.85), gain: dist, lp: 1800 + 2200 * dist });
+    talker(out, r, { female: r() < 0.5, pan: rand(r, -0.85, 0.85), gain: dist, lp: Math.min(sr * 0.45, 1800 + 2200 * dist) });
   }
-  loopify(out, xf);
+  if (loop) loopify(out, xf);
   return [normalize(out, 0.8)];
 }
 

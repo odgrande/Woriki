@@ -1,0 +1,24 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #fffdf7; }
+#world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+#ui > * { pointer-events: auto; }
+
+.amen-loading {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: #fffdf7;
+  background-image: linear-gradient(rgba(0,0,0,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transition: opacity .35s ease;
+}
+.amen-loading.is-done { opacity: 0; pointer-events: none; }
+.amen-loading-card {
+  width: min(360px, calc(100vw - 32px)); padding: 24px; text-align: center;
+  background: #fff; border: 2px solid #000; border-radius: 16px; box-shadow: 6px 6px 0 #000;
+  font: 500 15px/1.4 Inter, system-ui, sans-serif;
+}
+.amen-loading-logo { font-size: 44px; }
+.amen-loading h2 { margin: 6px 0 4px; font: 700 24px "Space Grotesk", Inter, sans-serif; }
+.amen-loading-step { margin: 0 0 14px; color: #52525b; }
+.amen-loading-bar { height: 12px; border: 2px solid #000; border-radius: 999px; overflow: hidden; background: #f4f4f5; }
+.amen-loading-bar > div { height: 100%; width: 0; background: #fde047; transition: width .4s ease; }
+@media (prefers-reduced-motion: reduce) { .amen-loading, .amen-loading-bar > div { transition: none; } }

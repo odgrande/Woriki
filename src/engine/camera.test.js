@@ -68,12 +68,25 @@ describe('follow camera', () => {
     const cam = createFollowCamera(ctx, fakeInput());
     cam.yaw = 0; cam.pitch = 0.25; cam.distance = 6;
     for (let i = 0; i < 30; i++) cam.update(1 / 60, V(0, 0, 0), ph);
-    expect(ctx.camera.position.z).toBeLessThan(2);
-    expect(cam.currentDistance).toBeLessThan(2.2);
+    // Either in front of the wall or risen above it (looking down) — never inside it.
+    const c = ctx.camera.position;
+    expect(c.z < 2 || c.y > 4.1).toBe(true);
+    expect(c.z > 2 && c.z < 2.3 && c.y < 4.1).toBe(false);
     // wall removed → eases back out
     ph.clear();
     for (let i = 0; i < 240; i++) cam.update(1 / 60, V(0, 0, 0), ph);
     expect(cam.currentDistance).toBeCloseTo(6, 1);
+  });
+
+  it('pulls in close under a wall too tall to rise over', () => {
+    const ctx = ctxWith();
+    const ph = createPhysics();
+    ph.addBox(V(-10, 0, 2), V(10, 40, 2.3), { kind: 'wall' });
+    const cam = createFollowCamera(ctx, fakeInput());
+    cam.yaw = 0; cam.pitch = 0.25; cam.distance = 6;
+    for (let i = 0; i < 30; i++) cam.update(1 / 60, V(0, 0, 0), ph);
+    expect(ctx.camera.position.z).toBeLessThan(2);
+    expect(cam.currentDistance).toBeLessThan(3);
   });
 
   it('auto-follows a strafing player but not one running at the camera', () => {

@@ -2,6 +2,7 @@
 // OfflineAudioContext and returns the PCM so a test can measure it and write WAV files.
 import { createBaker } from '/src/audio/baker.js';
 import { createEngine } from '/src/audio/engine.js';
+import { BEDS } from '/src/audio/ambience.js';
 
 const baker = createBaker();
 
@@ -23,7 +24,7 @@ window.__renderOffline = async (spec) => {
   const seconds = spec.seconds ?? 3;
   const sr = spec.sampleRate ?? 44100;
   const oac = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr);
-  const engine = createEngine(oac, { quality: spec.quality || 'medium', baker });
+  const engine = createEngine(oac, { quality: spec.quality || 'medium', baker, reverb: !spec.noReverb });
   const pre = new Set(spec.preload || []);
   if (spec.sounds?.length) pre.add('sfx');
   if (spec.steps?.length) pre.add('footsteps');
@@ -32,12 +33,16 @@ window.__renderOffline = async (spec) => {
   const t0 = performance.now();
   await engine.preload([...pre]);
   const bakeMs = performance.now() - t0;
+  // profiling: keep only some layer kinds of the bed (restored after rendering)
+  const saved = spec.zone && BEDS[spec.zone] ? BEDS[spec.zone] : null;
+  if (saved && spec.bedKinds) BEDS[spec.zone] = saved.filter((l) => spec.bedKinds.some((k) => k in l));
   const L = spec.listener || { x: 0, y: 0, z: 0, yaw: 0 };
   engine.setListener(L, { x: Math.sin(L.yaw || 0), y: 0, z: Math.cos(L.yaw || 0) });
   engine.setZone(spec.zone ?? 'none', 0.05);
   if (spec.noAmbience) engine.ambience.set('none', 0.01);
   if (spec.music) {
     if (spec.solo) for (const name of engine.music.instruments) if (!spec.solo.includes(name)) engine.music.setInstrumentMuted(name, true);
+    if (spec.only) for (const name of engine.music.instruments) if (!spec.only.includes(name)) engine.music.setInstrumentEnabled(name, false);
     engine.music.set('worship');
     await new Promise((r) => setTimeout(r, 0));
   }
@@ -45,14 +50,15 @@ window.__renderOffline = async (spec) => {
   for (const st of spec.steps || []) engine.footstep(st.surface, { run: st.run, when: st.at, position: st.position });
   // Drive the engine exactly like the live clock does: suspend every 0.25 s of audio time and
   // schedule only a short lookahead, so node counts and voice stealing match real play.
-  const TICK = 0.25;
-  engine.pump(0.35);
+  const TICK = spec.tick ?? 0.25;
+  engine.pump(TICK + 0.1);
   for (let t = TICK; t < seconds; t += TICK) {
-    oac.suspend(t).then(() => { engine.pump(0.35); oac.resume(); });
+    oac.suspend(t).then(() => { engine.pump(TICK + 0.1); oac.resume(); });
   }
   const t1 = performance.now();
   const buf = await oac.startRendering();
   const renderMs = performance.now() - t1;
+  if (saved) BEDS[spec.zone] = saved;
   const chans = [buf.getChannelData(0), buf.getChannelData(1)];
   let peak = 0, sum = 0;
   for (const c of chans) for (let i = 0; i < c.length; i++) { const v = Math.abs(c[i]); if (v > peak) peak = v; sum += c[i] * c[i]; }

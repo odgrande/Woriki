@@ -110,6 +110,8 @@
   font-variant-numeric: tabular-nums;
 }
 .ac-chip .ac-icon { width: 14px; height: 14px; }
+.ac-star { fill: var(--yellow); stroke: var(--ink); }
+.ac-chip .ac-star { width: 15px; height: 15px; }
 .ac-chip.is-yellow { background: var(--yellow); }
 .ac-chip.is-green { background: var(--green); }
 .ac-chip.is-pink { background: var(--pink); }
@@ -161,7 +163,7 @@
 .ac-bar.is-low .ac-icon { color: var(--red); animation: ac-pulse 1.4s ease-in-out infinite; }
 .ac-bar-num { display: none; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 20px; text-align: right; }
 
-.ac-hud-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ac-hud-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-left: auto; }
 .ac-online-slot:empty { display: none; }
 .ac-online { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 1px 8px; border: 1.5px solid var(--ink); border-radius: var(--r-pill); background: var(--green); font-size: 12px; font-weight: 800; box-shadow: 1px 1px 0 var(--ink); font-variant-numeric: tabular-nums; }
 .ac-online i { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; border: 1.5px solid var(--ink); }
@@ -170,9 +172,9 @@
 
 /* Status banner (next service / live attendance / prayer / shift) */
 .ac-banner {
-  position: fixed; z-index: 26; left: 50%; transform: translateX(-50%);
+  position: fixed; z-index: 26; left: calc(8px + var(--safe-l));
   top: calc(var(--ac-hud-h, 92px) + 14px + var(--safe-t));
-  display: flex; align-items: center; gap: 8px; max-width: calc(100% - 24px);
+  display: flex; align-items: center; gap: 8px; max-width: calc(100% - 70px - var(--safe-l) - var(--safe-r));
   padding: 6px 12px 6px 8px; border: var(--b); border-radius: var(--r-pill); background: var(--white);
   box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 700; color: var(--ink);
   transition: background .2s;
@@ -302,7 +304,8 @@
 .ac-wallet > div { padding: 10px 12px; border: var(--b); border-radius: var(--r-md); background: var(--white); box-shadow: var(--shadow-sm); }
 .ac-wallet > div:last-child { background: var(--yellow); }
 .ac-wallet span { display: block; font-size: 12px; font-weight: 600; color: var(--zinc-600); }
-.ac-wallet strong { font-family: var(--head); font-size: 22px; color: var(--ink); }
+.ac-wallet strong { display: flex; align-items: center; gap: 4px; font-family: var(--head); font-size: 22px; color: var(--ink); }
+.ac-wallet strong .ac-star { width: 20px; height: 20px; fill: var(--white); }
 .ac-act.is-owned { background: var(--green); }
 .ac-act.is-owned .ac-act-desc { color: var(--ink-2); }
 .ac-price { font-family: var(--head); font-weight: 700; font-size: 14px; white-space: nowrap; }
@@ -360,6 +363,7 @@
 .ac-keys td { padding: 7px 4px; border-bottom: 1.5px dashed var(--zinc-300); font-weight: 600; vertical-align: middle; }
 .ac-keys td:first-child { white-space: nowrap; width: 44%; }
 .ac-keys-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 12px; text-align: left; }
+.ac-keys-grid.is-touch .ac-keys-touch { order: -1; }
 .ac-keys-grid h4 { font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .amen-ui kbd { display: inline-block; min-width: 26px; padding: 2px 6px; border: var(--b); border-radius: 6px; background: var(--white); box-shadow: 2px 2px 0 var(--ink); font: 700 12px/1.4 var(--head); text-align: center; color: var(--ink); }
 
@@ -377,7 +381,7 @@
 .ac-switch button[aria-checked="true"]::after { transform: translateX(26px); }
 
 /* ------------------------------------------------------------------ toasts */
-.ac-toasts { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); top: calc(var(--ac-hud-h, 92px) + 58px + var(--safe-t)); width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.ac-toasts { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); top: calc(var(--ac-hud-h, 92px) + 64px + var(--safe-t)); width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .ac-toast {
   display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border: var(--b); border-radius: var(--r-md);
   background: var(--ink-2); color: var(--white); box-shadow: 3px 3px 0 0 var(--yellow); font-size: 13.5px; font-weight: 600; line-height: 1.35;
@@ -411,6 +415,7 @@
 
 /* ------------------------------------------------------------------ larger screens */
 @media (min-width: 600px) {
+  .ac-banner { left: 50%; transform: translateX(-50%); max-width: calc(100% - 140px); }
   .ac-hud-chips .ac-chip { font-size: 13px; }
   .ac-mood .ac-mood-label { display: inline; }
   .ac-who { display: block; }

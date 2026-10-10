@@ -110,8 +110,8 @@ describe('bar events', () => {
   it('lists every sampled note needed, in range', () => {
     const n = notesNeeded();
     expect(n.ep.length).toBeGreaterThan(5);
-    expect(Math.min(...n.ep)).toBeGreaterThanOrEqual(62);
-    expect(Math.max(...n.ep)).toBeLessThanOrEqual(81);
+    expect(Math.min(...n.ep)).toBeGreaterThanOrEqual(66);
+    expect(Math.max(...n.ep)).toBeLessThanOrEqual(84);
     expect(Math.min(...n.bass)).toBeGreaterThanOrEqual(38);
     expect(Math.max(...n.bass)).toBeLessThanOrEqual(64);
     expect(Math.min(...n.guitar)).toBeGreaterThanOrEqual(57);

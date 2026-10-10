@@ -101,9 +101,27 @@ export function createNav(nodes, edges, opts = {}) {
     return null;
   }
 
+  const insideAny = (x, z, grow) => blockers.some((k) => x > k.x0 - grow && x < k.x1 + grow && z > k.z0 - grow && z < k.z1 + grow);
+  /**
+   * When `p` lies inside a blocker footprint (a seat inside its pew, a spot behind a counter edge),
+   * the point just outside its nearest free face, else null. Paths go through it so walkers
+   * approach a pew seat from the row gap in front of it, not through the backrest.
+   */
+  function exitPoint(p, margin = 0.32) {
+    const k = blockers.find((b) => p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1);
+    if (!k) return null;
+    const faces = [
+      [p.x - k.x0, k.x0 - margin, p.z], [k.x1 - p.x, k.x1 + margin, p.z],
+      [p.z - k.z0, p.x, k.z0 - margin], [k.z1 - p.z, p.x, k.z1 + margin],
+    ].sort((a, b) => a[0] - b[0]);
+    for (const [, x, z] of faces) if (!insideAny(x, z, 0.2)) return { x, z };
+    return { x: faces[0][1], z: faces[0][2] };
+  }
+
   return {
     nodes, edges,
     nearest,
+    exitPoint,
     /** Random node (optionally inside a zone). */
     randomNode(zone, rnd = Math.random) {
       const list = zone ? nodes.filter((n) => n.zone === zone && adj[n.id].length) : nodes.filter((n) => adj[n.id].length);
@@ -111,16 +129,23 @@ export function createNav(nodes, edges, opts = {}) {
     },
     /** Waypoints from `from` to `to` (excludes the start, ends exactly at `to`). Empty if unreachable. */
     path(from, to) {
-      if (clearLine(from, to, blockers, 0.25) && d(from, to) < 12) return [vec(to.x, to.y ?? 0, to.z)];
-      const s = nearest(from), g = nearest(to);
+      const end = vec(to.x, to.y ?? 0, to.z);
+      // leave / reach points inside furniture (pew seats, benches) through their nearest open face
+      const exA = exitPoint(from), exB = exitPoint(to);
+      const a = exA || from, b = exB || to;
+      const head = exA ? [vec(exA.x, from.y ?? 0, exA.z)] : [];
+      const tail = exB ? [vec(exB.x, to.y ?? 0, exB.z), end] : [end];
+      if (clearLine(a, b, blockers, 0.25) && d(a, b) < 12) return [...head, ...tail];
+      const s = nearest(a), g = nearest(b);
       if (s < 0 || g < 0) return [];
       const ids = astar(s, g);
       if (!ids) return [];
       const pts = ids.map((i) => vec(nodes[i].position.x, nodes[i].position.y, nodes[i].position.z));
       // skip the first node if we can already see the second one
-      if (pts.length > 1 && clearLine(from, pts[1], blockers, 0.3)) pts.shift();
-      pts.push(vec(to.x, to.y ?? 0, to.z));
-      return pts;
+      if (pts.length > 1 && clearLine(a, pts[1], blockers, 0.3)) pts.shift();
+      // skip the last node if the goal is visible from the one before it
+      if (pts.length > 1 && clearLine(pts[pts.length - 2], b, blockers, 0.3)) pts.pop();
+      return [...head, ...pts, ...tail];
     },
   };
 }

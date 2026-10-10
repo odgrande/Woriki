@@ -114,6 +114,7 @@ export function buildMarket(W) {
     for (let x = x0; x <= x1 + 0.01; x += (x1 - x0) / 4) { posts.push([x, z0]); posts.push([x, z1]); }
     for (const [x, z] of posts) { B.box('wood', x, 1.4, z, 0.12, 2.8, 0.12, { color: '#5b4330' }); W.cylinder(x, z, 0.08, 2.8); }
     shedRoof(W, x0 - 0.5, z0 - 0.6, x1 + 0.5, z1 + 0.4, 3.0, 2.7, { color: '#7d7f7a', dir: 1 });
+    W.collide(x0 - 0.5, 2.7, z0 - 0.6, x1 + 0.5, 3.0, z1 + 0.4, 'roof');
     // plank half walls on the back and sides
     B.boxMM('wood', x0, 0, z1 - 0.04, x1, 1.1, z1 + 0.04, { color: '#7a5a3a' });
     B.boxMM('wood', x0 - 0.04, 0, z0 + 1.6, x0 + 0.04, 1.1, z1, { color: '#7a5a3a' });

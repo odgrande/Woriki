@@ -17,7 +17,24 @@ import { buildEdges, createNav } from './nav.js';
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 /** Kinds of collider the follow camera should not pass through. */
-const CAMERA_BLOCKING = new Set(['wall', 'building', 'fence', 'gate', 'pillar', 'kiosk']);
+export const CAMERA_BLOCKING = new Set(['wall', 'building', 'fence', 'gate', 'pillar', 'kiosk', 'ceiling', 'roof']);
+/** Kinds that only exist for the camera (above head height: rooms' ceilings and roof spaces). */
+const OVERHEAD = new Set(['ceiling', 'roof']);
+
+/**
+ * Register the builder's colliders with a physics world (see ARCHITECTURE.md → Collisions).
+ * Nothing in the map is meant to be stood on (raised floors come from `groundAt`), so every
+ * collider is non-walkable; only walls, fences, buildings, ceilings and roofs block the camera.
+ * @param {{addBox:Function, addCylinder:Function}} physics
+ * @param {any[]} colliders from createState().col
+ */
+export function registerColliders(physics, colliders) {
+  for (const c of colliders) {
+    const o = { kind: c.kind, camera: CAMERA_BLOCKING.has(c.kind), walkable: false };
+    if (c.cyl) physics.addCylinder(V(c.x, 0, c.z), c.r, c.h, o);
+    else physics.addBox(V(c.x0, c.y0, c.z0), V(c.x1, c.y1, c.z1), o);
+  }
+}
 
 /**
  * Builder state shared by the area builders (pure data + geometry batches; no GPU work).
@@ -202,22 +219,17 @@ export async function buildWorld(ctx, physics) {
   const bellState = { swing: 0 };
 
   // ---------------------------------------------------------------- physics
-  for (const c of colliders) {
-    if (c.cyl) physics.addCylinder(V(c.x, 0, c.z), c.r, c.h);
-    else physics.addBox(V(c.x0, c.y0, c.z0), V(c.x1, c.y1, c.z1), { kind: c.kind });
-  }
+  registerColliders(physics, colliders);
   physics.setGround(groundAt);
-  // invisible camera blockers: merged boxes of walls / buildings / fences
-  const blockGeos = colliders.filter((c) => !c.cyl && CAMERA_BLOCKING.has(c.kind)).map((c) => {
+  // Invisible mesh blockers for cameras that raycast meshes: only the overhead volumes
+  // (ceilings, roof spaces). Walls are already camera colliders in `physics`, and a small
+  // mesh keeps the per-frame raycast cheap on phones.
+  const blockGeos = colliders.filter((c) => !c.cyl && OVERHEAD.has(c.kind)).map((c) => {
     const g = new THREE.BoxGeometry(c.x1 - c.x0, c.y1 - c.y0, c.z1 - c.z0);
     g.translate((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2, (c.z0 + c.z1) / 2);
     g.deleteAttribute('uv'); g.deleteAttribute('normal');
     return g;
   });
-  // ceilings / roofs count as blockers too so the camera stays inside rooms
-  for (const [x0, z0, x1, z1, y] of [[HALL.x0, HALL.z0, HALL.x1, HALL.z1, HALL.ceil]]) {
-    const g = new THREE.BoxGeometry(x1 - x0, 0.1, z1 - z0); g.translate((x0 + x1) / 2, y + 0.05, (z0 + z1) / 2); g.deleteAttribute('uv'); g.deleteAttribute('normal'); blockGeos.push(g);
-  }
   const blocker = new THREE.Mesh(mergeGeometries(blockGeos, false), new THREE.MeshBasicMaterial({ visible: false }));
   blocker.name = 'world:camera-blockers';
   blocker.visible = false;

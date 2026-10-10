@@ -112,6 +112,7 @@ function buildBusStop(W) {
     }
   }
   shedRoof(W, x0 - 0.4, z0 - 0.4, x1 + 0.4, z1 + 0.3, 2.95, 2.75, { color: '#2c5d8f', dir: 0 });
+  W.collide(x0 - 0.4, 2.75, z0 - 0.4, x1 + 0.4, 2.95, z1 + 0.3, 'roof');
   B.box('metal', (x0 + x1) / 2, 2.73, z0 - 0.4, x1 - x0 + 0.8, 0.12, 0.06, { color: '#1d3f66', uv: 'keep' });
   // back panel with adverts
   B.box('metal', (x0 + x1) / 2, 1.4, z1 - 0.05, x1 - x0 - 0.4, 1.6, 0.05, { color: '#d8d6d0' });

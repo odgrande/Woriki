@@ -18,6 +18,16 @@ export function createNameTags({ camera, root, canvas, max = 12, maxDistance = 3
   const v = new THREE.Vector3();
   const camPos = new THREE.Vector3();
 
+  /** Width / height of a tag (pill + bubble), read once per content change. */
+  function measure(t) {
+    const wasShown = t.el.classList.contains('on');
+    if (!wasShown) t.el.classList.add('on');
+    const say = !t.sayEl.hidden;
+    t.w = Math.max(t.pillEl.offsetWidth, say ? t.sayEl.offsetWidth : 0) || 90;
+    t.h = (t.pillEl.offsetHeight || 20) + (say ? t.sayEl.offsetHeight + 10 : 0);
+    if (!wasShown) t.el.classList.remove('on');
+  }
+
   function setContent(tag, { name, role }) {
     tag.w = 0; // re-measure
     if (name !== undefined) tag.nameEl.textContent = name;
@@ -40,6 +50,7 @@ export function createNameTags({ camera, root, canvas, max = 12, maxDistance = 3
       const tag = {
         el, object, height, enabled: true, shown: false, sayUntil: 0, x: NaN, y: NaN, s: NaN, o: NaN, w: 0,
         nameEl: el.querySelector('.nt-name'), roleEl: el.querySelector('.nt-role'), sayEl: el.querySelector('.nt-say'),
+        pillEl: el.querySelector('.nt-pill'), h: 20,
       };
       setContent(tag, { name, role });
       layer.appendChild(el);
@@ -90,7 +101,23 @@ export function createNameTags({ camera, root, canvas, max = 12, maxDistance = 3
       }
       // Speakers first, then nearest.
       cands.sort((a, b) => (b.sayUntil ? 1 : 0) - (a.sayUntil ? 1 : 0) || a.d - b.d);
-      const show = new Set(cands.slice(0, max));
+      const shown = cands.slice(0, max);
+      const show = new Set(shown);
+      // Declutter: nearer tags keep their spot, farther ones step up above whatever they would overlap
+      // (a tag's box is its pill plus its speech bubble, measured when the content changes).
+      const placed = [];
+      for (const t of shown) {
+        if (!t.w) measure(t);
+        const hw = t.w * 0.5 + 4;
+        let y = t.py;
+        for (let k = 0; k < 5; k++) {
+          const hit = placed.find((p) => Math.abs(p.x - t.px) < p.hw + hw && y > p.top && y - t.h < p.y);
+          if (!hit) break;
+          y = hit.top - 3;
+        }
+        t.py = y;
+        placed.push({ x: t.px, y, top: y - t.h, hw });
+      }
       for (const t of tags.values()) {
         const on = show.has(t);
         if (on !== t.shown) { t.shown = on; t.el.classList.toggle('on', on); }
@@ -98,7 +125,7 @@ export function createNameTags({ camera, root, canvas, max = 12, maxDistance = 3
         const s = Math.max(0.72, Math.min(1, 1.12 - t.d / 28));
         const o = t.d > maxDistance * 0.7 && !t.sayUntil ? Math.max(0, 1 - (t.d - maxDistance * 0.7) / (maxDistance * 0.3)) : 1;
         // Keep the pill / bubble readable at the screen edges (width measured once per content change).
-        if (!t.w) t.w = Math.max(t.el.querySelector('.nt-pill').offsetWidth, t.sayEl.hidden ? 0 : t.sayEl.offsetWidth);
+        if (!t.w) measure(t);
         const half = (t.w * s) / 2 + 6;
         const x = Math.round(Math.max(half, Math.min(w - half, t.px))), y = Math.round(Math.max(t.sayUntil ? 120 : 28, t.py));
         if (x !== t.x || y !== t.y || Math.abs(s - t.s) > 0.01) {

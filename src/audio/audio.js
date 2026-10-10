@@ -41,8 +41,8 @@ export function createAudio(ctx = {}, opts = {}) {
 
   // Bake the small, early sounds right away (in the worker) so the first click and the
   // first footsteps are ready by the time the player has picked a role.
-  for (const [r, a] of ESSENTIAL) baker.load(r, a).catch(() => {});
-  for (const s of ['asphalt', 'concrete', 'tile']) baker.load('footsteps', { surface: s, run: false }).catch(() => {});
+  for (const [r, a] of ESSENTIAL) baker.load(r, a, 1).catch(() => {});
+  for (const s of ['asphalt', 'concrete', 'tile']) baker.load('footsteps', { surface: s, run: false }, 1).catch(() => {});
 
   function running() { return !!engine && ac.state === 'running'; }
 
@@ -71,8 +71,11 @@ export function createAudio(ctx = {}, opts = {}) {
     if (musicTrack !== 'none') engine.music.set(musicTrack);
     timer = setInterval(tick, TICK_MS);
     document.addEventListener('visibilitychange', onVisibility);
-    // the rest in the background: every footstep surface, all sounds, all beds, then music
-    engine.preload(['footsteps', 'sfx', engine.zone.ambience]).then(() => engine.preload(['street', 'church', 'market', 'home', 'prayer'])).catch(() => {});
+    // the rest in the background, most useful first: footsteps, sounds and the current bed,
+    // then the service music, then the other beds
+    engine.preload(['footsteps', 'sfx', engine.zone.ambience], 1).catch(() => {});
+    engine.preload(['music'], 0).catch(() => {});
+    engine.preload(['street', 'church', 'market', 'home', 'prayer'], 0).catch(() => {});
     return true;
   }
 

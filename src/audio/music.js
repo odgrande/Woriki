@@ -45,32 +45,31 @@ export function createMusic(engine) {
     ch[name] = g;
   }
 
-  // EP: gentle stereo autopan (suitcase tremolo)
   const lfoNodes = [];
-  if (ac.createStereoPanner) {
+  const lfo = (hz) => { const o = ac.createOscillator(); o.frequency.value = hz; lfoNodes.push(o); return o; };
+  const high = engine.quality === 'high';
+
+  // EP: gentle stereo autopan (suitcase tremolo) — per-sample panning, so high tier only
+  if (high && ac.createStereoPanner) {
     const ap = ac.createStereoPanner();
     ch.ep.disconnect(); ch.ep.connect(ap); ap.connect(output);
-    const lfo = ac.createOscillator(); lfo.frequency.value = 4.2;
     const d = ac.createGain(); d.gain.value = 0.22;
-    lfo.connect(d); d.connect(ap.pan); lfoNodes.push(lfo);
+    lfo(4.2).connect(d); d.connect(ap.pan);
   }
 
-  // Organ: drawbar registration 88 6400 000-ish on a 16' fundamental, slow Leslie
+  // Organ: drawbar registration (16' 8' 5⅓' 4' 2⅔' 2') with a slow Leslie as amplitude
+  // tremolo on the whole bus (one modulated gain instead of per-note pitch modulation)
   const organWave = (() => {
     const imag = new Float32Array([0, 0.75, 1.0, 0.55, 0.42, 0, 0.18, 0, 0.14]);
     return ac.createPeriodicWave(new Float32Array(imag.length), imag, { disableNormalization: false });
   })();
-  const leslie = ac.createOscillator(); leslie.frequency.value = 0.85; lfoNodes.push(leslie);
-  const leslieDetune = ac.createGain(); leslieDetune.gain.value = 6; leslie.connect(leslieDetune);
-  const organTrem = ac.createGain(); organTrem.gain.value = 1;
-  ch.organ.disconnect(); ch.organ.connect(organTrem);
-  if (ac.createStereoPanner) {
-    const op = ac.createStereoPanner(); organTrem.connect(op); op.connect(output);
-    const pd = ac.createGain(); pd.gain.value = 0.3; leslie.connect(pd); pd.connect(op.pan);
-  } else organTrem.connect(output);
-  const tremDepth = ac.createGain(); tremDepth.gain.value = 0.12; leslie.connect(tremDepth); tremDepth.connect(organTrem.gain);
+  const organTrem = ac.createGain(); organTrem.gain.value = 0.9;
+  ch.organ.disconnect(); ch.organ.connect(organTrem); organTrem.connect(output);
+  const tremDepth = ac.createGain(); tremDepth.gain.value = 0.1;
+  lfo(0.85).connect(tremDepth); tremDepth.connect(organTrem.gain);
 
-  // Choir: formant bank ("aah") + Haas widening
+  // Choir: formant bank ("aah"), then an ensemble: two slowly modulated delay lines give
+  // every voice pitch vibrato and spread it left/right (one modulation for the whole choir)
   const choirIn = ac.createGain(); choirIn.gain.value = 1;
   const choirSum = ac.createGain(); choirSum.gain.value = 1;
   const formants = [[700, 7, 1.0], [1150, 10, 0.55], [2700, 16, 0.32]];
@@ -86,16 +85,15 @@ export function createMusic(engine) {
   choirSum.connect(ch.choir);
   if (ac.createChannelMerger) {
     const merger = ac.createChannelMerger(2);
-    const delay = ac.createDelay(0.05); delay.delayTime.value = 0.013;
-    ch.choir.connect(merger, 0, 0);
-    ch.choir.connect(delay); delay.connect(merger, 0, 1);
+    [[0.012, 5.1, 0], [0.019, 5.7, 1]].forEach(([base, hz, side]) => {
+      const dl = ac.createDelay(0.05); dl.delayTime.value = base;
+      const depth = ac.createGain(); depth.gain.value = 0.00022; // ±0.22 ms → about ±12 cents at 5 Hz
+      lfo(hz).connect(depth); depth.connect(dl.delayTime);
+      ch.choir.connect(dl); dl.connect(merger, 0, side);
+    });
     merger.connect(output);
   } else ch.choir.connect(output);
-  const vib1 = ac.createOscillator(); vib1.frequency.value = 5.1;
-  const vib2 = ac.createOscillator(); vib2.frequency.value = 5.8;
-  const vibD1 = ac.createGain(); vibD1.gain.value = 14; vib1.connect(vibD1);
-  const vibD2 = ac.createGain(); vibD2.gain.value = 11; vib2.connect(vibD2);
-  lfoNodes.push(vib1, vib2);
+
   let lfosStarted = false;
   function startLfos() {
     if (lfosStarted) return;
@@ -103,24 +101,24 @@ export function createMusic(engine) {
     for (const o of lfoNodes) o.start(ac.currentTime);
   }
 
+  /** Per-note envelopes only need block-rate precision: much cheaper on phones. */
+  const kRate = (param) => { try { param.automationRate = 'k-rate'; } catch { /* older engines */ } };
+
   // ---- samples ---------------------------------------------------------------
   const samples = { ep: new Map(), bass: new Map(), guitar: new Map(), kick: null, clap: null, shaker: null, conga: null, talking: null };
   let loading = null;
   let loaded = false;
 
-  function load() {
-    if (loading) return loading;
-    const need = notesNeeded();
+  const need = notesNeeded();
+  const drumRecipes = [['kick', 'kick'], ['clap', 'crowdClap'], ['shaker', 'shaker'], ['conga', 'conga'], ['talking', 'talkingDrum']];
+  /** Bake every sample the groove needs (re-calling with a higher priority bumps queued jobs). */
+  function load(priority = 1) {
     const jobs = [];
     for (const inst of ['ep', 'bass', 'guitar']) {
-      for (const m of need[inst]) jobs.push(baker.load(inst, { midi: m }).then((b) => samples[inst].set(m, b[0])));
+      for (const m of need[inst]) jobs.push(baker.load(inst, { midi: m }, priority).then((b) => samples[inst].set(m, b[0])));
     }
-    jobs.push(baker.load('kick').then((b) => { samples.kick = b; }));
-    jobs.push(baker.load('crowdClap').then((b) => { samples.clap = b; }));
-    jobs.push(baker.load('shaker').then((b) => { samples.shaker = b; }));
-    jobs.push(baker.load('conga').then((b) => { samples.conga = b; }));
-    jobs.push(baker.load('talkingDrum').then((b) => { samples.talking = b; }));
-    loading = Promise.all(jobs).then(() => { loaded = true; });
+    for (const [slot, recipe] of drumRecipes) jobs.push(baker.load(recipe, undefined, priority).then((b) => { samples[slot] = b; }));
+    if (!loading) loading = Promise.all(jobs).then(() => { loaded = true; });
     return loading;
   }
 
@@ -133,6 +131,7 @@ export function createMusic(engine) {
     src.buffer = buf;
     if (rate !== 1) src.playbackRate.value = rate;
     const g = ac.createGain();
+    kRate(g.gain);
     g.gain.value = velGain(vel);
     src.connect(g); g.connect(ch[inst]);
     const rel = RELEASE[inst];
@@ -151,8 +150,8 @@ export function createMusic(engine) {
     const o = ac.createOscillator();
     o.setPeriodicWave(organWave);
     o.frequency.value = mtof(midi) / 2;
-    leslieDetune.connect(o.detune);
     const g = ac.createGain();
+    kRate(g.gain);
     g.gain.setValueAtTime(0, when);
     g.gain.linearRampToValueAtTime(velGain(vel), when + 0.012);
     g.gain.setValueAtTime(velGain(vel), when + durSec);
@@ -160,11 +159,12 @@ export function createMusic(engine) {
     o.connect(g); g.connect(ch.organ);
     o.start(when); o.stop(when + durSec + 0.4);
     liveOsc.add(o);
-    o.onended = () => { liveOsc.delete(o); try { leslieDetune.disconnect(o.detune); } catch { /* ignore */ } try { g.disconnect(); } catch { /* ignore */ } };
+    o.onended = () => { liveOsc.delete(o); try { g.disconnect(); } catch { /* ignore */ } };
   }
 
   function choirNote(midi, when, durSec, vel) {
     const g = ac.createGain();
+    kRate(g.gain);
     const peak = velGain(vel) * 0.5;
     g.gain.setValueAtTime(0, when);
     g.gain.linearRampToValueAtTime(peak, when + 0.35);
@@ -172,16 +172,15 @@ export function createMusic(engine) {
     g.gain.setTargetAtTime(0, when + durSec, 0.18);
     g.connect(choirIn);
     const voices = low ? [0] : [-7, 7];
-    voices.forEach((cents, k) => {
+    voices.forEach((cents) => {
       const o = ac.createOscillator();
       o.type = 'sawtooth';
       o.frequency.value = mtof(midi);
       o.detune.value = cents;
-      (k ? vibD2 : vibD1).connect(o.detune);
       o.connect(g);
       o.start(when); o.stop(when + durSec + 1.3);
       liveOsc.add(o);
-      o.onended = () => { liveOsc.delete(o); try { (k ? vibD2 : vibD1).disconnect(o.detune); } catch { /* ignore */ } try { g.disconnect(); } catch { /* ignore */ } };
+      o.onended = () => { liveOsc.delete(o); try { g.disconnect(); } catch { /* ignore */ } };
     });
   }
 
@@ -192,7 +191,9 @@ export function createMusic(engine) {
     return best;
   }
 
+  const disabled = new Set();
   function schedule(e, when) {
+    if (disabled.has(e.inst)) return;
     const durSec = e.dur * STEP_SECONDS;
     switch (e.inst) {
       case 'organ': organNote(e.midi, when, durSec, e.vel); break;
@@ -248,6 +249,8 @@ export function createMusic(engine) {
       if (!ch[name]) return;
       engine.glide(ch[name].gain, m ? 0 : MIX[name].gain, 0.03);
     },
+    /** Stop scheduling an instrument entirely (saves CPU; used by tests and for profiling). */
+    setInstrumentEnabled(name, on) { if (on) disabled.delete(name); else disabled.add(name); },
     /** Position for debugging: {bar, step}. */
     get position() { return { bar, step }; },
     set(track) {
@@ -261,7 +264,7 @@ export function createMusic(engine) {
           output.gain.setValueAtTime(output.gain.value, t);
           output.gain.linearRampToValueAtTime(1, t + 1.5);
         } else if (!playing) {
-          load().then(() => { if (want && !playing) begin(); }).catch(() => {});
+          load(2).then(() => { if (want && !playing) begin(); }).catch(() => {});
         }
       } else {
         want = false;

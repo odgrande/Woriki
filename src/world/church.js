@@ -5,11 +5,12 @@ import * as THREE from 'three';
 import { mat, quad4, rectUV } from './geo.js';
 import { wall, gableRoof, hipRoof, fence, signboard, wallText } from './buildings.js';
 import { atlasBox, lathe } from './props.js';
-import { CHURCH, HALL, ALTAR, CHOIR, MEDIA, PRAYER, CANTEEN, KIDS, CARPARK, SECPOST } from './layout.js';
+import { CHURCH, HALL, ALTAR, CHOIR, MEDIA, PRAYER, CANTEEN, KIDS, CARPARK, SECPOST, PEWS } from './layout.js';
 import { rng } from './noise.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const WHITE = '#f6f2e7', BLUE = '#2f5d9a', CREAM = '#f1e7cf';
+const { rows: PEW_ROWS, z0: PEW_Z0, step: PEW_STEP } = PEWS;
 
 export function buildChurch(W) {
   const { b: B, P, S } = W;
@@ -96,6 +97,7 @@ function buildSecurityPost(W) {
   wall(W, 'z', z0, z1, x0, { ...o, out: -1, openings: [{ a: z0 + 0.5, b: z1 - 0.5, y0: 1.0, y1: 2.1, type: 'window', win: 'win-slide', grille: '#1e3f73' }] });
   wall(W, 'z', z0, z1, x1, { ...o, out: 1 });
   B.boxMM('concrete', x0 - 0.5, h, z0 - 0.5, x1 + 0.5, h + 0.18, z1 + 0.5, { color: '#d6d0c2' });
+  W.collide(x0 - 0.5, h, z0 - 0.5, x1 + 0.5, h + 0.18, z1 + 0.5, 'roof');
   B.boxMM('tiles', x0, 0, z0, x1, 0.02, z1, { color: '#d8cfc0' });
   B.boxMM('plaster', x0 - 0.02, 0, z0 - 0.02, x1 + 0.02, 0.5, z1 + 0.02, { color: BLUE });
   signboard(W, 'security', x0 - 0.13, 2.38, (z0 + z1) / 2, 1.2, -Math.PI / 2, { back: false });
@@ -160,6 +162,8 @@ function buildHall(W, r) {
   B.boxMM('ceiling', x0, HALL.ceil, z0, x1, HALL.ceil + 0.05, z1, { color: '#f7f6f1' });
   for (const z of [-26, -32, -38]) B.boxMM('paint', x0, HALL.ceil - 0.06, z - 0.06, x1, HALL.ceil, z + 0.06, { color: '#d9d4c7', uv: 'keep' });
   gableRoof(W, x0, z0, x1, z1, h, 3.6, 'z', { color: '#7b2b27', wallColor: WHITE, overhang: 0.7, fascia: '#efe9dc' });
+  W.collide(x0, HALL.ceil, z0, x1, HALL.ceil + 0.1, z1, 'ceiling');
+  W.collide(x0 + 2, h, z0, x1 - 2, h + 2.2, z1, 'roof');
   // facade: cross on the gable, name, porch
   B.box('plaster', cx, h + 4.4, z1 + 0.25, 0.3, 2.2, 0.2, { color: WHITE });
   B.box('plaster', cx, h + 4.9, z1 + 0.25, 1.3, 0.3, 0.2, { color: WHITE });
@@ -284,13 +288,15 @@ function buildHall(W, r) {
   B.add('props', atlasBox(0.5, 0.5, 0.05, { all: P.black, nz: P.clock }), { m: mat(cx, 4.4, z1 - 0.17) });
   for (const [x, z, ry] of [[x0 + 0.24, -30.2, Math.PI / 2], [x0 + 0.24, -37.8, Math.PI / 2], [x1 - 0.24, -30.2, -Math.PI / 2], [x1 - 0.24, -37.8, -Math.PI / 2]]) W.inst('ac', mat(x, 4.8, z, ry));
 
-  // pews: 4 blocks × 8 rows, sitters face the altar (−Z)
-  const blocks = [[6.0, 11.4], [12.6, 18.0], [20.0, 25.4], [26.6, 32.0]];
-  for (let k = 0; k < 8; k++) {
-    const z = -33.8 + k * 1.2;
+  // pews: 4 blocks × 8 rows, sitters face the altar (−Z). Rows are 1.32 m apart so there is a
+  // 0.7 m gap to shuffle along a row to a middle seat (the last row stops short of the media riser).
+  const blocks = PEWS.blocks;
+  for (let k = 0; k < PEW_ROWS; k++) {
+    const z = PEW_Z0 + k * PEW_STEP;
     for (const [a, bx] of blocks) {
+      if (k === PEW_ROWS - 1 && bx > MEDIA.x0) continue;
       W.inst('pew', mat((a + bx) / 2, 0, z, Math.PI));
-      W.collide(a, 0, z - 0.3, bx, 1.05, z + 0.32, 'furniture');
+      W.collide(a, 0, z - 0.25, bx, 1.05, z + 0.36, 'furniture');
       for (let i = 0; i < 7; i++) W.seat(a + 0.48 + i * 0.74, 0.47, z - 0.02, Math.PI, 'pew', 'church-hall');
     }
   }
@@ -378,6 +384,8 @@ function buildPrayerRoom(W) {
   B.boxMM('carpet', x0, 0, z0, x1, 0.025, z1, { color: '#2f5e4a' });
   B.boxMM('ceiling', x0, h - 0.2, z0, x1, h - 0.15, z1, { color: '#f7f6f1' });
   hipRoof(W, x0, z0, x1, z1, h, 2.0, { color: '#6f777a', overhang: 0.6 });
+  W.collide(x0, h - 0.2, z0, x1, h - 0.1, z1, 'ceiling');
+  W.collide(x0, h, z0, x1, h + 1.0, z1, 'roof');
   signboard(W, 'prayer', (42.0 + 43.4) / 2, 2.75, z1 + 0.14, 1.5, 0, { back: false });
   // north wall: cross and scripture
   B.box('wood', 43, 2.3, z0 + 0.16, 0.14, 1.5, 0.06, { color: '#4a2a14' });
@@ -421,6 +429,8 @@ function buildCanteen(W, r) {
   B.boxMM('tiles', x0, -0.02, z0, x1, 0.02, z1, { color: '#e3dccb' });
   B.boxMM('ceiling', x0, h - 0.2, z0, x1, h - 0.15, z1, { color: '#f7f6f1' });
   gableRoof(W, x0, z0, x1, z1, h, 1.8, 'x', { color: '#7d8588', wallColor: WHITE, overhang: 0.5 });
+  W.collide(x0, h - 0.2, z0, x1, h - 0.1, z1, 'ceiling');
+  W.collide(x0, h, z0, x1, h + 0.9, z1, 'roof');
   signboard(W, 'canteen', 41, 2.75, z1 + 0.14, 1.6, 0, { back: false });
   // counter separating the kitchen
   const cz = -27.2;
@@ -468,6 +478,7 @@ function buildKids(W) {
     for (const z of [z0 - 0.3, z1 + 0.3]) B.box('fabric', (a + bx) / 2, ya - 0.17, z, bx - a, 0.25, 0.01, { color: c, uv: 'keep' });
   }
   B.boxMM('concrete', x0 - 0.3, 0.0, z0 - 0.3, x1 + 0.3, 0.03, z1 + 0.3, { color: '#c8c2b5' });
+  W.collide(x0, ya, z0, x1, ya + 0.5, z1, 'roof');
   signboard(W, 'children', (x0 + x1) / 2, ya - 0.1, z1 + 0.33, 2.6, 0, { back: false });
   // whiteboard on an easel at the east end, kids' chairs facing it
   B.box('metal', x1 - 0.6, 0.85, zm, 0.06, 1.7, 1.2, { color: '#888', uv: 'keep' });

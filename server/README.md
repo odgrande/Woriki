@@ -111,4 +111,8 @@ the hibernation API (idle rooms cost nothing), and Cloudflare's Lagos edge cuts 
 - `hub.js`: rooms, players, resume, chat, history, reports, the 10 Hz tick (transport-agnostic).
 - `protocol.js`: constants and validators shared with the client.
 - `filter.js`: profanity masking. `ratelimit.js`: token buckets. `static.js`: tiny static file server.
-- Tests: `npx vitest run server/` (unit + an integration test that starts the server and connects real clients).
+- Tests: `npx vitest run server/ src/net/` (unit tests, a fake-clock hub test, an integration test that starts the
+  server and connects real clients, and client tests for reconnect/resume and the BroadcastChannel fallback).
+  End to end in two browser pages: `node dev/net/two-players.pw.mjs` (Playwright; starts the server and Vite if needed).
+- Dev harness: `npx vite` then open `/dev/net/index.html?name=Ada&role=choir` in two tabs with `node server/index.js`
+  running on 8790 (`PORT=8790`), or pass `&server=ws://host:port/ws`. `&bots=8&botchat=1` adds walking, chatting players.

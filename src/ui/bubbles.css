@@ -1,0 +1,41 @@
+.amen-bubbles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+}
+.amen-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: min(240px, 60vw);
+  padding: 6px 10px;
+  font: 600 13px/1.3 Inter, system-ui, sans-serif;
+  color: #000;
+  background: #fffdf7;
+  border: 2px solid #000;
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 #000;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+  word-wrap: break-word;
+}
+.amen-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  transform: translateX(-50%) rotate(45deg);
+}
+.amen-bubble b { font-family: "Space Grotesk", Inter, sans-serif; }
+.amen-bubble.is-chat { background: #bfdbfe; }
+.amen-bubble.is-self { background: #fde047; }
+@media (prefers-reduced-motion: reduce) {
+  .amen-bubble { transition: none; }
+}

@@ -319,6 +319,7 @@ export function block(W, o) {
     }
   }
   const rc = o.roofColor || '#8c9396';
+  if (o.roof !== 'flat') W.collide(x0, H, z0, x1, H + Math.min(x1 - x0, z1 - z0) * 0.11, z1, 'roof');
   if (o.roof === 'hip') hipRoof(W, x0, z0, x1, z1, H, Math.min(x1 - x0, z1 - z0) * 0.22, { color: rc });
   else if (o.roof === 'gable-x') gableRoof(W, x0, z0, x1, z1, H, (z1 - z0) * 0.22, 'x', { color: rc, wallColor: o.color });
   else if (o.roof === 'gable-z') gableRoof(W, x0, z0, x1, z1, H, (x1 - x0) * 0.22, 'z', { color: rc, wallColor: o.color });

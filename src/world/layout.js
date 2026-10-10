@@ -20,6 +20,8 @@ export const HALL = { x0: 4, x1: 34, z0: -42, z1: -20, h: 6.6, ceil: 6.0 };
 export const ALTAR = { x0: 8, x1: 30, z0: -41.75, z1: -36.2, h: 0.6 };
 export const CHOIR = { x0: 24.5, x1: 30, z0: -41.75, z1: -38.6 };
 export const MEDIA = { x0: 27.5, x1: 33.75, z0: -24.6, z1: -20.25, h: 0.25 };
+/** Pew blocks in the hall: rows from z0 (front) every `step` m; sitters face −Z. aisles = walkable x lines. */
+export const PEWS = { z0: -33.9, step: 1.32, rows: 8, blocks: [[6.0, 11.4], [12.6, 18.0], [20.0, 25.4], [26.6, 32.0]], aisles: [5.1, 12, 19, 26, 32.9] };
 export const PRAYER = { x0: 38, x1: 48, z0: -42, z1: -34, h: 4.2 };
 export const CANTEEN = { x0: 38, x1: 50, z0: -30, z1: -21, h: 4.2 };
 export const KIDS = { x0: 37, x1: 49, z0: -17.5, z1: -11.5 };
@@ -160,15 +162,22 @@ export function navNodes() {
   // auditorium: doors, aisles, cross aisle, altar, choir, media
   add(19, -19, 'compound'); add(8.4, -18.4, 'compound');
   add(3, -27, 'carpark'); add(35, -27, 'compound');
-  for (const z of [-21.3, -24.6, -27.9, -31.2, -34.6]) { add(19, z, 'church-hall'); add(5.1, z, 'church-hall'); add(z > -25 ? 33.35 : 32.9, z, 'church-hall'); add(12, z, 'church-hall'); add(26, z, 'church-hall'); }
-  add(8, -21.3, 'church-hall'); add(16, -21.3, 'church-hall'); add(23, -21.3, 'church-hall');
-  add(9, -34.6, 'church-hall'); add(15.5, -34.6, 'church-hall'); add(22.5, -34.6, 'church-hall'); add(29, -34.6, 'church-hall');
+  // one node per aisle in front of every pew row (the gap a sitter shuffles along), then the back
+  for (let k = 0; k < PEWS.rows; k++) {
+    const z = PEWS.z0 + k * PEWS.step - 0.6;
+    for (const x of PEWS.aisles) add(x, z, 'church-hall');
+  }
+  for (const x of [5.1, 8, 12, 16, 19, 23, 26]) { add(x, -23.4, 'church-hall'); add(x, -21.3, 'church-hall'); }
+  add(33.35, -24.4, 'media'); add(33.35, -21.3, 'media');
+  add(9, -34.5, 'church-hall'); add(15.5, -34.5, 'church-hall'); add(22.5, -34.5, 'church-hall'); add(29, -34.5, 'church-hall');
   add(11, -37.3, 'altar'); add(15, -37.3, 'altar'); add(19, -36.4, 'altar'); add(22.5, -37.3, 'altar'); add(16, -40.5, 'altar'); add(21.5, -40.5, 'altar');
   add(27, -37.6, 'choir'); add(25.5, -39.4, 'choir'); add(28.5, -41, 'choir');
   add(30.5, -22.7, 'media'); add(29, -21.2, 'media');
   // prayer room, canteen, children's church
   add(42.7, -32.8, 'compound'); add(42.7, -35.5, 'prayer-room'); add(40, -38, 'prayer-room'); add(45.5, -38, 'prayer-room'); add(42.7, -40.5, 'prayer-room');
   add(41, -19.8, 'compound'); add(41.2, -22.1, 'kitchen'); add(44.6, -22.1, 'kitchen'); add(48.3, -22.1, 'kitchen'); add(40.3, -25.8, 'kitchen'); add(44, -25.8, 'kitchen'); add(47.6, -25.8, 'kitchen');
+  // behind the serving counter (staff side), reached round its east end
+  add(48.8, -26.2, 'kitchen'); add(48.8, -28.3, 'kitchen'); add(44.6, -28.3, 'kitchen'); add(40.4, -28.3, 'kitchen');
   add(39, -13, 'children'); add(43, -15.8, 'children'); add(47, -13, 'children');
   // home compound and house
   add(13.8, 9.7, 'home'); add(13.8, 12.6, 'home'); add(9, 15, 'home'); add(19, 13.6, 'home'); add(28.6, 12.5, 'home'); add(28.5, 18, 'home');
@@ -179,6 +188,7 @@ export function navNodes() {
   // market and bus stop
   for (let x = -44; x <= -17.9; x += 5.2) { add(x, 13.6, 'market'); add(x, 19.5, 'market'); }
   for (const x of [-42.2, -37, -31.85, -26.6, -21.5, -17.4]) add(x, 9.2, 'market');
+  add(-2.2, 12.9, 'market'); add(-7.3, 12.9, 'market'); add(-7.3, 15.0, 'market'); add(-2.2, 15.0, 'market'); // inside the buka
   add(-15, 13.5, 'market'); add(-13, 19.5, 'market'); add(-2.0, 10.9, 'market'); add(-2.25, 8.9, 'market'); add(-6, 18.3, 'market'); add(0.5, 12.5, 'market'); add(1, 19.5, 'market');
   add(-54, 6.6, 'busstop'); add(-59.5, 10.5, 'busstop'); add(-62, 9.6, 'busstop'); add(-49, 10.5, 'busstop');
   return n;

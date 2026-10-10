@@ -3,6 +3,13 @@
 import { h, ic, setChildren, trapFocus, store } from './dom.js';
 import { naira } from '../game/content.js';
 
+/** Drop a trailing "+6 character, -₦500." list when the same changes are shown as chips. */
+export function stripStats(text, deltas) {
+  if (!text || !deltas?.length) return text;
+  const out = text.replace(/(?:[\s,]*[+\-−]\d+\s?(?:⭐|faith|character|word|energy|fame|members|food))+[.,!]*\s*$/i, '').trim();
+  return out || text;
+}
+
 const DELTA_LABEL = { naira: '', points: '⭐', energy: 'energy', hunger: 'food', faith: 'faith', character: 'character', word: 'word', fame: 'fame' };
 
 /** "+6 character", "-₦1,000", "+3⭐" chips. */
@@ -56,14 +63,12 @@ export function createDialogs({ root, game, onModal }) {
       if (queue.length) next();
       else { onModal(false); prevFocus?.focus?.({ preventScroll: true }); }
     };
-    if (m.dismissible) {
-      wrap.addEventListener('pointerdown', (e) => { if (e.target === wrap) close(); });
-      card.append(h('button.ac-iconbtn.ac-modal-close', { type: 'button', attrs: { 'aria-label': 'Close' }, on: { click: close } }, ic('x')));
-    }
+    if (m.dismissible) wrap.addEventListener('pointerdown', (e) => { if (e.target === wrap) close(); });
     current = { ...m, close, wrap, card };
     onModal(true);
     m.build(card, close);
     if (closed) return;
+    if (m.dismissible) card.append(h('button.ac-iconbtn.ac-modal-close', { type: 'button', attrs: { 'aria-label': 'Close' }, on: { click: close } }, ic('x')));
     root.append(wrap);
     untrap = trapFocus(wrap);
     focusFirst(card);
@@ -112,7 +117,7 @@ export function createDialogs({ root, game, onModal }) {
         function choose(i) {
           const r = game.choose(i);
           if (!r?.ok || !r.text) { close(); return; }
-          const body = r.text.startsWith(`${ev.title}: `) ? r.text.slice(ev.title.length + 2) : r.text;
+          const body = stripStats(r.text.startsWith(`${ev.title}: `) ? r.text.slice(ev.title.length + 2) : r.text, r.deltas);
           const fell = /You fell into/.test(body);
           setChildren(card,
             h('div.ac-modal-emoji', { text: fell ? '💔' : ev.emoji, attrs: { 'aria-hidden': 'true' } }),
@@ -204,10 +209,11 @@ export function createDialogs({ root, game, onModal }) {
       dismissible: true,
       wide: true,
       build(card) {
+        const touch = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
         setChildren(card,
           h('h3', { text: 'Controls', id: 'ac-modal-title' }),
-          h('div.ac-keys-grid', null,
-            h('div', null, h('h4', null, ic('keyboard', { size: 18 }), 'Keyboard'),
+          h(`div.ac-keys-grid${touch ? '.is-touch' : ''}`, null,
+            h('div.ac-keys-kb', null, h('h4', null, ic('keyboard', { size: 18 }), 'Keyboard'),
               h('table.ac-keys', null, h('tbody', null,
                 row(['W', 'A', 'S', 'D'], 'Walk (or arrow keys)'),
                 row(['Shift'], 'Run'),
@@ -222,7 +228,7 @@ export function createDialogs({ root, game, onModal }) {
                 row(['N'], 'Sleep (at home)'),
                 row(['?'], 'This help'),
                 row(['Esc'], 'Close panels')))),
-            h('div', null, h('h4', null, ic('smartphone', { size: 18 }), 'Phone'),
+            h('div.ac-keys-touch', null, h('h4', null, ic('smartphone', { size: 18 }), 'Phone'),
               h('table.ac-keys', null, h('tbody', null,
                 h('tr', null, h('td', { text: 'Left side' }), h('td', { text: 'Drag to walk; push far to run' })),
                 h('tr', null, h('td', { text: 'Right side' }), h('td', { text: 'Drag to look around' })),
@@ -281,7 +287,7 @@ export function createDialogs({ root, game, onModal }) {
     if (!text) return;
     const t = h('div.ac-toast', { data: tone ? { tone } : {} },
       emoji ? h('span.ac-toast-emoji', { text: emoji, attrs: { 'aria-hidden': 'true' } }) : null,
-      h('div.ac-toast-body', null, h('div', { text }), deltaChips(deltas || [])));
+      h('div.ac-toast-body', null, h('div', { text: stripStats(text, deltas) }), deltaChips(deltas || [])));
     toasts.append(t);
     while (toasts.children.length > 3) toasts.firstChild.remove();
     const life = ms || Math.min(8000, 2600 + text.length * 35);

@@ -277,7 +277,7 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
 
   function renderShop(s) {
     const out = [
-      h('div.ac-wallet', null, h('div', null, h('span', { text: 'Naira' }), h('strong', { text: naira(s.naira) })), h('div', null, h('span', { text: 'Points' }), h('strong', { text: `${s.points}⭐` }))),
+      h('div.ac-wallet', null, h('div', null, h('span', { text: 'Naira' }), h('strong', { text: naira(s.naira) })), h('div', null, h('span', { text: 'Points' }), h('strong', null, String(s.points), ic('star', { cls: 'ac-star' })))),
       h('p.ac-note', { text: 'Naira comes from work and missions. ⭐ points come from showing up, serving and praying. Every item does something.' }),
       section('Shop'),
       ...SHOP.map((it) => buyRow({
@@ -347,7 +347,7 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     const [, , label] = TABS.find((t) => t[0] === tab);
     title.textContent = label;
     const c = game.clock;
-    sub.textContent = tab === 'today' ? `${c.weekdayName} ${c.time} · Day ${c.day}` : tab === 'shop' ? `${naira(s.naira)} · ${s.points}⭐` : '';
+    sub.textContent = tab === 'today' ? `${c.weekdayName} ${c.time} · Day ${c.day}` : tab === 'shop' ? `${naira(s.naira)} · ${s.points} points` : '';
     const top = body.scrollTop;
     const focusId = document.activeElement?.id;
     const content = tab === 'today' ? renderToday(s) : tab === 'prayer' ? renderPrayer(s) : tab === 'shop' ? renderShop(s) : renderDiary(s);

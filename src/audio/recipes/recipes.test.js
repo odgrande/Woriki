@@ -40,7 +40,7 @@ const CASES = [
   ['horn', {}], ['okada', {}], ['okada', { mode: 'source' }], ['carPass', { kind: 'danfo' }], ['generator', {}],
   ['thunder', {}], ['bulbul', {}], ['dove', {}], ['crow', {}], ['babble', { seconds: 3, talkers: 3 }], ['hawker', {}], ['amen', {}],
   ['ep', { midi: 67 }], ['bass', { midi: 43 }], ['guitar', { midi: 71 }], ['kick', {}], ['shaker', {}], ['conga', {}], ['talkingDrum', {}],
-  ['noise', { color: 'pink' }],
+  ['bed', { seconds: 3, layers: [{ noise: 'pink', filters: [['lowpass', 800, 0.7]], gain: 0.8, lfo: [[0.3, 0.2]] }, { babble: { talkers: 2 }, gain: 0.5, filters: [] }] }],
 ];
 
 describe('every recipe', () => {
@@ -147,7 +147,11 @@ describe('loops are seamless', () => {
   };
   it('generator', () => { const [g] = bake('generator', {}); expect(seam(g.channels[0])).toBeLessThan(8); });
   it('babble', () => { const [b] = bake('babble', { seconds: 2, talkers: 3 }); expect(seam(b.channels[0])).toBeLessThan(8); });
-  it('noise beds', () => { for (const color of ['pink', 'brown']) { const [n] = bake('noise', { color }); expect(seam(n.channels[0])).toBeLessThan(8); } });
+  it('ambience beds', () => {
+    const [b] = bake('bed', { seconds: 3, layers: [{ noise: 'brown', filters: [['lowpass', 300, 0.7]], gain: 1 }, { generator: { fire: 50 }, gain: 0.3, filters: [] }] });
+    expect(seam(b.channels[0])).toBeLessThan(8);
+    expect(seam(b.channels[1])).toBeLessThan(8);
+  });
 });
 
 describe('vehicles', () => {

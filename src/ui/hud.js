@@ -22,7 +22,7 @@ export function createHud({ game, root, actions }) {
   const time = h('strong', { text: '--:--' });
   const day = h('span', { text: '' });
   const nairaChip = h('span.ac-chip', { title: 'Naira' }, h('span', { text: '₦0' }));
-  const pointsChip = h('span.ac-chip.is-yellow', { title: 'Points' }, h('span', { text: '⭐ 0' }));
+  const pointsChip = h('span.ac-chip', { title: 'Points' }, ic('star', { cls: 'ac-star' }), h('span', { text: '0' }));
   const moodChip = h('span.ac-chip.ac-mood', { title: 'Mood' }, h('span.ac-mood-emoji'), h('span.ac-mood-label'));
   const who = h('div.ac-who');
   const bars = {};
@@ -72,7 +72,8 @@ export function createHud({ game, root, actions }) {
     time.textContent = c.time;
     day.textContent = `${c.weekdayShort} · Day ${c.day}`;
     nairaChip.firstChild.textContent = naira(s.naira);
-    pointsChip.firstChild.textContent = `⭐ ${s.points}`;
+    pointsChip.lastChild.textContent = String(s.points);
+    pointsChip.setAttribute('aria-label', `${s.points} points`);
     const m = game.mood;
     moodChip.dataset.mood = m.id;
     moodChip.querySelector('.ac-mood-emoji').textContent = m.emoji;

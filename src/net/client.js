@@ -35,14 +35,16 @@ const MSG = {
  * @param {string} [base] explicit URL (ws:, wss:, http:, https: or a path)
  */
 export function serverUrl(room = DEFAULT_ROOM, base) {
-  const env = /** @type {any} */ (import.meta).env || {};
+  // Written as `import.meta.env` so Vite can substitute it at build time.
+  const env = import.meta.env || {};
   const loc = globalThis.location;
   let raw = base || env.VITE_SERVER_URL;
   if (!raw) {
     if (!loc || !/^https?:$/.test(loc.protocol)) raw = 'ws://localhost:8787/ws';
     else {
       const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-      raw = env.DEV ? `${proto}//${loc.hostname}:8787/ws` : `${proto}//${loc.host}/ws`;
+      // Same origin in every environment: Vite's dev server proxies /ws to the game server.
+      raw = `${proto}//${loc.host}/ws`;
     }
   }
   const u = new URL(raw, loc && /^https?:$/.test(loc.protocol) ? loc.href : 'http://localhost/');
