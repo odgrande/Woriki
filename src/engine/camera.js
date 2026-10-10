@@ -46,6 +46,7 @@ export function createFollowCamera(ctx, input, opts = {}) {
   let lift = 0; // extra pitch used to rise over walls behind the player
   let fov = baseFov;
   let speedAvg = 0;
+  let pendYaw = 0, pendPitch = 0, pendZoom = 0;
 
   const cam = {
     /** Orbit angle around +Y. 0 = camera on the +Z side looking towards −Z. */
@@ -63,10 +64,14 @@ export function createFollowCamera(ctx, input, opts = {}) {
     /** Radians per dragged pixel. */
     sensitivity: 0.0052,
     touchSensitivity: 0.0072,
+    /** Ease mouse / touch look and zoom over a few frames (off = apply at once). */
+    smoothLook: opts.smoothLook ?? true,
+    /** Look easing rate (1/s): higher is snappier. */
+    lookSmoothing: 22,
     /** Rotate gently behind the player while they move. */
     autoFollow: true,
     /** Auto-follow rate (1/s) at running speed. */
-    followStrength: 0.6,
+    followStrength: 1.3,
     /** Widen the view a little when running. */
     fovKick: opts.fovKick ?? true,
     /** Distance actually used this frame (after wall pull-in). */
@@ -90,7 +95,7 @@ export function createFollowCamera(ctx, input, opts = {}) {
     /** Put the camera straight behind a heading (rotation.y of a character). */
     behind(rotY) { cam.yaw = wrap(rotY + Math.PI); },
     /** Skip smoothing on the next update (after a teleport). */
-    snap() { snapped = false; },
+    snap() { snapped = false; pendYaw = pendPitch = pendZoom = 0; },
     /** Current view (see VIEWS): 'follow', 'close', 'wide', 'top' or 'first'. */
     mode: 'follow',
     /** Switch view: distance, height and pitch limits per view. */
@@ -121,13 +126,32 @@ export function createFollowCamera(ctx, input, opts = {}) {
       dt = Math.min(Math.max(dt, 0), 0.1);
       // ---- input
       if (input) {
+        // Mouse and touchpad deltas arrive in uneven bursts: glide towards them over a few
+        // frames (≈ 60 ms) so turning and zooming feel smooth instead of steppy.
         const { dx, dy } = input.lookDelta();
         const sens = input.touch ? cam.touchSensitivity : cam.sensitivity;
-        cam.yaw = wrap(cam.yaw - dx * sens);
-        cam.pitch = THREE.MathUtils.clamp(cam.pitch + dy * sens, cam.minPitch, cam.maxPitch);
+        pendYaw -= dx * sens;
+        pendPitch += dy * sens;
         const z = input.zoomDelta();
-        if (z) cam.distance = THREE.MathUtils.clamp(cam.distance * Math.pow(1.12, z), cam.minDistance, cam.maxDistance);
+        if (z) pendZoom += z;
+        // never queue more than the limits allow (no drifting on after hitting the stop)
+        pendPitch = THREE.MathUtils.clamp(cam.pitch + pendPitch, cam.minPitch, cam.maxPitch) - cam.pitch;
+        const zl = Math.log(1.12);
+        pendZoom = THREE.MathUtils.clamp(pendZoom, Math.log(cam.minDistance / cam.distance) / zl, Math.log(cam.maxDistance / cam.distance) / zl);
       }
+      const kl = cam.smoothLook ? damp(cam.lookSmoothing, dt) : 1;
+      if (Math.abs(pendYaw) > 1e-5 || Math.abs(pendPitch) > 1e-5) {
+        const sy = pendYaw * kl, sp = pendPitch * kl;
+        cam.yaw = wrap(cam.yaw + sy);
+        cam.pitch = THREE.MathUtils.clamp(cam.pitch + sp, cam.minPitch, cam.maxPitch);
+        pendYaw -= sy; pendPitch -= sp;
+      } else { pendYaw = 0; pendPitch = 0; }
+      if (Math.abs(pendZoom) > 1e-4) {
+        const kz = cam.smoothLook ? damp(12, dt) : 1;
+        const sz = pendZoom * kz;
+        cam.distance = THREE.MathUtils.clamp(cam.distance * Math.pow(1.12, sz), cam.minDistance, cam.maxDistance);
+        pendZoom -= sz;
+      } else pendZoom = 0;
       cam.distance = THREE.MathUtils.clamp(cam.distance, cam.minDistance, cam.maxDistance);
 
       // ---- follow the target

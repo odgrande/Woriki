@@ -78,3 +78,13 @@ describe('navNodes', () => {
     for (const [x, z, zone] of navNodes()) if (zone === 'church-hall') { expect(x).toBeGreaterThan(HALL.x0); expect(x).toBeLessThan(HALL.x1); }
   });
 });
+
+describe('road noise zone', () => {
+  it('is only the carriageway: the walkways are the quiet neighbourhood', async () => {
+    const { ZONE_DEFS, pickZone } = await import('./layout.js');
+    const THREE = await import('three');
+    const zones = ZONE_DEFS.map((z) => ({ ...z, box: new THREE.Box3(new THREE.Vector3(...z.min), new THREE.Vector3(...z.max)) }));
+    expect(pickZone(zones, { x: -40, y: 0, z: 0 }).ambience).toBe('street');
+    expect(pickZone(zones, { x: 45, y: 0, z: -6.5 }).ambience).toBe('town');
+  });
+});

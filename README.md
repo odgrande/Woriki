@@ -23,7 +23,7 @@ real choices around it, as in real life.
 
   Finish all three for a bonus.
 - **Road safety.** There is a zebra crossing with traffic lights at the church gate, where cars stop on red
-  and people cross on the green man, and a pedestrian bridge by the market. An invisible barrier along
+  and people wait for the green light to cross, and a pedestrian bridge by the market. An invisible barrier along
   the kerbs tells you where to cross. Horns are heard only on the street.
 - **Everything on the map is tappable:** places, buildings, billboards, neighbourhoods, bridges, roads,
   cars, boats, palms, water tanks and the lagoon. Every house has a family living in it, with their own

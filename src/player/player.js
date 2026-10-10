@@ -12,6 +12,8 @@ const ACCEL = 14;
 const DECEL = 18;
 const AIR_ACCEL = 3.5;
 const TURN_RATE = 11;
+/** Keyboard turning speed (rad/s) for the left / right keys. */
+const KEY_TURN = 2.6;
 const COYOTE = 0.12;
 const JUMP_BUFFER = 0.15;
 const RADIUS = 0.26;
@@ -361,7 +363,15 @@ export function createPlayer(ctx, deps = {}) {
   // ------------------------------------------------------------ update
   function update(dt, t) {
     dt = Math.min(Math.max(dt || 0, 0), 0.1);
-    const mv = input?.move || { x: 0, y: 0 };
+    let mv = input?.move || { x: 0, y: 0 };
+    // Keyboard steering: left / right turn you (and the camera stays behind you), up walks
+    // forward, down walks back towards the camera. Nobody walks sideways across the screen.
+    if (input?.keyboardMove && camera && 'yaw' in camera && Math.abs(mv.x) > 0.05 && (state === 'move' || state === 'air')) {
+      const turn = -Math.sign(mv.x) * KEY_TURN * dt;
+      camera.yaw = wrap(camera.yaw + turn);
+      if (mv.y >= -0.05) heading = wrap(heading + turn);
+      mv = { x: 0, y: mv.y };
+    }
     const mag = Math.min(1, Math.hypot(mv.x, mv.y));
     const wantsMove = mag > 0.05;
     const run = !!input?.run;

@@ -18,7 +18,8 @@ const PRESS_TTL = 750;
 
 /** Key help for the controls panel (UI reads this; order = display order). */
 export const KEY_BINDINGS = [
-  { keys: ['W', 'A', 'S', 'D'], alt: 'Arrow keys', action: 'Walk' },
+  { keys: ['W', 'S'], alt: '↑ ↓', action: 'Walk forward / back' },
+  { keys: ['A', 'D'], alt: '← →', action: 'Turn left / right' },
   { keys: ['Shift'], action: 'Run (hold)' },
   { keys: ['Space'], action: 'Jump' },
   { keys: ['C'], action: 'Sit / stand' },
@@ -324,6 +325,8 @@ export function createInput(domRoot = document.body, opts = {}) {
   const input = {
     /** Movement {x, y} in −1..1 (x right, y forward). Read every frame. */
     get move() { return readMove(); },
+    /** True while the movement comes from the keyboard (not the touch joystick): keys steer. */
+    get keyboardMove() { return enabled && !(stick.id !== -1 && stick.mag > 0) && [...held].some((c) => MOVE_KEYS[c]); },
     /** Run modifier: Shift held, or the joystick pushed past 90 %. */
     get run() {
       if (!enabled) return false;

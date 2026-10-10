@@ -209,8 +209,8 @@ function roadHint(s) {
   if (atZebra && rules.pedWalk) return;
   lastRoadHint = now;
   ctx.bus.emit('game:toast', atZebra
-    ? { text: 'Wait for the green man before you cross. 🚦', emoji: '✋', tone: 'warn' }
-    : { text: 'You can\'t cross here. Use the pedestrian bridge by the market, or the zebra crossing at the church gate when the green man shows.', emoji: '🚧', tone: 'warn' });
+    ? { text: 'Wait for the green light before you cross. 🚦', emoji: '✋', tone: 'warn' }
+    : { text: 'You can\'t cross here. Use the pedestrian bridge by the market, or the zebra crossing at the church gate when the light turns green.', emoji: '🚧', tone: 'warn' });
 }
 
 /** Walk up the stairs, across the pedestrian bridge and down the other side. */
@@ -315,11 +315,14 @@ async function journey(go) {
   const back = s.player.position.clone();
   const heading = s.player.heading;
   s.travelling = true;
+  quiet(false);
+  audio.setZone('street'); // on the road: traffic, horns, okadas
   try {
     await s.journey.play({ mode: go.mode, ownBike: go.mode === 'bike' && !!game.state?.items?.bike }, s.character);
   } finally {
     s.travelling = false;
     if (!go.walk) { s.player.teleport(back, heading); s.camera.behind(heading); s.camera.snap?.(); }
+    audio.setZone(s.world.zoneAt?.(s.player.position) ?? null);
   }
 }
 
@@ -380,6 +383,7 @@ const homeScene = (() => {
 // Render while on the landing map, the home card or playing; the sign-up screens have their own
 // small preview renderer.
 async function onScreen({ screen, saved }) {
+  if (screen !== 'game') quiet(true);
   if (screen === 'landing') {
     homeScene.hide();
     ctx.start();
@@ -391,6 +395,7 @@ async function onScreen({ screen, saved }) {
     finishBoot(800);
   } else if (screen === 'game') {
     ctx.start();
+    quiet(false);
     finishBoot(0);
   } else {
     homeScene.hide();
@@ -398,6 +403,13 @@ async function onScreen({ screen, saved }) {
     finishBoot(600);
   }
 }
+/** The world's sounds and speech bubbles only while you are in it (not on the map or the front door). */
+function quiet(on) {
+  document.documentElement.classList.toggle('amen-quiet', on);
+  const s = session;
+  audio.setZone(on || !s?.player ? 'none' : s.world.zoneAt?.(s.player.position) ?? null);
+}
+ctx.bus.on('ui:map', ({ open }) => quiet(open));
 ctx.bus.on('ui:screen', onScreen);
 ctx.bus.on('ui:view', ({ mode }) => session?.camera?.setMode(mode));
 // Players' church adverts on the billboards (map and street).

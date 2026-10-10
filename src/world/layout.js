@@ -43,22 +43,23 @@ export const CINEMA = { x0: 588, x1: 612, z0: -6, z1: 16, h: 6, door: [598.6, 60
 const Y0 = -2, Y1 = 14;
 /** Zone definitions. `extra` zones (compound, children) are additions to the contract list. */
 export const ZONE_DEFS = [
-  { id: 'street', label: 'Herbert Macaulay Way', ambience: 'street', min: [MAP.minX, Y0, -WALK.outer], max: [MAP.maxX, Y1, WALK.outer] },
+  { id: 'street', label: 'Herbert Macaulay Way', ambience: 'street', min: [MAP.minX, Y0, ROAD.z0 - 0.8], max: [MAP.maxX, Y1, ROAD.z1 + 0.8] },
+  { id: 'walkway', label: 'Herbert Macaulay Way', ambience: 'town', min: [MAP.minX, Y0, -WALK.outer], max: [MAP.maxX, Y1, WALK.outer + 0.01] },
   { id: 'busstop', label: 'Yaba Bus Stop', ambience: 'street', min: [BUSSTOP.x0, Y0, BUSSTOP.z0], max: [BUSSTOP.x1, Y1, BUSSTOP.z1] },
   { id: 'market', label: 'Yaba Market Row', ambience: 'market', min: [MARKET.x0, Y0, MARKET.z0], max: [MARKET.x1, Y1, MARKET.z1] },
-  { id: 'compound', label: 'Grace Assembly Compound', ambience: 'street', min: [CHURCH.x0, Y0, CHURCH.z0], max: [CHURCH.x1, Y1, CHURCH.z1] },
-  { id: 'gate', label: 'Church Gate', ambience: 'street', min: [3, Y0, -15], max: [19, Y1, -6] },
-  { id: 'carpark', label: 'Church Car Park', ambience: 'street', min: [CHURCH.x0, Y0, -30], max: [3, Y1, CHURCH.z1] },
+  { id: 'compound', label: 'Grace Assembly Compound', ambience: 'town', min: [CHURCH.x0, Y0, CHURCH.z0], max: [CHURCH.x1, Y1, CHURCH.z1] },
+  { id: 'gate', label: 'Church Gate', ambience: 'town', min: [3, Y0, -15], max: [19, Y1, -6] },
+  { id: 'carpark', label: 'Church Car Park', ambience: 'town', min: [CHURCH.x0, Y0, -30], max: [3, Y1, CHURCH.z1] },
   { id: 'church-hall', label: 'Grace Assembly Auditorium', ambience: 'church', min: [HALL.x0, Y0, HALL.z0], max: [HALL.x1, Y1, HALL.z1] },
   { id: 'altar', label: 'Altar', ambience: 'church', min: [HALL.x0, Y0, HALL.z0], max: [CHOIR.x0, Y1, -35.2] },
   { id: 'choir', label: 'Choir Stand', ambience: 'church', min: [CHOIR.x0, Y0, HALL.z0], max: [HALL.x1, Y1, -35.2] },
   { id: 'media', label: 'Media Desk', ambience: 'church', min: [MEDIA.x0, Y0, MEDIA.z0], max: [HALL.x1, Y1, HALL.z1] },
   { id: 'prayer-room', label: 'Prayer Room', ambience: 'prayer', min: [PRAYER.x0, Y0, PRAYER.z0], max: [PRAYER.x1, Y1, PRAYER.z1] },
   { id: 'kitchen', label: 'Canteen & Kitchen', ambience: 'church', min: [CANTEEN.x0, Y0, CANTEEN.z0], max: [CANTEEN.x1, Y1, CANTEEN.z1] },
-  { id: 'children', label: "Children's Church", ambience: 'street', min: [KIDS.x0 - 1, Y0, KIDS.z0 - 1], max: [KIDS.x1 + 1, Y1, KIDS.z1 + 1] },
+  { id: 'children', label: "Children's Church", ambience: 'town', min: [KIDS.x0 - 1, Y0, KIDS.z0 - 1], max: [KIDS.x1 + 1, Y1, KIDS.z1 + 1] },
   { id: 'home', label: 'Home, No. 14', ambience: 'home', min: [HOME.x0, Y0, HOME.z0], max: [HOME.x1, Y1, HOME.z1] },
   { id: 'beach', label: 'Elegushi Beach, Lekki', ambience: 'beach', min: [BEACH.x0 - 30, Y0, BEACH.z0 - 40], max: [BEACH.x1 + 30, Y1, BEACH.z1] },
-  { id: 'theatre', label: 'National Theatre, Iganmu', ambience: 'street', min: [THEATRE.x0 - 40, Y0, THEATRE.z0 - 40], max: [THEATRE.x1 + 40, Y1, THEATRE.z1 + 40] },
+  { id: 'theatre', label: 'National Theatre, Iganmu', ambience: 'town', min: [THEATRE.x0 - 40, Y0, THEATRE.z0 - 40], max: [THEATRE.x1 + 40, Y1, THEATRE.z1 + 40] },
   { id: 'cinema', label: 'National Theatre Cinema', ambience: 'cinema', min: [CINEMA.x0, Y0, CINEMA.z0], max: [CINEMA.x1, Y1, CINEMA.z1] },
 ];
 
@@ -152,7 +153,7 @@ export function navNodes() {
   const sz = (x) => (x < -46 && x > -62 ? 'busstop' : x > -46 && x < 2 ? 'market' : 'street');
   for (const [a, b] of CROSS_N) { const x = (a + b) / 2; add(x, -4.42, 'street'); add(x, -5.9, 'street'); }
   for (const [a, b] of CROSS_S) { const x = (a + b) / 2; add(x, 4.42, sz(x)); add(x, 5.9, sz(x)); }
-  // People cross the road only at the zebra crossing (x 12.2–14.6), when the green man shows.
+  // People cross the road only at the zebra crossing (x 12.2–14.6), when the pedestrian light is green.
   add(13.4, -3.6, 'street'); add(13.4, 0, 'street'); add(13.4, 3.6, 'street');
   // church gate, forecourt, car park, east yard, back yard
   add(9, -8.5, 'gate'); add(13.5, -8.6, 'gate'); add(9, -12, 'gate'); add(14, -13.2, 'gate');

@@ -1,7 +1,7 @@
 // Road safety on Herbert Macaulay Way: a zebra crossing with traffic lights in front of the
 // church and home gates, a pedestrian bridge by the market, and an invisible barrier along the
 // kerbs so nobody walks into moving traffic. Cars stop at the stop line on red; people cross
-// only when the green man shows, or over the bridge.
+// only when the pedestrian light turns green, or over the bridge.
 import * as THREE from 'three';
 import { ROAD } from './layout.js';
 
@@ -10,7 +10,7 @@ export const ZEBRA = { x0: 12.2, x1: 14.6, stopEast: 10.9, stopWest: 15.9 };
 /** The pedestrian bridge: deck across the road at x0..x1, stairs on both walkways. */
 export const FOOTBRIDGE = { x0: -26.2, x1: -24.0, top: 5.6, stairX0: -31.6, zN: -7.7, zS: 7.7, stairW: 1.4 };
 
-/** Light cycle (seconds): cars green → amber → all red → green man (walk) → flashing → all red. */
+/** Light cycle (seconds): cars green → amber → all red → people's green light (walk) → flashing → all red. */
 const CYCLE = [['go', 16], ['amber', 3], ['allred', 1.5], ['walk', 10], ['flash', 3], ['allred2', 1.5]];
 const CYCLE_LEN = CYCLE.reduce((n, [, d]) => n + d, 0);
 
@@ -63,7 +63,7 @@ export function createRoadRules(ctx, { root, physics, interactables }) {
     group.add(head);
     heads.push({ red, amber, green });
   }
-  // pedestrian signals at both ends of the zebra: red man / green man
+  // pedestrian signals at both ends of the zebra: a red light (wait) and a green light (cross)
   const peds = [];
   for (const [z, ry] of [[ROAD.z0 - 0.7, 0], [ROAD.z1 + 0.7, Math.PI]]) {
     const x = ZEBRA.x1 + 0.4;
@@ -71,11 +71,9 @@ export function createRoadRules(ctx, { root, physics, interactables }) {
     const head = new THREE.Group();
     head.position.set(x, 2.35, z);
     head.rotation.y = ry;
-    head.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.6, 0.18), std('#141414')));
-    const man = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: manTexture('stop') }));
-    man.position.set(0, 0.12, 0.095);
-    const walk = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ map: manTexture('walk') }));
-    walk.position.set(0, -0.14, 0.095);
+    head.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.56, 0.18), std('#141414')));
+    const man = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 8), lamp(OFF)); man.position.set(0, 0.13, 0.1);
+    const walk = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 8), lamp(OFF)); walk.position.set(0, -0.13, 0.1);
     head.add(man, walk);
     group.add(head);
     peds.push({ man, walk });
@@ -137,7 +135,7 @@ export function createRoadRules(ctx, { root, physics, interactables }) {
   /* ---------------------------------------------------------------- invisible barrier along the kerbs */
   const add = (x0, x1, z) => physics?.addBox(new THREE.Vector3(x0, 0, z - 0.06), new THREE.Vector3(x1, 2.2, z + 0.06), { kind: 'roadgate', camera: false, walkable: false });
   for (const z of [ROAD.z0, ROAD.z1]) { add(-120, ZEBRA.x0, z); add(ZEBRA.x1, 120, z); }
-  // the gate across the zebra: closed unless the green man shows
+  // the gate across the zebra: closed unless the pedestrian light is green
   let gates = [];
   const closeGates = () => { if (gates.length || !physics) return; gates = [ROAD.z0, ROAD.z1].map((z) => add(ZEBRA.x0, ZEBRA.x1, z)); };
   const openGates = () => { for (const g of gates) physics?.remove(g); gates = []; };
@@ -155,8 +153,8 @@ export function createRoadRules(ctx, { root, physics, interactables }) {
     }
     const blink = phase === 'flash' && Math.floor(t * 3) % 2 === 0;
     for (const p of peds) {
-      p.man.material.color.set(walk ? '#333333' : '#ffffff');
-      p.walk.material.color.set(walk && !blink ? '#ffffff' : '#333333');
+      p.man.material.color.set(walk ? OFF : '#ff2a2a');
+      p.walk.material.color.set(walk && !blink ? '#22ff66' : OFF);
     }
     if (phase === 'walk') openGates();
     else if (phase === 'go' || phase === 'amber') closeGates();
@@ -172,28 +170,10 @@ export function createRoadRules(ctx, { root, physics, interactables }) {
       else if (phase === 'flash') apply();
     },
     get phase() { return phase; },
-    /** People may step onto the zebra (the green man shows). */
+    /** People may step onto the zebra (their light is green). */
     get pedWalk() { return phase === 'walk'; },
     /** Cars may pass the stop line. */
     get carsGo() { return phase === 'go' || phase === 'amber'; },
     ZEBRA, FOOTBRIDGE,
   };
-}
-
-/** Red standing man / green walking man for the pedestrian signal. */
-function manTexture(kind) {
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = '#111'; g.fillRect(0, 0, 64, 64);
-  g.fillStyle = kind === 'walk' ? '#22ff66' : '#ff2a2a';
-  g.beginPath(); g.arc(32, 12, 6, 0, Math.PI * 2); g.fill();
-  if (kind === 'walk') {
-    g.fillRect(28, 20, 8, 20);
-    g.save(); g.translate(32, 40); g.rotate(0.45); g.fillRect(-3, 0, 6, 20); g.restore();
-    g.save(); g.translate(32, 40); g.rotate(-0.45); g.fillRect(-3, 0, 6, 20); g.restore();
-  } else {
-    g.fillRect(25, 20, 14, 22); g.fillRect(26, 42, 5, 18); g.fillRect(33, 42, 5, 18);
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
 }

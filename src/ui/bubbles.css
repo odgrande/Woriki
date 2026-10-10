@@ -39,3 +39,5 @@
 @media (prefers-reduced-motion: reduce) {
   .amen-bubble { transition: none; }
 }
+/* on the map / front door: no speech bubbles from the world behind */
+.amen-quiet .amen-bubbles { display: none !important; }

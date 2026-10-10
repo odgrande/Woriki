@@ -31,18 +31,26 @@ describe('follow camera', () => {
     const input = fakeInput();
     const cam = createFollowCamera(ctxWith(), input);
     const y0 = cam.yaw;
+    const settle = () => { for (let i = 0; i < 60; i++) cam.update(1 / 60, V(0, 0, 0)); };
     input.st.dx = 100;
     cam.update(1 / 60, V(0, 0, 0));
+    const first = cam.yaw;
+    expect(first).toBeLessThan(y0); // starts turning at once…
+    expect(first).toBeGreaterThan(y0 - 100 * cam.sensitivity); // …and glides the rest
+    settle();
     expect(cam.yaw).toBeCloseTo(y0 - 100 * cam.sensitivity);
     input.st.dy = 10000;
-    cam.update(1 / 60, V(0, 0, 0));
-    expect(cam.pitch).toBe(cam.maxPitch);
+    settle();
+    expect(cam.pitch).toBeCloseTo(cam.maxPitch, 4);
+    input.st.dy = -40; // a small move back responds at once (nothing queued past the limit)
+    settle();
+    expect(cam.pitch).toBeCloseTo(cam.maxPitch - 40 * cam.sensitivity, 3);
     input.st.zoom = 50;
-    cam.update(1 / 60, V(0, 0, 0));
-    expect(cam.distance).toBe(cam.maxDistance);
+    settle();
+    expect(cam.distance).toBeCloseTo(cam.maxDistance, 3);
     input.st.zoom = -50;
-    cam.update(1 / 60, V(0, 0, 0));
-    expect(cam.distance).toBe(cam.minDistance);
+    settle();
+    expect(cam.distance).toBeCloseTo(cam.minDistance, 3);
   });
 
   it('looks at the player from behind and follows smoothly', () => {

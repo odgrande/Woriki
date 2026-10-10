@@ -1,17 +1,22 @@
 // Pure mapping from world zones to ambience beds and mix settings (no Web Audio here).
 
-/** @typedef {'street'|'church'|'market'|'home'|'prayer'|'none'} Ambience */
+/** @typedef {'street'|'town'|'church'|'market'|'home'|'prayer'|'beach'|'cinema'|'none'} Ambience */
 /** @typedef {'inside'|'adjacent'|'compound'|'far'} Placement where the listener is relative to the church hall */
 
-export const AMBIENCES = ['street', 'church', 'market', 'home', 'prayer', 'beach', 'cinema'];
+export const AMBIENCES = ['street', 'town', 'church', 'market', 'home', 'prayer', 'beach', 'cinema'];
 
 /** World zone id → [ambience bed, placement relative to the auditorium]. */
 export const ZONE_MAP = {
+  // traffic noise only on the road itself
   street: ['street', 'far'],
   busstop: ['street', 'far'],
+  // each place has its own sound; outdoors off the road is the calm neighbourhood (no horns)
+  walkway: ['town', 'far'],
   market: ['market', 'far'],
-  gate: ['street', 'compound'],
-  carpark: ['street', 'compound'],
+  gate: ['town', 'compound'],
+  carpark: ['town', 'compound'],
+  compound: ['town', 'compound'],
+  children: ['town', 'compound'],
   'church-hall': ['church', 'inside'],
   altar: ['church', 'inside'],
   choir: ['church', 'inside'],
@@ -21,11 +26,12 @@ export const ZONE_MAP = {
   home: ['home', 'far'],
   // Far from Yaba: the church's music is not heard there.
   beach: ['beach', 'away'],
-  theatre: ['street', 'away'],
+  theatre: ['town', 'away'],
   cinema: ['cinema', 'away'],
+  inside: ['town', 'away'],
 };
 
-const DEFAULT_PLACEMENT = { street: 'far', church: 'inside', market: 'far', home: 'far', prayer: 'adjacent', beach: 'away', cinema: 'away', none: 'far' };
+const DEFAULT_PLACEMENT = { street: 'far', town: 'far', church: 'inside', market: 'far', home: 'far', prayer: 'adjacent', beach: 'away', cinema: 'away', none: 'far' };
 
 /**
  * Resolve whatever the caller passed (zone object, zone id, ambience name, null) into
@@ -34,17 +40,17 @@ const DEFAULT_PLACEMENT = { street: 'far', church: 'inside', market: 'far', home
  * @returns {{ambience: Ambience, placement: Placement, id: string|null}}
  */
 export function resolveZone(zone) {
-  if (zone == null) return { ambience: 'street', placement: 'far', id: null };
+  if (zone == null) return { ambience: 'town', placement: 'far', id: null };
   if (typeof zone === 'object') {
     const id = zone.id ?? null;
     if (id && ZONE_MAP[id]) return { ambience: zone.ambience && AMBIENCES.includes(zone.ambience) ? zone.ambience : ZONE_MAP[id][0], placement: ZONE_MAP[id][1], id };
-    const amb = AMBIENCES.includes(zone.ambience) ? zone.ambience : 'street';
+    const amb = AMBIENCES.includes(zone.ambience) ? zone.ambience : 'town';
     return { ambience: amb, placement: DEFAULT_PLACEMENT[amb], id };
   }
   const s = String(zone);
   if (ZONE_MAP[s]) return { ambience: /** @type {Ambience} */ (ZONE_MAP[s][0]), placement: /** @type {Placement} */ (ZONE_MAP[s][1]), id: s };
   if (AMBIENCES.includes(s) || s === 'none') return { ambience: /** @type {Ambience} */ (s), placement: DEFAULT_PLACEMENT[s], id: null };
-  return { ambience: 'street', placement: 'far', id: s };
+  return { ambience: 'town', placement: 'far', id: s };
 }
 
 /**
@@ -64,7 +70,7 @@ export function musicMix(placement) {
 
 /** Room reverb send for effects and footsteps per ambience (0..1). */
 export function reverbFor(ambience) {
-  return { church: 0.32, prayer: 0.2, home: 0.1, street: 0.07, market: 0.05, beach: 0.03, cinema: 0.22, none: 0.05 }[ambience] ?? 0.07;
+  return { church: 0.32, prayer: 0.2, home: 0.1, town: 0.08, street: 0.07, market: 0.05, beach: 0.03, cinema: 0.22, none: 0.05 }[ambience] ?? 0.07;
 }
 
 /** Footstep loudness per surface (relative), run boost and playback rate. */

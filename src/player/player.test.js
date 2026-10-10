@@ -51,6 +51,23 @@ function setup({ seats = [], interactables = [] } = {}) {
 }
 
 describe('player movement', () => {
+  it('steers with the keyboard: left / right turn you and the camera, nobody walks sideways', () => {
+    const { player, input, camera, run } = setup();
+    input.keyboardMove = true;
+    input.move = { x: 0, y: 1 };
+    run(0.5);
+    input.move = { x: -1, y: 1 }; // up + left
+    run(0.6);
+    // the camera turned with you, so you always walk away from it (never across the screen)
+    const behind = ((camera.yaw + Math.PI - player.heading) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    expect(Math.abs(behind)).toBeLessThan(0.2);
+    expect(Math.abs(camera.yaw)).toBeGreaterThan(1); // turned about 90°
+    input.move = { x: 1, y: 0 }; // right alone turns on the spot
+    const p0 = player.position.clone();
+    run(0.5);
+    expect(player.position.distanceTo(p0)).toBeLessThan(0.6); // only the stop from walking
+  });
+
   it('walks and runs camera-relative and faces where it goes', () => {
     const { player, input, run } = setup();
     input.move = { x: 0, y: 1 };

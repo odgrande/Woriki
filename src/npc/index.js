@@ -7,6 +7,9 @@ import { createCharacter, randomAppearance } from '../characters/index.js';
 import * as L from './lines.js';
 
 const WALK_ZONES = ['street', 'market', 'busstop', 'compound', 'carpark', 'gate'];
+/** Where NPCs may chat in passing (outdoors on the street), and seconds between such lines. */
+const STREET_ZONES = ['street', 'walkway', 'busstop', 'market'];
+const CHATTER_GAP = [35, 70];
 const COUNTS = { low: 16, medium: 30, high: 42 };
 const MAX_HIGH = { low: 5, medium: 9, high: 13 };
 const CONGREGATION = { low: 10, medium: 20, high: 30 };
@@ -58,14 +61,26 @@ export function createCommunity(ctx, opts) {
   let brainIndex = 0;
   let greetGlobal = 0;
   let sermonTimer = 4;
+  let chatterCD = 8;
   const offs = [];
   const maxHigh = MAX_HIGH[quality] ?? 9;
 
   const ground = (x, z) => (physics ? physics.groundHeight(x, z) : (world.groundAt ? world.groundAt(x, z) : 0));
 
-  function say(npc, text, seconds) {
+  /**
+   * Show a line over an NPC. `ambient` lines (gist, greetings in passing, vendors calling) are
+   * rare and only on the street: the real talk in Amen City is from real players in the chat.
+   * Worship (sermon, choir, "Amen!") and replies when you greet someone always show.
+   */
+  function say(npc, text, seconds, ambient = true) {
     if (!bubbles || !text) return;
-    if (npc.dist > 26 || !npc.char.object.visible) return;
+    if (npc.dist > 26 || !npc.char.object.visible || ctx.viewingWorld === false) return;
+    if (ambient) {
+      if (chatterCD > 0 || npc.dist > 10 || !player) return;
+      const zone = world.zoneAt?.(player.position)?.id;
+      if (!STREET_ZONES.includes(zone)) return;
+      chatterCD = CHATTER_GAP[0] + rng() * (CHATTER_GAP[1] - CHATTER_GAP[0]);
+    }
     bubbles.show(npc.char.object, text, { kind: 'npc', seconds, height: (npc.sitting ? 1.45 : 2.0) });
     ctx.bus?.emit('npc:say', { npc, text });
   }
@@ -304,7 +319,7 @@ export function createCommunity(ctx, opts) {
           if (rng() < 0.5) npc.char.raiseHands(2 + rng() * 2);
           npc.timer = 3 + rng() * 4;
         }
-        if (service && npc.lineTimer <= 0) { say(npc, pick(L.CHOIR), 4); npc.lineTimer = 10 + rng() * 10; }
+        if (service && npc.lineTimer <= 0) { say(npc, pick(L.CHOIR), 4, false); npc.lineTimer = 10 + rng() * 10; }
         break;
       case 'pastor':
         if (!service && npc.lineTimer <= 0) { if (npc.dist < 12) say(npc, pick(L.GREET)); npc.lineTimer = 20 + rng() * 15; }
@@ -341,13 +356,13 @@ export function createCommunity(ctx, opts) {
     if (sermonTimer > 0) return;
     const pastor = npcs.find((n) => n.kind === 'pastor');
     if (pastor) {
-      say(pastor, pick(L.SERMON), 4.5);
+      say(pastor, pick(L.SERMON), 4.5, false);
       if (rng() < 0.4) pastor.char.raiseHands(2.5);
     }
     // A few voices answer.
     setTimeout(() => {
       const listeners = congregants.filter((c) => c.dist < 20);
-      for (let i = 0; i < Math.min(2, listeners.length); i++) say(pick(listeners), pick(L.CONGREGATION), 2.2);
+      for (let i = 0; i < Math.min(2, listeners.length); i++) say(pick(listeners), pick(L.CONGREGATION), 2.2, false);
     }, 1600);
     sermonTimer = 7 + rng() * 5;
   }
@@ -380,7 +395,7 @@ export function createCommunity(ctx, opts) {
     close.forEach((n, i) => setTimeout(() => {
       n.faceUntil = ctx.time + 3;
       n.char.wave(1.8);
-      say(n, pick(L.WAVE_BACK), 2.5);
+      say(n, pick(L.WAVE_BACK), 2.5, false);
     }, 300 + i * 500));
   }
 
@@ -398,7 +413,7 @@ export function createCommunity(ctx, opts) {
     tmp.set(target.x - npc.pos.x, 0, target.z - npc.pos.z);
     const d = tmp.length();
     if (d < 0.2) { npc.path.shift(); return; }
-    // Road safety: wait at the kerb until the green man shows; never step into moving traffic.
+    // Road safety: wait at the kerb until the light turns green; never step into moving traffic.
     const rules = world.roadRules;
     if (rules && Math.abs(npc.pos.z) >= 3.9 && Math.abs(target.z) < 3.9 && !rules.pedWalk) {
       if (npc.char.state !== 'idle') setAnim(npc, 'idle');
@@ -467,6 +482,7 @@ export function createCommunity(ctx, opts) {
   /* ---------------------------------------------------------------- loop */
   function update(dt, t) {
     highQueue -= dt;
+    chatterCD -= dt;
     const cam = ctx.camera.position;
     lodTimer -= dt;
     if (lodTimer <= 0) { updateLod(cam); lodTimer = 0.4; }

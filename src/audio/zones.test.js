@@ -8,9 +8,25 @@ describe('resolveZone', () => {
     expect(resolveZone('market')).toMatchObject({ ambience: 'market', placement: 'far' });
     expect(resolveZone('prayer')).toMatchObject({ ambience: 'prayer', placement: 'adjacent' });
     expect(resolveZone('none')).toMatchObject({ ambience: 'none' });
-    expect(resolveZone(null)).toMatchObject({ ambience: 'street', placement: 'far' });
+    expect(resolveZone(null)).toMatchObject({ ambience: 'town', placement: 'far' });
     expect(resolveZone({ ambience: 'home' })).toMatchObject({ ambience: 'home', placement: 'far' });
-    expect(resolveZone('somewhere-new')).toMatchObject({ ambience: 'street' });
+    expect(resolveZone('somewhere-new')).toMatchObject({ ambience: 'town' });
+  });
+
+  it('hears traffic only on the road; each place keeps its own sound', () => {
+    expect(resolveZone('street').ambience).toBe('street');
+    for (const id of ['walkway', 'gate', 'carpark', 'compound', 'children', 'theatre']) expect(resolveZone(id).ambience).toBe('town');
+    expect(resolveZone('home').ambience).toBe('home');
+    expect(resolveZone('market').ambience).toBe('market');
+  });
+
+  it('only the street has people talking in the background (and quietly)', async () => {
+    const { BEDS } = await import('./ambience.js');
+    for (const [name, layers] of Object.entries(BEDS)) {
+      const talk = layers.filter((l) => l.babble);
+      if (name === 'street' || name === 'market') expect(talk.every((l) => l.gain <= 0.06)).toBe(true);
+      else if (name !== 'cinema') expect(talk).toHaveLength(0);
+    }
   });
 
   it('maps every world zone from the architecture', () => {
