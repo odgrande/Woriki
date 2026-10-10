@@ -1,7 +1,9 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #fffdf7; }
 #world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-#ui > * { pointer-events: auto; }
+/* :where() keeps this at zero specificity, so full-screen layers (name tags, bubbles, map pins) that
+   set pointer-events: none stay click-through and the 3D view gets drags, wheel and pinch. */
+:where(#ui) > * { pointer-events: auto; }
 
 .amen-loading {
   position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;

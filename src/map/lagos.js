@@ -194,7 +194,7 @@ export function createLagosMap(ctx, opts) {
       });
       walls.castShadow = roofs.castShadow = shadows;
       walls.receiveShadow = shadows;
-      walls.userData.pick = roofs.userData.pick = { type: 'house', list: k.list };
+      walls.userData.pick = roofs.userData.pick = { type: 'house', list: k.list, kind: ki };
       houses.push(walls, roofs);
       scene.add(walls, roofs);
     }
@@ -202,6 +202,7 @@ export function createLagosMap(ctx, opts) {
       const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 10).translate(0, 0.15, 0), new THREE.MeshStandardMaterial({ roughness: 0.5 }), tanks.length);
       tanks.forEach(([x, y, z, s0, black], i) => { m.makeScale(s0, s0, s0).setPosition(x, y, z); tm.setMatrixAt(i, m); tm.setColorAt(i, c.set(black ? '#1f1f22' : '#2b5fa8')); });
       tm.castShadow = shadows;
+      tm.userData.pick = { type: 'info', emoji: '🛢️', title: 'Rooftop water tank', text: 'There is no tap water on most Lagos streets, so every house pumps from a borehole into a tank on the roof. When NEPA takes the light, the pump stops too.' };
       scene.add(tm);
     }
   }
@@ -243,7 +244,12 @@ export function createLagosMap(ctx, opts) {
       ims[k].setColorAt(counts[k], c.setHSL(0.25 + rand() * 0.06, 0.25, 0.75 + rand() * 0.25));
       counts[k]++;
     }
-    ims.forEach((im, k) => { im.count = counts[k]; im.castShadow = shadows; scene.add(im); });
+    ims.forEach((im, k) => {
+      im.count = counts[k]; im.castShadow = shadows;
+      im.userData.pick = k ? { type: 'info', emoji: '🌴', title: 'Coconut palm', text: 'Palms line the compounds and the beaches. The coconut man climbs them with a rope around his waist.' }
+        : { type: 'info', emoji: '🌳', title: 'Mango tree', text: 'Neighbours sit under the mango tree in the evening to gist. A good place to share the Gospel.' };
+      scene.add(im);
+    });
   }
 
   /* ---------------------------------------------------------------- clouds */
@@ -468,6 +474,7 @@ export function createLagosMap(ctx, opts) {
     const palette = ['#f4f4f5', '#1f2937', '#9ca3af', '#b91c1c', '#1d4ed8', '#0f766e'];
     const c = new THREE.Color();
     cars.forEach((car, i) => im.setColorAt(i, c.set(car.danfo ? '#facc15' : palette[i % palette.length])));
+    im.userData.pick = { type: 'car' };
     traffic.add(im);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), tan = new THREE.Vector3(), side = new THREE.Vector3();
     const one = V3(1, 1, 1);
@@ -497,6 +504,7 @@ export function createLagosMap(ctx, opts) {
     const list = [];
     for (const r of routes) for (let k = 0; k < 3; k++) {
       const mesh = new THREE.Mesh(hull, std(k ? '#f8fafc' : '#c2410c'));
+      mesh.userData.pick = k ? { type: 'info', emoji: '⛴️', title: 'Lagos ferry', text: 'Ferries cross the lagoon from Ikorodu to CMS and from Mile 2 to Marina. Life jackets on, and pray before you board!' } : { type: 'info', emoji: '🛶', title: 'Fishing canoe', text: 'Makoko fishermen paddle out at dawn. The Makoko outreach goes by canoe too.' };
       boats.add(mesh);
       list.push({ mesh, curve: new THREE.CatmullRomCurve3(r.map(([x, z]) => V3(x, 0.05, z))), t: rand(), speed: 0.012 + rand() * 0.02 });
     }
@@ -666,6 +674,28 @@ export function createLagosMap(ctx, opts) {
   };
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointerup', onUp);
+  // Laptop touchpads: two-finger swipe pans the map (like Google Maps), pinch (ctrl+wheel) and a
+  // mouse wheel zoom. MapControls does the zooming; we take the panning swipes first.
+  const right = new THREE.Vector3(), fwd = new THREE.Vector3();
+  const onWheel = (e) => {
+    if (!isOpen) return;
+    map.tour(false);
+    if (e.ctrlKey || e.deltaMode !== 0) return;
+    const swipe = Math.abs(e.deltaX) > 0.5 || (Math.abs(e.deltaY) < 40 && !Number.isInteger(e.deltaY));
+    if (!swipe) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const k = camera.position.distanceTo(controls.target) / 700;
+    right.setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
+    fwd.set(-right.z, 0, right.x); // towards the viewer on the ground
+    const move = right.multiplyScalar(e.deltaX * k).add(fwd.multiplyScalar(e.deltaY * k)); // like scrolling a page
+    camera.position.add(move);
+    controls.target.add(move);
+    clampTarget();
+  };
+  canvas.addEventListener('wheel', onWheel, { capture: true, passive: false });
+  // The slow tour on the landing page stops as soon as you touch the map.
+  controls.addEventListener('start', () => map.tour(false));
   function pickOf(o) { while (o) { if (o.userData?.pick) return o.userData.pick; o = o.parent; } return null; }
   /** Turn a ray hit into something to show: a place, a billboard poster, a neighbourhood, a bridge… */
   function describe(hit) {
@@ -691,6 +721,19 @@ export function createLagosMap(ctx, opts) {
       if (z > 50) return areaPick('Atlantic Ocean');
       if (Math.hypot(x - PLACE_BY_ID.makoko.at[0], z - PLACE_BY_ID.makoko.at[1]) < 8) return { type: 'place', place: PLACE_BY_ID.makoko };
       return areaPick('Lagos Lagoon');
+    }
+    if (pk.type === 'house') {
+      const plot = pk.list?.[hit.instanceId];
+      const area = nearestArea(plot ? plot.x : x, plot ? plot.z : z);
+      return { type: 'house', key: `${pk.kind}:${hit.instanceId}`, area };
+    }
+    if (pk.type === 'car') {
+      const car = cars[hit.instanceId];
+      const road = car && ([...ROADS, ...BRIDGES].find((r) => r.pts === car.l.pts));
+      const name = road?.name || 'the road';
+      return car?.danfo
+        ? { type: 'info', emoji: '🚐', title: `Danfo on ${name}`, text: `"${['Oshodi! Oshodi!', 'CMS! Obalende!', 'Yaba! Ojuelegba!', 'Ikeja along!'][hit.instanceId % 4]}" The conductor hangs out of the door, collecting fares. ₦300 to ₦700, depending on the go-slow.` }
+        : { type: 'info', emoji: '🚗', title: `Car on ${name}`, text: car?.l.bridge ? 'Stuck in go-slow on the bridge. Hawkers sell gala, water and phone chargers between the cars.' : 'Lagos traffic: okadas weave in and out, and somebody is always honking.' };
     }
     if (pk.type === 'tower') return { type: 'info', emoji: '🏢', title: `Towers of ${nearestArea(x, z)}`, text: 'Banks, offices and churches that meet in hotel halls on Sunday. Workers pour out at 5pm into the go-slow.' };
     return areaPick(nearestArea(x, z), pk.type === 'house');
@@ -809,6 +852,21 @@ export function createLagosMap(ctx, opts) {
       }
       atlasTex.needsUpdate = true;
     },
+    /** Zoom buttons: f < 1 moves closer, f > 1 further away. */
+    zoomBy(f) {
+      map.tour(false);
+      const off = camera.position.clone().sub(controls.target);
+      const d = THREE.MathUtils.clamp(off.length() * f, controls.minDistance, controls.maxDistance);
+      camera.position.copy(controls.target).add(off.setLength(d));
+      controls.update();
+    },
+    /** Turn the map around its centre (radians). */
+    rotateBy(a) {
+      map.tour(false);
+      const off = camera.position.clone().sub(controls.target).applyAxisAngle(V3(0, 1, 0), a);
+      camera.position.copy(controls.target).add(off);
+      controls.update();
+    },
     /** Billboard positions (for tests / focusing). */
     billboards: spots,
     applyTime,
@@ -816,6 +874,7 @@ export function createLagosMap(ctx, opts) {
       map.hide();
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointerup', onUp);
+      canvas.removeEventListener('wheel', onWheel, { capture: true });
       controls.dispose();
       pinRoot.remove();
       scene.traverse((o) => { o.geometry?.dispose(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach((x) => { x.map?.dispose(); x.dispose(); }); });

@@ -353,6 +353,8 @@ export async function buildWorld(ctx, physics) {
     },
     /** Players' booked church adverts on the street billboard. */
     setAds(ads) { billboards.setAds(ads); },
+    /** The poster of a clicked street billboard, or null. */
+    posterAt: (o) => billboards.posterAt(o),
     get night() { return lastHour >= 0 && daylight(lastHour) < 0.3; },
     /** Show a lyrics slide on the projector screens (0 = welcome). */
     setLyrics(i) { slide = i; screen.show(i); },

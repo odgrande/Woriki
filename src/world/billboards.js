@@ -48,8 +48,9 @@ export function createStreetBillboards(root, collide) {
       const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.5).translate(sx, Y + H / 2 + 0.25, 0.55), new THREE.MeshBasicMaterial({ color: '#fff3c4' }));
       b.add(lamp);
     }
+    b.userData.poster = poster;
     group.add(b);
-    faces.push({ face, g, tex, poster });
+    faces.push({ face, g, tex, poster, board: b });
   }
   return {
     group,
@@ -61,6 +62,9 @@ export function createStreetBillboards(root, collide) {
       const f = faces[0];
       drawPoster(f.g, 0, 0, 512, 224, ad ? { ...ad, booked: true } : f.poster);
       f.tex.needsUpdate = true;
+      f.board.userData.poster = ad ? { ...ad, booked: true } : f.poster;
     },
+    /** The poster on the billboard an object belongs to, or null. */
+    posterAt(o) { while (o) { if (o.userData?.poster) return o.userData.poster; o = o.parent; } return null; },
   };
 }

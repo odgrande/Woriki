@@ -25,8 +25,9 @@ real choices around it, as in real life.
 - **Road safety.** There is a zebra crossing with traffic lights at the church gate, where cars stop on red
   and people cross on the green man, and a pedestrian bridge by the market. An invisible barrier along
   the kerbs tells you where to cross. Horns are heard only on the street.
-- **Everything on the map is tappable:** places, buildings, billboards, neighbourhoods, bridges, roads and
-  the lagoon. Lagos only. "Coming soon" places are already on the map: Prayer City camp, the airport,
+- **Everything on the map is tappable:** places, buildings, billboards, neighbourhoods, bridges, roads,
+  cars, boats, palms, water tanks and the lagoon. Every house has a family living in it, with their own
+  story and prayer need: visit and invite them to church, or pray for them. Lagos only. "Coming soon" places are already on the map: Prayer City camp, the airport,
   the Bible school campus, the National Stadium, Mile 12, the Lekki Conservation Centre and land for your
   church.
 - **Choices beyond the church gate** (police station at Sabo, LUTH, a children's home, gospel radio,
@@ -128,6 +129,11 @@ real choices around it, as in real life.
 | `M` | Map | Open the Lagos map |
 | `H` | Home | Go home (pick bike, taxi, danfo, free ride or trek) |
 | mouse drag / wheel | drag right side / pinch | Turn and zoom the camera |
+| touchpad | – | Two-finger swipe up/down zooms, left/right turns; pinch zooms |
+| click | tap | Click a person to greet them or share the Gospel, furniture to change it, a billboard to read it |
+
+On the map, drag to move around, scroll or pinch to zoom (a two-finger swipe moves the map), right-drag
+to turn, or use the + / − / turn buttons on the right.
 | `?` | ? button | Show all controls |
 
 ## Run it

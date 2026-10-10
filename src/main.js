@@ -76,6 +76,7 @@ ui = createUI(ctx, {
   snapshot: () => snapshot(),
 });
 debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
+debug.mapDebug = lagosMap;
 
 /* ---------------------------------------------------------------- loading overlay */
 function loadingOverlay() {
@@ -271,10 +272,37 @@ ctx.bus.on('player:interact', (item) => {
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, ctx.camera);
-    ray.far = 14;
+    ray.far = 40;
     const hit = ray.intersectObject(s.decor.root, true)[0];
     const slot = hit && s.decor.slotOf(hit.object);
-    if (slot) ui.furniture(slot);
+    if (slot) { ui.furniture(slot); return; }
+    // people: the nearest one on screen under the pointer (cheaper than raycasting skinned meshes)
+    let best = null, bd = 46;
+    const v = new THREE.Vector3();
+    for (const n of s.community.npcs) {
+      if (!n.char.object.visible) continue;
+      v.copy(n.pos); v.y += 1.2;
+      if (v.distanceTo(ctx.camera.position) > 30) continue;
+      v.project(ctx.camera);
+      if (v.z > 1) continue;
+      const d = Math.hypot(((v.x + 1) / 2) * r.width + r.left - e.clientX, ((1 - v.y) / 2) * r.height + r.top - e.clientY);
+      if (d < bd) { bd = d; best = n; }
+    }
+    if (best) {
+      ui.person(best, {
+        greet: () => {
+          best.faceUntil = ctx.time + 3;
+          best.char.wave?.(1.8);
+          s.character.wave?.(1.6);
+          bubbles.show(best.char.object, ['God bless you!', 'Good afternoon o!', 'How body?', 'Praise the Lord!', 'Amen! Welcome.'][best.id % 5], { kind: 'npc', name: best.name });
+        },
+      });
+      return;
+    }
+    // the big church billboards over the street
+    const board = ray.intersectObject(s.world.root.getObjectByName('world:billboards') || s.world.root, true)[0];
+    const poster = board && s.world.posterAt?.(board.object);
+    if (poster) ui.poster(poster);
   });
 }
 

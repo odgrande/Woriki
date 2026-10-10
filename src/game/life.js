@@ -449,7 +449,7 @@ export function doPhone(s, id) {
     if (s.naira < f.naira) return { ok: false, reason: `You need ${naira(f.naira)}` };
     s.naira -= f.naira;
     s.hunger = clamp(s.hunger + f.hunger, 0, 100);
-    return { ok: true, text: `${f.emoji} The rider brought your ${f.name.toLowerCase()} from ${f.from}. You prayed and ate. Delivery included.` };
+    return { ok: true, text: `${f.emoji} The rider brought your ${f.name.replace(/^The /, 'the ')} from ${f.from}. You prayed and ate. Delivery included.` };
   }
   const a = PHONE_ACTIONS[id];
   if (!a) return { ok: false, reason: 'Not available' };
@@ -498,3 +498,70 @@ export function bookAd(s, ad) {
 
 /** Booked ads still running at time T. */
 export const activeAds = (s) => (s.ads || []).filter((a) => a.untilT > s.T);
+
+/* ================================================================ families in the houses */
+
+const SURNAMES = ['Adeyemi', 'Okafor', 'Bello', 'Eze', 'Ogunleye', 'Nwosu', 'Abubakar', 'Balogun', 'Okonkwo', 'Ibrahim', 'Adebayo', 'Chukwu', 'Olawale', 'Effiong', 'Danjuma', 'Akande', 'Obi', 'Lawal', 'Ekpo', 'Oyelaran', 'Nnamdi', 'Fashola', 'Ojo', 'Amadi'];
+const FAITHS = [
+  ['go to Mount Zion Gospel Church every Sunday', 'church'],
+  ['stopped going to church when Papa lost his job', 'backslid'],
+  ['are Muslims, kind neighbours who greet everybody', 'muslim'],
+  ['are new in Lagos and looking for a church', 'seeking'],
+  ['only go to church at Christmas and Easter', 'casual'],
+  ['are pillars at Living Waters Chapel', 'church'],
+  ['have never been to church', 'none'],
+  ['go to a white-garment church on the next street', 'church'],
+];
+const JOBS = ['Mama sells provisions in front of the house', 'Papa drives a danfo on the Oshodi route', 'they run a tailoring shop', 'Papa is a civil servant at Alausa', 'Mama is a nurse at LUTH', 'the first son is a Yaba "tech bro"', 'they sell foodstuff at Mile 12', 'Papa is a mechanic under the bridge', 'Mama makes small chops for parties'];
+const NEEDS = ['Papa\'s job', 'the twins\' school fees', 'Grandma\'s health', 'peace in the home', 'the daughter\'s JAMB exam', 'this year\'s rent', 'a child who is sick', 'a visa that keeps getting refused', 'the son who keeps late nights'];
+
+function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/** The family living in a house on the map (the same every time). */
+export function familyAt(key, area = 'Lagos') {
+  const h = hash(String(key));
+  const r = (n, k) => Math.floor(((h >>> k) % 1000) / 1000 * n);
+  const [faith, kind] = FAITHS[r(FAITHS.length, 3)];
+  return {
+    key: String(key), area,
+    name: `The ${SURNAMES[r(SURNAMES.length, 0)]} family`,
+    faith, kind,
+    job: JOBS[r(JOBS.length, 7)],
+    need: NEEDS[r(NEEDS.length, 11)],
+    children: 1 + r(5, 13),
+  };
+}
+
+/** Visit a family and invite them to church (a few visits a day). Mutates `s`. */
+export function visitFamily(s, key, area, rng = Math.random) {
+  const f = familyAt(key, area);
+  s.doneToday = s.doneToday || {};
+  const k = `visit:${f.key}`;
+  if (s.doneToday[k]) return { ok: false, reason: `You already visited ${f.name.replace(/^The /, 'the ')} today.` };
+  if ((s.doneToday.visits || 0) >= 4) return { ok: false, reason: 'You have visited enough homes today. Rest your legs.' };
+  if (s.energy < 10) return { ok: false, reason: 'You are too tired' };
+  s.doneToday[k] = true;
+  s.doneToday.visits = (s.doneToday.visits || 0) + 1;
+  s.energy = clamp(s.energy - 10, 0, 100);
+  let text;
+  const x = rng();
+  if (x < 0.2) text = `Nobody was home at ${f.name}'s. You slipped an invitation card under the door.`;
+  else if (f.kind === 'muslim') { s.character = clamp(s.character + 2, 0, 100); text = `${f.name} welcomed you with zobo and puff-puff. You talked about God and family with respect. They promised to pray for you too. +2 character.`; }
+  else if (f.kind === 'church') { s.points += 3; text = `${f.name} already go to church. You prayed together for ${f.need}. +3⭐`; }
+  else if (x < 0.7) { s.points += 6; s.doneToday.invite = true; text = `${f.name} said they will come to Grace Assembly on Sunday! You prayed for ${f.need}. +6⭐`; if (rng() < 0.25) { s.souls += 1; text += ' The mother gave her life to Christ right there in the parlour. +1 soul!'; } }
+  else text = `${f.name} were polite but busy. "Next Sunday, by God's grace." Keep praying for them.`;
+  return { ok: true, text, family: f };
+}
+
+/** Pray for a family's need (once a day each). */
+export function prayFamily(s, key, area) {
+  const f = familyAt(key, area);
+  s.doneToday = s.doneToday || {};
+  const k = `prayfam:${f.key}`;
+  if (s.doneToday[k]) return { ok: false, reason: 'You already prayed for them today.' };
+  s.doneToday[k] = true;
+  s.faith = clamp(s.faith + 1, 0, 100);
+  s.prayed += 1;
+  s.points += 1;
+  return { ok: true, text: `You prayed for ${f.name.replace(/^The /, 'the ')}: ${f.need}. God hears. +1⭐`, family: f };
+}

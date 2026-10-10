@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { distanceKm, travelQuote, travel, buyFurniture, activitiesAt, doActivity, placeOfZone, crossesLagoon } from './life.js';
+import { distanceKm, travelQuote, travel, buyFurniture, activitiesAt, doActivity, placeOfZone, crossesLagoon, familyAt, visitFamily, prayFamily } from './life.js';
 import { newState } from './state.js';
 import { createGame } from './index.js';
 
@@ -157,5 +157,32 @@ describe('daily assignments and the dice', () => {
     expect(seen.size).toBeGreaterThan(6);
     const s = (await import('./state.js')).newState({ name: 'A', role: 'usher', start: 'convert' });
     expect(s.start).toBe('convert');
+  });
+});
+
+describe('families in the houses', () => {
+  it('the same house always has the same family', () => {
+    expect(familyAt('0:12', 'Yaba')).toEqual(familyAt('0:12', 'Yaba'));
+    const names = new Set(Array.from({ length: 40 }, (_, i) => familyAt(`1:${i}`).name));
+    expect(names.size).toBeGreaterThan(8);
+  });
+
+  it('visiting invites them to church, once a house and a few houses a day', () => {
+    const s = newState({ name: 'A', role: 'usher' });
+    const first = visitFamily(s, '0:1', 'Yaba', () => 0.5);
+    expect(first.ok).toBe(true);
+    expect(first.text).not.toMatch(/\bthe [a-z]+ family/); // surnames keep their capital
+    expect(visitFamily(s, '0:1', 'Yaba').ok).toBe(false);
+    for (let i = 2; i < 5; i++) visitFamily(s, `0:${i}`, 'Yaba', () => 0.5);
+    expect(s.doneToday.visits).toBe(4);
+    expect(visitFamily(s, '0:9', 'Yaba').ok).toBe(false);
+  });
+
+  it('praying for a family raises faith once a day', () => {
+    const s = newState({ name: 'A', role: 'usher' });
+    const f0 = s.faith;
+    expect(prayFamily(s, '2:3', 'Ikeja').ok).toBe(true);
+    expect(prayFamily(s, '2:3', 'Ikeja').ok).toBe(false);
+    expect(s.faith).toBe(Math.min(100, f0 + 1));
   });
 });

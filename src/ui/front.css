@@ -75,6 +75,12 @@
   border: var(--b); border-radius: var(--r-pill); background: var(--white); font-weight: 700; font-size: 13px; color: var(--ink); box-shadow: var(--shadow-sm); cursor: pointer;
 }
 .mv-chip[aria-pressed="false"] { opacity: .6; box-shadow: none; }
+.mv-zoom { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: grid; gap: 6px; }
+.mv-zoom-btn {
+  width: 42px; height: 42px; display: grid; place-items: center; border: var(--b); border-radius: 12px; background: var(--white);
+  font: 700 22px/1 var(--head); color: var(--ink); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.mv-zoom-btn:active { transform: translateY(1px); box-shadow: none; }
 .mv-walk { margin-left: auto; min-height: 40px; white-space: nowrap; }
 .mv-card {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(12px + var(--safe-b) + var(--amen-nav-h)); width: min(460px, calc(100% - 24px));
@@ -140,3 +146,5 @@
 .mv-soon { margin: 0 0 10px; padding: 8px 10px; background: #fef3c7; border: 2px dashed #a16207; border-radius: var(--r-sm); font-size: 13.5px; }
 button.mv-act.is-link { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 button.mv-act.is-link:hover { background: var(--zinc-100); }
+.mv-family-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.mv-family-btns .ac-btn { flex: 1; }

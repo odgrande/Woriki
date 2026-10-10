@@ -265,9 +265,16 @@ export function createInput(domRoot = document.body, opts = {}) {
   }
   function onWheel(e) {
     if (!enabled || !isGameTarget(e.target)) return;
-    const unit = e.deltaMode === 1 ? 1 / 3 : e.deltaMode === 2 ? 1 : 1 / 100;
-    zoom += Math.max(-3, Math.min(3, e.deltaY * unit));
     e.preventDefault();
+    // Laptop touchpads: pinch arrives as ctrl+wheel (zoom), a two-finger sideways swipe turns the
+    // camera, a two-finger up/down swipe zooms. A mouse wheel zooms.
+    if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY) && e.deltaMode === 0) {
+      look.dx += e.deltaX * 0.9;
+      lastLookAt = performance.now();
+      return;
+    }
+    const unit = e.deltaMode === 1 ? 1 / 3 : e.deltaMode === 2 ? 1 : e.ctrlKey ? 1 / 25 : 1 / 100;
+    zoom += Math.max(-3, Math.min(3, e.deltaY * unit));
   }
   function onContextMenu(e) { if (isGameTarget(e.target)) e.preventDefault(); }
   function onBlur() { clearHeld(); releaseStick(); lookers.clear(); mouseDrag = -1; pinchDist = 0; gesture = false; }

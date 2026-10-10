@@ -3,7 +3,7 @@
 // travel screen while you are on the way.
 import { h, ic, setChildren } from './dom.js';
 import { naira } from '../game/content.js';
-import { PLACE_BY_ID, distanceKm } from '../game/life.js';
+import { PLACE_BY_ID, distanceKm, familyAt } from '../game/life.js';
 import { drawPoster } from '../map/posters.js';
 import { countdown } from '../game/clock.js';
 
@@ -48,8 +48,15 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
   const walkBtn = h('button.ac-btn.is-yellow.mv-walk', { type: 'button', on: { click: () => walkYaba() } }, '🚶', 'Walk Yaba');
   const closeBtn = h('button.ac-iconbtn.mv-close', { type: 'button', attrs: { 'aria-label': 'Close map' }, on: { click: () => close() } }, ic('x'));
   const top = h('div.mv-top', null, title, closeBtn);
+  // On-screen zoom / turn buttons, for laptops whose touchpad doesn't pinch.
+  const zbtn = (label, text, fn) => h('button.mv-zoom-btn', { type: 'button', attrs: { 'aria-label': label, title: label }, on: { click: fn } }, text);
+  const zoom = h('div.mv-zoom', { attrs: { role: 'group', 'aria-label': 'Zoom' } },
+    zbtn('Zoom in', '+', () => map.zoomBy(0.7)),
+    zbtn('Zoom out', '−', () => map.zoomBy(1.4)),
+    zbtn('Turn left', '⟲', () => map.rotateBy(-Math.PI / 8)),
+    zbtn('Turn right', '⟳', () => map.rotateBy(Math.PI / 8)));
   const card = h('section.mv-card', { hidden: true, attrs: { 'aria-live': 'polite' } });
-  const el = h('div.mv', { hidden: true }, top, h('div.mv-row', null, chips, walkBtn), card);
+  const el = h('div.mv', { hidden: true }, top, h('div.mv-row', null, chips, walkBtn), zoom, card);
   root.append(el);
 
   /* ---------------------------------------------------------------- open / close */
@@ -103,7 +110,7 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
       return;
     }
     selected = null;
-    if (mode === 'landing' && info.type !== 'billboard') { landingPick?.(info); return; }
+    if (mode === 'landing' && info.type !== 'billboard' && info.type !== 'house') { landingPick?.(info); return; }
     renderInfo(info);
   }
 
@@ -121,6 +128,17 @@ export function createMapView({ root, game, map, toast, onArrive, onToggle = () 
         c,
         h('p.mv-desc', { text: `${info.poster?.sub || ''}. Churches across Lagos put their programmes on these boards.` }),
         mode === 'game' ? h('button.ac-btn.is-primary.is-block', { type: 'button', on: { click: () => { close(); onAds?.(); } } }, '📣 Put your church programme on a billboard') : null);
+    } else if (info.type === 'house') {
+      const f = familyAt(info.key, info.area);
+      const act = (fn) => { const r = fn(); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); };
+      setChildren(card,
+        head('🏠', f.name, `${info.area} · ${f.children} ${f.children === 1 ? 'child' : 'children'}`),
+        h('p.mv-desc', { text: `They ${f.faith}. ${f.job[0].toUpperCase()}${f.job.slice(1)}. Prayer need: ${f.need}.` }),
+        mode === 'game'
+          ? h('div.mv-family-btns', null,
+            h('button.ac-btn.is-primary', { type: 'button', on: { click: () => act(() => game.visitFamily(info.key, info.area)) } }, '🚪 Visit & invite to church'),
+            h('button.ac-btn', { type: 'button', on: { click: () => act(() => game.prayFamily(info.key, info.area)) } }, '🙏 Pray for them'))
+          : null);
     } else if (info.type === 'area') {
       const places = (info.places || []).map((id) => PLACE_BY_ID[id]).filter(Boolean);
       setChildren(card,

@@ -14,6 +14,8 @@ import { createFront, isLoggedIn } from './front.js';
 import { createMapView } from './mapview.js';
 import { createPhone } from './phone/phone.js';
 import { FURNITURE_BY_ID, variantOf } from '../game/life.js';
+import { drawPoster } from '../map/posters.js';
+import { ROLES as GAME_ROLES } from '../game/content.js';
 import { naira } from '../game/content.js';
 import { countdown } from '../game/clock.js';
 
@@ -268,6 +270,54 @@ export function createUI(ctx, opts) {
     if (open) game.pause('phone'); else game.resume('phone');
   }));
 
+  const KIND_TEXT = {
+    vendor: 'Sells here every day. Buy something, and greet them with a smile.',
+    choir: 'Sings in the Grace Assembly choir.',
+    kid: 'A child from the neighbourhood. Children\'s church is on Sunday!',
+    pastor: 'Senior Pastor of Grace Assembly. Ask him to pray with you.',
+    post: 'Serving at their post in God\'s house.',
+    congregant: 'Worshipping with you at Grace Assembly.',
+    group: 'Gisting with friends.',
+    wander: 'Walking around Yaba.',
+    leaving: 'Going home after the service.',
+  };
+  /** A person in the street or the church was clicked. */
+  function person(npc, cb = {}) {
+    if (!inGame) return;
+    const role = GAME_ROLES[npc.role];
+    dialogs.open({
+      id: `person:${npc.id}`,
+      dismissible: true,
+      build(card, close) {
+        setChildren(card,
+          h('div.ac-modal-emoji', { text: npc.kind === 'kid' ? '🧒' : npc.kind === 'pastor' ? '👨🏿‍💼' : role?.emoji || '🙂', attrs: { 'aria-hidden': 'true' } }),
+          h('h3', { text: npc.kind === 'pastor' ? 'Pastor Ade' : npc.name, id: 'ac-modal-title' }),
+          h('p', { text: `${npc.kind === 'pastor' ? '' : `${role?.name || 'Neighbour'} · `}${KIND_TEXT[npc.kind] || ''}` }),
+          h('div.ac-choices', null,
+            h('button.ac-btn.is-primary', { type: 'button', on: { click: () => { close(); cb.greet?.(); } } }, '👋 Greet'),
+            npc.kind === 'kid' ? null : h('button.ac-btn', { type: 'button', on: { click: () => { close(); const r = game.act('witness'); if (r && !r.ok && r.reason) dialogs.toast(r.reason, { tone: 'warn' }); } } }, '💬 Share the Gospel'),
+            npc.kind === 'pastor' ? h('button.ac-btn', { type: 'button', on: { click: () => { close(); const r = game.phone('callPastor'); if (r && !r.ok && r.reason) dialogs.toast(r.reason, { tone: 'warn' }); } } }, '🙏 Ask him to pray') : null));
+      },
+    });
+  }
+  /** A billboard poster, big. */
+  function poster(p) {
+    dialogs.open({
+      id: 'poster',
+      dismissible: true,
+      build(card, close) {
+        const c = h('canvas.mv-poster', { width: 512, height: 224, attrs: { 'aria-label': p.title } });
+        drawPoster(c.getContext('2d'), 0, 0, 512, 224, p);
+        setChildren(card, c,
+          h('h3', { text: p.title, id: 'ac-modal-title' }),
+          h('p', { text: `${p.church || ''}${p.sub ? ` · ${p.sub}` : ''}` }),
+          h('div.ac-choices', null,
+            h('button.ac-btn.is-primary', { type: 'button', on: { click: () => { close(); phone.show('ads'); } } }, '📣 Advertise your church programme'),
+            h('button.ac-btn', { type: 'button', on: { click: close } }, 'Close')));
+      },
+    });
+  }
+
   /** Replace or upgrade a piece of furniture (click it, or press F next to it). */
   function furniture(slot) {
     const f = FURNITURE_BY_ID[slot];
@@ -426,6 +476,10 @@ export function createUI(ctx, opts) {
     phone,
     /** Replace or upgrade furniture in a slot of the home. */
     furniture,
+    /** A clicked person in the 3D world. */
+    person,
+    /** A clicked billboard poster. */
+    poster,
     /** A pin on the Lagos map was tapped. */
     mapPick: (p) => mapView?.pick(p),
     get mapOpen() { return !!mapView?.open; },

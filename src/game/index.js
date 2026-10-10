@@ -10,7 +10,7 @@ import {
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
-import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds } from './life.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds, visitFamily as visitFamilySys, prayFamily as prayFamilySys } from './life.js';
 import { deltas as deltasOf } from './systems.js';
 import { checkAssignments, assignmentView } from './assignments.js';
 
@@ -414,6 +414,27 @@ export function createGame(ctx = {}, opts = {}) {
         addLog(s, r.text);
         e.fx.push({ type: 'toast', text: r.text, emoji: r.emoji, deltas: deltasOf(before, s), tone: r.shady ? 'warn' : undefined });
         e.fx.push({ type: 'audio:play', name: r.shady ? 'fail' : 'success' });
+        return r;
+      });
+    },
+    /** Visit the family in a house on the map and invite them to church. */
+    visitFamily(key, area) {
+      return run((e) => {
+        const before = { ...s };
+        const r = visitFamilySys(s, key, area, rng);
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        e.fx.push({ type: 'toast', text: r.text, emoji: '🏠', deltas: deltasOf(before, s) });
+        return r;
+      });
+    },
+    /** Pray for a family's need. */
+    prayFamily(key, area) {
+      return run((e) => {
+        const before = { ...s };
+        const r = prayFamilySys(s, key, area);
+        if (!r.ok) return r;
+        e.fx.push({ type: 'toast', text: r.text, emoji: '🙏', deltas: deltasOf(before, s) });
         return r;
       });
     },
