@@ -69,6 +69,7 @@ ui = createUI(ctx, {
   onStart: (profile) => enter(profile),
   onArrive: (go) => arrive(go),
 });
+debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
 
 /* ---------------------------------------------------------------- loading overlay */
 function loadingOverlay() {
@@ -195,8 +196,9 @@ const homeScene = (() => {
       char.object.rotation.y = 0.5;
       ctx.scene.add(char.object);
       char.play?.('idle');
-      ctx.camera.position.set(17.9, at.y + 1.55, 24.4);
-      ctx.camera.lookAt(15.6, at.y + 1.05, 20.9);
+      // Look down a little so you stand in the top half of the screen, above the card.
+      ctx.camera.position.set(18.3, at.y + 2.0, 25.6);
+      ctx.camera.lookAt(15.5, at.y + 0.35, 20.6);
       ctx.setShadowFocus(at);
       let wave = 1.2;
       off?.();

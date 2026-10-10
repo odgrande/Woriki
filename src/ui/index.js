@@ -85,6 +85,8 @@ export function createUI(ctx, opts) {
   /** Start a new life (or continue the saved one) and enter the game. */
   function begin(profile, how = 'new') {
     let p = profile;
+    front.hide();
+    mapView?.close();
     if (how === 'continue') {
       const s = game.continueGame();
       if (!s) { dialogs.toast('Could not load your saved life. Start a new one.', { tone: 'warn' }); return null; }

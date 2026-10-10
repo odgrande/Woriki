@@ -90,7 +90,7 @@ export function makeSpawns() {
       home: sp(16.6, 23.8, Math.PI / 2),
       church: sp(9, -6.2, Math.PI),
       market: sp(-21.5, 9.6, 0),
-      beach: sp(0, 584, 0),
+      beach: sp(0, 592, 0),
       theatre: sp(600, 30, Math.PI),
     },
     byRole: {
