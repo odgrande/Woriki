@@ -152,12 +152,8 @@ export function navNodes() {
   const sz = (x) => (x < -46 && x > -62 ? 'busstop' : x > -46 && x < 2 ? 'market' : 'street');
   for (const [a, b] of CROSS_N) { const x = (a + b) / 2; add(x, -4.42, 'street'); add(x, -5.9, 'street'); }
   for (const [a, b] of CROSS_S) { const x = (a + b) / 2; add(x, 4.42, sz(x)); add(x, 5.9, sz(x)); }
-  // road nodes where crossings face each other (NPCs cross there, Lagos style)
-  for (const [a, b] of CROSS_N) {
-    const x = (a + b) / 2;
-    const s = CROSS_S.find(([c, d]) => Math.abs((c + d) / 2 - x) < 7);
-    if (s) { add(x, -0.8, 'street'); add((s[0] + s[1]) / 2, 0.8, 'street'); }
-  }
+  // People cross the road only at the zebra crossing (x 12.2–14.6), when the green man shows.
+  add(13.4, -3.6, 'street'); add(13.4, 0, 'street'); add(13.4, 3.6, 'street');
   // church gate, forecourt, car park, east yard, back yard
   add(9, -8.5, 'gate'); add(13.5, -8.6, 'gate'); add(9, -12, 'gate'); add(14, -13.2, 'gate');
   for (let x = 4; x <= 34; x += 5) for (const z of [-17.5, -13.5]) add(x, z, x > 3 && x < 19 && z > -15 ? 'gate' : 'compound');

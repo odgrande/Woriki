@@ -61,10 +61,23 @@ export function createTraffic(W, kits, mats, bus) {
   const tmp = V(0, 0, 0);
   return {
     list,
-    update(dt) {
+    /** @param {number} dt @param {{carsGo: boolean, ZEBRA: object}} [rules] traffic lights at the zebra */
+    update(dt, rules) {
       for (const v of list) {
         // eastbound danfo stops briefly behind the bus stop to pick passengers
         let target = v.speed;
+        // red light: stop at the line before the zebra crossing (cars past the line carry on)
+        if (rules && !rules.carsGo) {
+          const line = v.dir > 0 ? rules.ZEBRA.stopEast - 2.4 : rules.ZEBRA.stopWest + 2.4;
+          const d = (line - v.x) * v.dir;
+          if (d > -0.3 && d < 30) target = Math.min(target, Math.max(0, d - 0.3) * 0.9);
+        }
+        // keep a gap behind the vehicle in front in the same lane
+        for (const o of list) {
+          if (o === v || o.dir !== v.dir) continue;
+          const gap = (o.x - v.x) * v.dir;
+          if (gap > 0 && gap < 7.5) target = Math.min(target, Math.max(0, gap - 5.5) * 1.5);
+        }
         if (v.kit === 'danfo' && v.dir > 0 && v.x > -72 && v.x < -64 && v.pause <= 0 && v.stopped !== true) target = 0;
         if (v.pause > 0) { v.pause -= dt; if (v.pause <= 0) v.stopped = true; }
         if (target === 0 && v.v < 0.2 && v.pause <= 0 && !v.stopped) v.pause = 4 + r() * 4;

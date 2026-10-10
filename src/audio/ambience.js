@@ -46,7 +46,6 @@ export const BEDS = {
     { noise: 'brown', filters: [hp(50), lp(160)], gain: 0.05 }, // street outside, through the walls
     { event: 'creak', every: [7, 18], gain: [0.08, 0.2], pan: [-0.8, 0.8], reverb: 0.6, rate: [0.9, 1.1] },
     { event: 'footsteps', args: { surface: 'tile', run: false }, every: [10, 26], gain: [0.05, 0.11], pan: [-0.8, 0.8], reverb: 0.8, seq: { count: [4, 8], gap: [0.52, 0.62] }, lowpass: [3000, 6000] },
-    { event: 'horn', every: [20, 45], gain: [0.02, 0.05], lowpass: [700, 1100], reverb: 0.2, pan: [-0.9, 0.9] },
   ],
   market: [
     { babble: BABBLE_A, filters: [hp(180), lp(3200)], gain: 0.18, pan: -0.35 },
@@ -56,15 +55,12 @@ export const BEDS = {
     { generator: { fire: 52 }, filters: [hp(80), lp(900)], gain: 0.05, pan: 0.7 },
     { event: 'hawker', every: [3.5, 9], gain: [0.07, 0.18], pan: [-0.85, 0.85], lowpass: [2500, 5000], reverb: 0.2, rate: [0.94, 1.06] },
     { event: 'coin', every: [6, 15], gain: [0.03, 0.07], pan: [-0.8, 0.8], rate: [0.5, 0.75], reverb: 0.15, lowpass: [3000, 6000] },
-    { event: 'horn', every: [8, 22], gain: [0.03, 0.1], lowpass: [1400, 3000], reverb: 0.35, pan: [-0.9, 0.9] },
-    { event: 'okada', args: { mode: 'pass' }, every: [12, 28], gain: [0.06, 0.14], reverb: 0.05 },
   ],
   prayer: [
     { noise: 'pink', filters: [hp(60), lp(240)], gain: 0.04 },
     { noise: 'pink', filters: [bp(430, 0.9)], gain: 0.02, lfo: [[8.7, 0.008]], pan: 0.3 },
     { babble: { seed: 46, talkers: 4 }, filters: [lp(650)], gain: 0.05 }, // others praying quietly
     { event: 'bulbul', every: [9, 22], gain: [0.02, 0.05], pan: [-0.9, 0.9], lowpass: [2500, 4000] },
-    { event: 'horn', every: [25, 55], gain: [0.012, 0.03], lowpass: [600, 900], pan: [-0.9, 0.9] },
   ],
   home: [
     { generator: { fire: 50 }, filters: [hp(70), lp(1500)], gain: 0.09, pan: 0.55 }, // neighbour's generator
@@ -74,7 +70,6 @@ export const BEDS = {
     { event: 'bulbul', every: [3, 9], gain: [0.08, 0.2], pan: [-0.9, 0.9], reverb: 0.1 },
     { event: 'dove', every: [10, 24], gain: [0.08, 0.16], pan: [-0.9, 0.9], reverb: 0.1, lowpass: [1800, 2600] },
     { event: 'crow', every: [25, 60], gain: [0.03, 0.06], pan: [-0.9, 0.9], lowpass: [2000, 3000], reverb: 0.25 },
-    { event: 'horn', every: [18, 40], gain: [0.02, 0.05], lowpass: [900, 1500], pan: [-0.9, 0.9], reverb: 0.3 },
   ],
   beach: [
     { noise: 'brown', filters: [hp(40), lp(420)], gain: 0.28, lfo: [[0.11, 0.2], [0.043, 0.07]] }, // surf swells

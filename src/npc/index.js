@@ -398,6 +398,12 @@ export function createCommunity(ctx, opts) {
     tmp.set(target.x - npc.pos.x, 0, target.z - npc.pos.z);
     const d = tmp.length();
     if (d < 0.2) { npc.path.shift(); return; }
+    // Road safety: wait at the kerb until the green man shows; never step into moving traffic.
+    const rules = world.roadRules;
+    if (rules && Math.abs(npc.pos.z) >= 3.9 && Math.abs(target.z) < 3.9 && !rules.pedWalk) {
+      if (npc.char.state !== 'idle') setAnim(npc, 'idle');
+      return;
+    }
     tmp.multiplyScalar(1 / d);
     // Keep a little distance from other people and from the player.
     for (const o of npcs) {

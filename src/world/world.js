@@ -12,6 +12,7 @@ import { buildMarket } from './market.js';
 import { buildHome } from './home.js';
 import { buildBeach, buildTheatre } from './districts.js';
 import { createStreetBillboards } from './billboards.js';
+import { createRoadRules } from './roadrules.js';
 import { buildVehicles, createTraffic } from './vehicles.js';
 import { ZONE_DEFS, groundAt, surfaceAt, pickZone, navNodes, HALL, ALTAR } from './layout.js';
 import { buildEdges, createNav } from './nav.js';
@@ -278,6 +279,8 @@ export async function buildWorld(ctx, physics) {
 
   // ---------------------------------------------------------------- traffic + per-frame updates
   const traffic = createTraffic(W, kits, mats, ctx.bus);
+  // zebra crossing with traffic lights, the pedestrian bridge and the kerb barrier
+  const roadRules = createRoadRules(ctx, { root, physics, interactables });
   const fanM = new THREE.Matrix4();
   let slide = 0, slideTimer = 0, inService = false;
   const offs = [
@@ -297,7 +300,7 @@ export async function buildWorld(ctx, physics) {
 
   let lastHour = -1;
   const world = {
-    root, spawns, seats, nav, zones, interactables,
+    root, spawns, seats, nav, zones, interactables, roadRules,
     vehicles: traffic.list,
     surfaceAt, zoneAt,
     groundAt,
@@ -362,7 +365,8 @@ export async function buildWorld(ctx, physics) {
         fans.forEach((p, i) => { fanM.makeRotationY(a + i * 0.7).setPosition(p); im.setMatrixAt(i, fanM); });
         im.instanceMatrix.needsUpdate = true;
       }
-      traffic.update(dt);
+      roadRules.update(dt);
+      traffic.update(dt, roadRules);
       for (const e of extras) e.update?.(dt, t);
       for (const d of doorState) {
         const target = d.open ? d.openAngle : d.closedAngle;

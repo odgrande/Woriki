@@ -168,6 +168,7 @@ function frame(dt, t) {
     s.player.update(dt, t);
     s.camera.update(dt, s.player.position, physics);
     s.character.object.visible = !s.camera.firstPerson;
+    roadHint(s);
   }
   s.community.update(dt, t);
   s.decor.update(dt, t);
@@ -190,6 +191,66 @@ function snapshot() {
     return c.toDataURL('image/jpeg', 0.72);
   } catch (e) { console.warn('[main] snapshot', e); return null; }
 }
+
+/* ---------------------------------------------------------------- road safety */
+let lastRoadHint = -1e9;
+/** Near the kerb where crossing is not allowed: say where to cross. */
+function roadHint(s) {
+  const rules = s.world.roadRules;
+  if (!rules) return;
+  const p = s.player.position;
+  const az = Math.abs(p.z);
+  if (az < 3.85 || az > 4.75) return;
+  const now = performance.now();
+  if (now - lastRoadHint < 6000) return;
+  const atZebra = p.x >= rules.ZEBRA.x0 - 0.4 && p.x <= rules.ZEBRA.x1 + 0.4;
+  if (atZebra && rules.pedWalk) return;
+  lastRoadHint = now;
+  ctx.bus.emit('game:toast', atZebra
+    ? { text: 'Wait for the green man before you cross. 🚦', emoji: '✋', tone: 'warn' }
+    : { text: 'You can\'t cross here. Use the pedestrian bridge by the market, or the zebra crossing at the church gate when the green man shows.', emoji: '🚧', tone: 'warn' });
+}
+
+/** Walk up the stairs, across the pedestrian bridge and down the other side. */
+async function crossFootbridge(path) {
+  const s = session;
+  if (!s?.player || s.travelling) return;
+  s.travelling = true;
+  const obj = s.player.object;
+  const speed = 2.3;
+  const pos = new THREE.Vector3().copy(path[0]);
+  let last = performance.now();
+  const target = new THREE.Vector3();
+  try {
+    for (let i = 1; i < path.length; i++) {
+      await new Promise((resolve) => {
+        const off = ctx.onUpdate(() => {
+          const now = performance.now();
+          const dt = Math.min(0.1, (now - last) / 1000); // wall clock: slow phones don't walk slower
+          last = now;
+          target.copy(path[i]);
+          const d = pos.distanceTo(target);
+          const step = Math.min(d, speed * dt);
+          if (d > 1e-3) {
+            const dir = target.clone().sub(pos).normalize();
+            pos.addScaledVector(dir, step);
+            if (Math.abs(dir.x) + Math.abs(dir.z) > 0.05) obj.rotation.y = Math.atan2(dir.x, dir.z);
+          }
+          obj.position.copy(pos);
+          s.character.setLocomotion?.(speed);
+          s.character.update?.(dt);
+          s.camera.update(dt, pos, physics);
+          if (d - step < 0.02) { off(); resolve(); }
+        });
+      });
+    }
+  } finally {
+    s.travelling = false;
+    s.player.teleport(path[path.length - 1], obj.rotation.y);
+    ctx.bus.emit('game:toast', { text: 'You crossed safely by the pedestrian bridge. Wise! 👍', emoji: '🌉' });
+  }
+}
+ctx.bus.on('player:interact', (item) => { if (item?.action === 'footbridge') crossFootbridge(item.path); });
 
 /* ---------------------------------------------------------------- travelling */
 /** The trip on the road (walking, okada, danfo, taxi or car); trips that are not walkable come back. */
