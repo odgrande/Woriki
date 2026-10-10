@@ -82,7 +82,8 @@ export function createContext(canvas, opts = {}) {
 
   const ctx = {
     THREE, renderer, scene, camera, quality, bus, sun, hemi,
-    assets: createAssets('/assets/'),
+    // Relative to wherever the game is hosted (Vite's base), so it also runs from a sub-path.
+    assets: createAssets(`${import.meta.env.BASE_URL}assets/`),
     /** Elapsed seconds since start. */
     time: 0,
     /** Register a per-frame update. Returns an unsubscribe function. */

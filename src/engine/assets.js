@@ -9,7 +9,9 @@ export function createAssets(base = '/assets/') {
   return {
     /** @returns {Promise<import('three/addons/loaders/GLTFLoader.js').GLTF>} */
     gltf(path) {
-      if (!cache.has(path)) cache.set(path, loader.loadAsync(base + path));
+      // Hosts that only serve plain data types get JSON glTF copies (see tools/embed-gltf.mjs).
+      const file = import.meta.env.VITE_GLTF_JSON ? path.replace(/\.glb$/, '.gltf.json') : path;
+      if (!cache.has(path)) cache.set(path, loader.loadAsync(base + file));
       return cache.get(path);
     },
   };
