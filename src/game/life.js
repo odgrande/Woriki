@@ -402,6 +402,8 @@ export function give(s, id, amount, week) {
   if (g.weekly && s.gifts[id] === week) return { ok: false, reason: 'Already given this week. God bless you!' };
   if (s.naira < n) return { ok: false, reason: `You need ${naira(n)}` };
   s.naira -= n;
+  s.doneToday = s.doneToday || {};
+  s.doneToday.given = true;
   if (g.weekly) s.gifts[id] = week;
   s.given = (s.given || 0) + n;
   const k = Math.min(1, n / 5000);

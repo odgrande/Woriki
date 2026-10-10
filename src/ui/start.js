@@ -3,6 +3,7 @@
 import { h, ic, setChildren } from './dom.js';
 import { createPreview } from './preview.js';
 import { ROLES, CHURCH_TYPES, ROLE_IDS } from '../game/content.js';
+import { rollDestiny } from '../game/destiny.js';
 
 // Labels for the appearance contract (ARCHITECTURE.md → Characters). The characters
 // module's own lists are used when loaded; these are the fallbacks and the UI names.
@@ -42,7 +43,7 @@ export function createStartScreen({ root, game, getLib, onBegin, quality = 'medi
   root.append(el);
   el.hidden = true;
 
-  const st = { step: 'who', name: '', role: 'worshipper', tradition: 'pentecostal', appearance: null, lookRole: null, customized: false, error: '' };
+  const st = { step: 'who', name: '', role: 'worshipper', tradition: 'pentecostal', start: null, destiny: null, rolling: false, appearance: null, lookRole: null, customized: false, error: '' };
   let preview = null;
   let lib = null;
 
@@ -59,33 +60,34 @@ export function createStartScreen({ root, game, getLib, onBegin, quality = 'medi
     const saved = game.saved;
     const nameInput = h('input.ac-input', { id: 'ac-name', value: st.name, maxLength: 20, autocomplete: 'off', placeholder: 'e.g. Tunde, Chioma, Ifeanyi', attrs: { 'aria-describedby': 'ac-name-err', enterkeyhint: 'next' } });
     nameInput.addEventListener('input', () => { st.name = nameInput.value; if (st.error) { st.error = ''; err.textContent = ''; } });
-    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') next(); });
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
     const err = h('p.ac-perk', { id: 'ac-name-err', text: st.error, style: { color: 'var(--red)' }, attrs: { role: 'alert' } });
 
-    const roleInfo = h('p.ac-role-info');
-    const showRole = () => {
-      const r = ROLES[st.role];
-      setChildren(roleInfo, h('b', { text: `${r.emoji} ${r.name}: ` }), r.blurb, r.postLabel ? ` During services you serve at ${r.postLabel}.` : '');
+    // No choosing: the dice decide your role in church, your tradition and how your story begins.
+    const dice = h('div.ac-dice', { attrs: { 'aria-live': 'polite' } });
+    const showDestiny = () => {
+      const d = st.destiny;
+      if (!d) {
+        setChildren(dice,
+          h('div.ac-die', { text: '🎲', attrs: { 'aria-hidden': 'true' } }),
+          h('p', { text: 'In Amen City you don\'t pick your role. Roll the dice and God\'s story for you begins: worshipper, usher, choir, security, media, kitchen, children\'s teacher, prayer warrior, visitor or the path to the pulpit.' }));
+        return;
+      }
+      const r = d.roleDef;
+      setChildren(dice,
+        h('div.ac-destiny', null,
+          h('span.ac-destiny-emoji', { text: r.emoji, attrs: { 'aria-hidden': 'true' } }),
+          h('div', null,
+            h('small', { text: 'Your role at Grace Assembly' }),
+            h('h3', { text: r.name }),
+            h('p', { text: `${r.blurb}${r.postLabel ? ` During services you serve at ${r.postLabel}.` : ''}` }))),
+        h('ul.ac-destiny-list', null,
+          h('li', null, h('span', { text: d.tradDef.emoji }), `${d.tradDef.name} church · ${d.tradDef.perk}`),
+          h('li', null, h('span', { text: d.startDef.emoji }), `${d.startDef.title}: ${d.startDef.text}`),
+          h('li', null, h('span', { text: '🏠' }), 'Home: No. 14, Yaba, behind Grace Assembly')),
+        h('p.ac-perk', { text: 'Your path is set. Later you can move to another department from your Today tab.' }));
     };
-    const roles = h('div.ac-roles', null, ROLE_IDS.map((id) => {
-      const r = ROLES[id];
-      const input = h('input', { type: 'radio', name: 'ac-role', value: id, checked: st.role === id, attrs: { 'aria-describedby': 'ac-role-info' } });
-      input.addEventListener('change', () => { st.role = id; showRole(); });
-      return h('label.ac-role', null, input,
-        h('span.ac-role-emoji', { text: r.emoji, attrs: { 'aria-hidden': 'true' } }),
-        h('span.ac-role-name', { text: r.name }),
-        h('span.ac-role-blurb', { text: ROLE_PLACE[id] }));
-    }));
-    roleInfo.id = 'ac-role-info';
-    showRole();
-
-    const perk = h('p.ac-perk', { text: CHURCH_TYPES[st.tradition].perk });
-    const trads = h('div.ac-trads', null, Object.entries(CHURCH_TYPES).map(([id, t]) => {
-      const input = h('input', { type: 'radio', name: 'ac-trad', value: id, checked: st.tradition === id });
-      input.addEventListener('change', () => { st.tradition = id; perk.textContent = t.perk; });
-      return h('label.ac-trad', null, input, h('span', { text: t.emoji, attrs: { 'aria-hidden': 'true' } }), h('span', { text: t.name }));
-    }));
-
+    showDestiny();
     const cont = saved && !saved.over ? [
       h('div.ac-continue', null,
         h('div.ac-avatar', { text: saved.emoji, attrs: { 'aria-hidden': 'true' } }),
@@ -98,32 +100,72 @@ export function createStartScreen({ root, game, getLib, onBegin, quality = 'medi
       h('header.ac-brand', null,
         h('div.ac-logo', { html: '' }, ic('church')),
         h('h1', { text: 'Amen City' }),
-        h('p.ac-tagline', null, 'Your place in God\'s house in Yaba, Lagos. ', h('span.ac-mark', { text: 'Pick your role.' })),
+        h('p.ac-tagline', null, 'Your place in God\'s house in Yaba, Lagos. ', h('span.ac-mark', { text: 'Roll the dice.' })),
         h('ul.ac-pitch', null,
           h('li', null, h('span', { text: '⛪' }), 'Real services: Sunday 9am, Wednesday Bible study, Friday vigil'),
           h('li', null, h('span', { text: '🙏' }), 'Pray, serve at your post, win souls across Lagos'),
           h('li', null, h('span', { text: '💬' }), 'Worship and chat with real people'),
           h('li', null, h('span', { text: '😈' }), 'The devil is busy. Stand firm, or repent and rise'))),
       cont,
-      h('form.ac-card', { attrs: { novalidate: true }, on: { submit: (e) => { e.preventDefault(); next(); } } },
+      h('form.ac-card', { attrs: { novalidate: true }, on: { submit: (e) => { e.preventDefault(); submit(); } } },
         h('label.ac-label', { htmlFor: 'ac-name', text: 'Your name' }),
         nameInput, err,
-        h('fieldset.ac-fieldset', null, h('legend', { text: 'Who are you in church?' }), roles, roleInfo),
-        h('fieldset.ac-fieldset', null, h('legend', { text: 'Church tradition' }), trads, perk),
-        h('button.ac-btn.is-primary.is-big.is-block', { type: 'submit' }, 'Next: your look', ic('arrow-right', { size: 20 })),
+        dice,
+        st.destiny
+          ? h('div.ac-dice-btns', null,
+            h('button.ac-btn.is-big', { type: 'button', on: { click: () => next() } }, 'See my look'),
+            h('button.ac-btn.is-primary.is-big', { type: 'submit' }, 'Enter Amen City', ic('arrow-right', { size: 20 })))
+          : h('button.ac-btn.is-primary.is-big.is-block.ac-roll', { type: 'submit', disabled: st.rolling }, '🎲 Roll the dice'),
         saved && !saved.over ? h('p.ac-disclaimer', { text: 'Starting a new life replaces your saved one.' }) : null),
       h('p.ac-disclaimer', { text: 'A virtual church community. All churches and people are fictional; the places in Lagos are real. Scripture from the King James Version.' })));
   }
 
-  function next() {
+  function needName() {
     const name = st.name.replace(/\s+/g, ' ').trim();
     if (!name) {
       st.error = 'Please enter your name.';
       renderWho();
       el.querySelector('#ac-name')?.focus();
-      return;
+      return false;
     }
     st.name = name.slice(0, 20);
+    return true;
+  }
+
+  /** Enter (form submit): roll the dice first, then enter Amen City. */
+  function submit() {
+    if (!needName()) return;
+    if (!st.destiny) { roll(); return; }
+    begin();
+  }
+
+  /** The dice spin through the roles, then land on yours. */
+  function roll() {
+    if (st.rolling || st.destiny) return;
+    st.rolling = true;
+    renderWho();
+    const box = el.querySelector('.ac-dice');
+    const t0 = performance.now();
+    const spin = () => {
+      const t = performance.now() - t0;
+      if (t < 1700) {
+        const r = ROLES[ROLE_IDS[Math.floor(t / 85) % ROLE_IDS.length]];
+        setChildren(box, h('div.ac-die.is-rolling', { text: '🎲', attrs: { 'aria-hidden': 'true' } }), h('p.ac-rolling', { text: `${r.emoji} ${r.name}…` }));
+        requestAnimationFrame(spin);
+        return;
+      }
+      const d = rollDestiny();
+      st.destiny = d;
+      st.role = d.role; st.tradition = d.tradition; st.start = d.start;
+      st.rolling = false;
+      renderWho();
+    };
+    requestAnimationFrame(spin);
+  }
+
+  function next() {
+    if (!needName()) return;
+    if (!st.destiny) { roll(); return; }
     st.step = 'look';
     render();
   }
@@ -233,7 +275,8 @@ export function createStartScreen({ root, game, getLib, onBegin, quality = 'medi
   }
 
   function begin() {
-    const profile = { name: st.name, role: st.role, tradition: st.tradition, appearance: norm(st.appearance) };
+    if (!st.appearance) { st.appearance = norm(defaultLook()); st.lookRole = st.role; }
+    const profile = { name: st.name, role: st.role, tradition: st.tradition, start: st.start, appearance: norm(st.appearance) };
     onBegin(profile, 'new');
   }
 

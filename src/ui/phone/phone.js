@@ -133,6 +133,7 @@ export function createPhone({ root, game, bus, toast, actions = {}, onBadge = ()
         h('p.ph-widget-day', { text: `${c.weekdayName}, ${c.date?.day ?? ''} ${c.date?.monthName ?? ''}` }),
         h('p.ph-widget-next', null, '⛪ ', next),
         plan?.items?.length ? h('p.ph-widget-plan', { text: `Today: ${plan.items.map((x) => `${x.name} ${x.time}`).join(' · ')}` }) : null,
+        (() => { const a = game.assignments; return a.length ? h('p.ph-widget-plan', { text: `✅ Assignments ${a.filter((x) => x.finished).length}/${a.length}: ${a.find((x) => !x.finished)?.text || 'all done!'}` }) : null; })(),
         h('p.ph-widget-verse', { text: `“${v[1]}” — ${v[0]}` })),
       h('div.ph-grid', null, APPS.filter((a) => !DOCK.includes(a[0])).map((a) => icon(a[0]))),
       h('div.ph-dock', null, DOCK.map(icon)),

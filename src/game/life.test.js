@@ -129,3 +129,33 @@ describe('church billboards and giving', () => {
     expect(give(s, 'offering', 1000, 4).ok).toBe(true);
   });
 });
+
+describe('daily assignments and the dice', () => {
+  it('gives three assignments a day and rewards them once', async () => {
+    const { checkAssignments, todaysAssignments } = await import('./assignments.js');
+    const s = life({ naira: 50000 });
+    expect(todaysAssignments(s)).toHaveLength(3);
+    checkAssignments(s);
+    const [first] = s.assign.ids;
+    const p0 = s.points;
+    // pretend the first one is done
+    const { ASSIGNMENT_BY_ID } = await import('./assignments.js');
+    const a = ASSIGNMENT_BY_ID[first];
+    s.doneToday = new Proxy({}, { get: () => true });
+    s.gifts = { tithe: Math.floor(s.T / (1440 * 7)) };
+    const lines = checkAssignments(s);
+    expect(lines.length).toBe(4); // three done + the bonus
+    expect(s.points).toBeGreaterThan(p0 + a.points);
+    expect(checkAssignments(s)).toEqual([]);
+  });
+
+  it('rolls a role, a tradition and a start story', async () => {
+    const { rollDestiny } = await import('./destiny.js');
+    const seen = new Set();
+    let x = 0;
+    for (let i = 0; i < 400; i++) seen.add(rollDestiny(() => ((x = (x * 9301 + 49297) % 233280) / 233280)).role);
+    expect(seen.size).toBeGreaterThan(6);
+    const s = (await import('./state.js')).newState({ name: 'A', role: 'usher', start: 'convert' });
+    expect(s.start).toBe('convert');
+  });
+});

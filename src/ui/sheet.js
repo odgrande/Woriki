@@ -116,7 +116,7 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
     if (tab === 'today') {
       const acts = game.actions().map((a) => `${a.id}:${a.ok ? 1 : 0}${a.done ? 1 : 0}${a.active ? 1 : 0}${a.reason || ''}${a.cost}${a.energy}`).join('|');
       const m = game.milestone;
-      return JSON.stringify([...base, Math.floor(s.T / 5), acts, m ? m.reqs.map((r) => r.join()).join() : '', s.convicted, s.role, s.stage]);
+      return JSON.stringify([...base, Math.floor(s.T / 5), acts, m ? m.reqs.map((r) => r.join()).join() : '', s.convicted, s.role, s.stage, s.assign?.done]);
     }
     if (tab === 'phone' && phoneTab === 'diary') return JSON.stringify([tab, phoneTab, s.log.length, s.log[0]?.text, s.streak, s.services, s.souls, s.prayed, Math.round(s.word), s.testimonies, s.role, s.rank, s.stage]);
     if (tab === 'phone') {
@@ -216,6 +216,19 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
     return null;
   }
 
+  /** Today's three assignments from church. */
+  function assignCard() {
+    const list = game.assignments;
+    if (!list.length) return null;
+    const n = list.filter((a) => a.finished).length;
+    return h('div.ac-assign', null,
+      h('div.ac-plan-title', null, '✅', ` Today's assignments · ${n}/${list.length}`),
+      h('ul', null, list.map((a) => h(`li${a.finished ? '.is-done' : ''}`, null,
+        h('span.ac-assign-check', { text: a.finished ? '✓' : '' }),
+        h('span', null, h('b', { text: `${a.emoji} ${a.text}` }), h('small', { text: a.finished ? `Done · +${a.points}⭐` : `${a.where} · +${a.points}⭐` }))))),
+      h('p.ac-plan-idea', { text: n === list.length ? '"Well done, thou good and faithful servant." Come back tomorrow for new assignments.' : 'Finish all three for a bonus +10⭐.' }));
+  }
+
   /** Today's church plan for this role, then normal life. */
   function planCard() {
     const plan = game.plan;
@@ -249,6 +262,7 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
       h('p.ac-verse', null, ic('quote'), h('span', null, `“${v[1]}” `, h('b', { text: `— ${v[0]}` }))),
       nowCard(s),
       planCard(),
+      assignCard(),
       journeyCard(s),
     ];
     const prayers = game.actions('prayer');

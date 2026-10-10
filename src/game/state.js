@@ -23,7 +23,8 @@ const cleanName = (n) => String(n || '').replace(/[\u0000-\u001f<>]/g, '').trim(
  * @param {{rng?: () => number, T?: number}} [o]
  */
 export function newState(profile = {}, { rng = Math.random, T = START_T } = {}) {
-  const startId = rng() < 0.5 ? 'home' : 'convert';
+  const roll = rng();
+  const startId = STARTS[profile.start] ? profile.start : roll < 0.5 ? 'home' : 'convert';
   const st = STARTS[startId];
   const role = ROLES[profile.role] ? profile.role : 'worshipper';
   return {

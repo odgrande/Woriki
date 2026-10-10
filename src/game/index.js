@@ -12,6 +12,7 @@ import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
 import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone, bookAd as bookAdSys, activeAds } from './life.js';
 import { deltas as deltasOf } from './systems.js';
+import { checkAssignments, assignmentView } from './assignments.js';
 
 /**
  * @typedef {object} GameOptions
@@ -99,10 +100,20 @@ export function createGame(ctx = {}, opts = {}) {
     if (!s) return { ok: false, reason: 'No game in progress' };
     const e = env();
     const out = fn(e);
+    assignmentsDone(e);
     flush(e.fx);
     changed(true);
     maybeSave(true);
     return out;
+  }
+
+  /** Reward today's church assignments the moment they are done (they are read from the state). */
+  function assignmentsDone(e) {
+    if (!s || s.over) return;
+    for (const text of checkAssignments(s)) {
+      e.fx.push({ type: 'toast', text, emoji: '✅', tone: 'good' });
+      e.fx.push({ type: 'audio:play', name: 'success' });
+    }
   }
 
   /* ---------------------------------------------------------------- persistence */
@@ -207,6 +218,7 @@ export function createGame(ctx = {}, opts = {}) {
     }
     const prevMinute = Math.floor(s.T);
     tickSystems(s, dtMin, e);
+    assignmentsDone(e);
     const hadFx = e.fx.length > 0;
     flush(e.fx);
     if (hadFx) changed(true);
@@ -284,6 +296,8 @@ export function createGame(ctx = {}, opts = {}) {
     get presence() { return s ? presence(s, game.loc) : null; },
     get milestone() { return s ? milestone(s) : null; },
     get postLabel() { return s ? postLabel(s) : null; },
+    /** Today's three church assignments: [{emoji, text, where, points, finished}]. */
+    get assignments() { if (!s) return []; checkAssignments(s); return assignmentView(s); },
     /** Today's meetings and a free-time idea. */
     get plan() { return s ? dayPlan(s) : null; },
     get paused() { return pauses.size > 0 || !!(s && (s.activeEvent || s.exam)); },

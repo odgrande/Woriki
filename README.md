@@ -11,6 +11,29 @@ It runs in the browser with no download, and it is built to work on cheap Androi
 **The church comes first.** Everything else in Lagos is there so that your walk with God has
 real choices around it, as in real life.
 
+- **Roll the dice.** You don't pick your role. The dice choose your role in church (worshipper, usher,
+  choir, security, media, kitchen, children's teacher, prayer warrior, visitor or the minister path),
+  your church tradition and how your story begins.
+- **Daily assignments.** Every day the church gives you three tasks, for example:
+  - visit the sick at LUTH
+  - pay your tithe or call Pastor Ade
+  - take food to Hope Children's Home
+  - tell the boys at the betting shop about Jesus
+  - rehearse for Sunday
+
+  Finish all three for a bonus.
+- **Road safety.** There is a zebra crossing with traffic lights at the church gate, where cars stop on red
+  and people cross on the green man, and a pedestrian bridge by the market. An invisible barrier along
+  the kerbs tells you where to cross. Horns are heard only on the street.
+- **Everything on the map is tappable:** places, buildings, billboards, neighbourhoods, bridges, roads and
+  the lagoon. Lagos only. "Coming soon" places are already on the map: Prayer City camp, the airport,
+  the Bible school campus, the National Stadium, Mile 12, the Lekki Conservation Centre and land for your
+  church.
+- **Choices beyond the church gate** (police station at Sabo, LUTH, a children's home, gospel radio,
+  a betting shop, a lounge, an owambe hall): bail a brother, pray in the police cell, donate blood,
+  or fall for bribery, betting and the lounge.
+- **Change your furniture.** Click any furniture (or press F next to it) to replace or upgrade it, from the
+  old maroon sofa and box TV to leather and a 75-inch screen. Your old one goes to a neighbour in need.
 - **Like Lagos Life at the door.** A logo preloader, then a live 3D map of Lagos with *Sign up free* and
   *Log in* before you join. Once you have a life you stay logged in on that device: you see your
   character at home with a card (name, today's date, naira, today's church plan) and *Continue*,
