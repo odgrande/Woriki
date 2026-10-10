@@ -282,3 +282,87 @@ export function doActivity(s, id, weekdayShort, hour, rng = Math.random) {
   s.naira = Math.round(s.naira);
   return { ok: true, text, shady: !!a.shady, emoji: a.emoji };
 }
+
+/* ================================================================ giving (bank app) */
+
+/** Ways to give at Grace Assembly. `amounts` = choices in the app (null: computed). */
+export const GIVING = [
+  { id: 'tithe', emoji: '🙌', name: 'Tithe (10%)', desc: 'A tenth of your week\'s income. Once a week.', weekly: true },
+  { id: 'offering', emoji: '🪙', name: 'Offering', desc: 'Give what is in your heart.', amounts: [500, 1000, 2000, 5000] },
+  { id: 'thanksgiving', emoji: '🎉', name: 'Thanksgiving', desc: 'Thank God for what He has done this week.', amounts: [5000, 10000, 20000], weekly: true },
+  { id: 'building', emoji: '🏗️', name: 'Building fund', desc: 'For the new auditorium.', amounts: [1000, 5000, 20000] },
+  { id: 'missions', emoji: '🌍', name: 'Support missions', desc: 'Bibles and food for the Makoko outreach.', amounts: [2000, 5000] },
+];
+export const GIVING_BY_ID = Object.fromEntries(GIVING.map((g) => [g.id, g]));
+
+/** The tithe on a week of salary. */
+export const titheAmount = (s) => Math.max(500, Math.round(((s.salary || 0) * 7 * 0.1) / 50) * 50);
+
+/**
+ * Give to the church. Mutates `s`. `week` = the current week number (once-a-week gifts).
+ * Giving is between you and God: small blessings, never a "money back" promise.
+ */
+export function give(s, id, amount, week) {
+  const g = GIVING_BY_ID[id];
+  if (!g) return { ok: false, reason: 'Unknown gift' };
+  s.gifts = s.gifts || {};
+  const n = id === 'tithe' ? titheAmount(s) : Math.round(Number(amount) || 0);
+  if (n <= 0) return { ok: false, reason: 'Choose an amount' };
+  if (g.weekly && s.gifts[id] === week) return { ok: false, reason: 'Already given this week. God bless you!' };
+  if (s.naira < n) return { ok: false, reason: `You need ${naira(n)}` };
+  s.naira -= n;
+  if (g.weekly) s.gifts[id] = week;
+  s.given = (s.given || 0) + n;
+  const k = Math.min(1, n / 5000);
+  let text;
+  switch (id) {
+    case 'tithe': s.faith = clamp(s.faith + 5, 0, 100); s.character = clamp(s.character + 2, 0, 100); s.points += 10; text = `You paid your tithe of ${naira(n)}. "Bring ye all the tithes into the storehouse" (Malachi 3:10). +10⭐`; break;
+    case 'thanksgiving': s.faith = clamp(s.faith + 4, 0, 100); s.testimonies += 1; s.points += 8; text = `Thanksgiving offering of ${naira(n)}. You danced to the altar. +8⭐`; break;
+    case 'missions': s.points += 6; s.character = clamp(s.character + 2, 0, 100); text = `${naira(n)} sent to the missions team. Bibles are going to Makoko. +6⭐`; break;
+    default: s.faith = clamp(s.faith + 1 + Math.round(k * 2), 0, 100); s.points += 2 + Math.round(k * 4); text = `You gave ${naira(n)} (${g.name.toLowerCase()}). "God loveth a cheerful giver" (2 Corinthians 9:7).`;
+  }
+  return { ok: true, text, amount: n };
+}
+
+/* ================================================================ phone actions */
+
+/** Food you can order to wherever you are (food app). */
+export const DELIVERY = [
+  { id: 'amala', emoji: '🍲', name: 'Amala, ewedu and gbegiri', from: 'Bode Thomas', naira: 4800, hunger: 55 },
+  { id: 'jollof', emoji: '🍛', name: 'Party jollof and chicken', from: 'Yaba', naira: 5500, hunger: 60 },
+  { id: 'ofada', emoji: '🌶️', name: 'Ofada rice and ayamase', from: 'Ikeja', naira: 6000, hunger: 60 },
+  { id: 'suya', emoji: '🍢', name: 'Suya (₦2,000 wrap)', from: 'University Road', naira: 2800, hunger: 25 },
+  { id: 'bread', emoji: '🍞', name: 'Agege bread and akara', from: 'Yaba', naira: 1500, hunger: 30 },
+];
+
+/**
+ * Small things you do on the phone. `once` = once a day. Returns story text.
+ */
+export const PHONE_ACTIONS = {
+  callPastor: { once: true, run: (s) => { s.faith = clamp(s.faith + 4, 0, 100); s.points += 2; return 'Pastor Ade prayed with you on the phone and reminded you: "The LORD is my shepherd." +4 faith.'; } },
+  callMum: { once: true, run: (s) => { s.character = clamp(s.character + 1, 0, 100); return 'Mum asked if you have eaten, if you went to church, and when you are bringing a wife or husband home. You laughed. +1 character.'; } },
+  callPartner: { once: true, run: (s) => { s.faith = clamp(s.faith + 2, 0, 100); return 'You and Sister Chioma prayed for 10 minutes for each other\'s needs. +2 faith.'; } },
+  sermon: { once: true, run: (s) => { s.word = clamp(s.word + 3, 0, 100); s.faith = clamp(s.faith + 2, 0, 100); s.points += 1; return 'You listened to last Sunday\'s sermon, "Faith that works". +3 word.'; } },
+  blockScam: { run: (s) => { s.character = clamp(s.character + 2, 0, 100); s.points += 2; return 'You blocked and reported the number. Not today, devil! +2 character.'; } },
+  replyScam: { run: (s) => { const lost = Math.min(s.naira, 25000); s.naira -= lost; s.character = clamp(s.character - 4, 0, 100); s.convicted = true; s.falls += 1; return `You sent "registration fee" for the "investment". ${naira(lost)} is gone and you feel ashamed. Confess & Repent is on your Today tab.`; } },
+};
+
+/** Do a phone action (or order food with id 'order:<food>'). Mutates `s`. */
+export function doPhone(s, id) {
+  s.doneToday = s.doneToday || {};
+  if (id.startsWith('order:')) {
+    const f = DELIVERY.find((x) => x.id === id.slice(6));
+    if (!f) return { ok: false, reason: 'Not on the menu' };
+    if (s.naira < f.naira) return { ok: false, reason: `You need ${naira(f.naira)}` };
+    s.naira -= f.naira;
+    s.hunger = clamp(s.hunger + f.hunger, 0, 100);
+    return { ok: true, text: `${f.emoji} The rider brought your ${f.name.toLowerCase()} from ${f.from}. You prayed and ate. Delivery included.` };
+  }
+  const a = PHONE_ACTIONS[id];
+  if (!a) return { ok: false, reason: 'Not available' };
+  if (a.once && s.doneToday[`phone:${id}`]) return { ok: false, reason: 'Already done today' };
+  if (a.once) s.doneToday[`phone:${id}`] = true;
+  const text = a.run(s);
+  s.naira = Math.round(s.naira);
+  return { ok: true, text };
+}

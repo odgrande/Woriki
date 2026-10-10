@@ -72,6 +72,7 @@ ui = createUI(ctx, {
   onArrive: (go) => arrive(go),
   onJourney: (go) => journey(go),
   onSkipJourney: () => session?.journey?.skip(),
+  snapshot: () => snapshot(),
 });
 debug.app = ui; // full UI API for tests (window.__amen.ui is the UI module's small status object)
 
@@ -130,6 +131,7 @@ async function enter(profile) {
     const net = createNet({ room: params.get('room') || 'yaba', name: profile.name || game.state?.name || 'Guest', role, appearance });
     const remotes = createRemotes(ctx, { net, kit, bubbles });
     const chat = createChatUI(ctx, { net, root: uiRoot, input, roomLabel: 'Yaba' });
+    ui.phone?.setNet(net);
     const syncOnline = () => ui.setOnline?.(net.online || 1, net.mode);
     net.on('online', syncOnline);
     net.on('welcome', syncOnline);
@@ -175,6 +177,18 @@ function frame(dt, t) {
 }
 
 function nextFrame() { return new Promise((r) => requestAnimationFrame(() => r())); }
+
+/** A small photo of the 3D view for the phone's camera (a JPEG data URL). */
+function snapshot() {
+  try {
+    ctx.renderer.render(ctx.scene, ctx.camera);
+    const src = ctx.renderer.domElement;
+    const c = document.createElement('canvas');
+    c.width = 480; c.height = Math.round((480 * src.height) / src.width);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.72);
+  } catch (e) { console.warn('[main] snapshot', e); return null; }
+}
 
 /* ---------------------------------------------------------------- travelling */
 /** The trip on the road (walking, okada, danfo, taxi or car); trips that are not walkable come back. */

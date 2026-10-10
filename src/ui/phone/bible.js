@@ -1,0 +1,66 @@
+// Passages for the phone's Bible app, King James Version (public domain).
+export const PASSAGES = [
+  { ref: 'Psalm 23', title: 'The LORD is my shepherd', verses: [
+    'The LORD is my shepherd; I shall not want.',
+    'He maketh me to lie down in green pastures: he leadeth me beside the still waters.',
+    'He restoreth my soul: he leadeth me in the paths of righteousness for his name\'s sake.',
+    'Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.',
+    'Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over.',
+    'Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever.',
+  ] },
+  { ref: 'Psalm 121', title: 'My help cometh from the LORD', verses: [
+    'I will lift up mine eyes unto the hills, from whence cometh my help.',
+    'My help cometh from the LORD, which made heaven and earth.',
+    'He will not suffer thy foot to be moved: he that keepeth thee will not slumber.',
+    'Behold, he that keepeth Israel shall neither slumber nor sleep.',
+    'The LORD is thy keeper: the LORD is thy shade upon thy right hand.',
+    'The sun shall not smite thee by day, nor the moon by night.',
+    'The LORD shall preserve thee from all evil: he shall preserve thy soul.',
+    'The LORD shall preserve thy going out and thy coming in from this time forth, and even for evermore.',
+  ] },
+  { ref: 'Psalm 1', title: 'Blessed is the man', verses: [
+    'Blessed is the man that walketh not in the counsel of the ungodly, nor standeth in the way of sinners, nor sitteth in the seat of the scornful.',
+    'But his delight is in the law of the LORD; and in his law doth he meditate day and night.',
+    'And he shall be like a tree planted by the rivers of water, that bringeth forth his fruit in his season; his leaf also shall not wither; and whatsoever he doeth shall prosper.',
+    'The ungodly are not so: but are like the chaff which the wind driveth away.',
+    'Therefore the ungodly shall not stand in the judgment, nor sinners in the congregation of the righteous.',
+    'For the LORD knoweth the way of the righteous: but the way of the ungodly shall perish.',
+  ] },
+  { ref: 'Matthew 5:3-12', title: 'The Beatitudes', start: 3, verses: [
+    'Blessed are the poor in spirit: for theirs is the kingdom of heaven.',
+    'Blessed are they that mourn: for they shall be comforted.',
+    'Blessed are the meek: for they shall inherit the earth.',
+    'Blessed are they which do hunger and thirst after righteousness: for they shall be filled.',
+    'Blessed are the merciful: for they shall obtain mercy.',
+    'Blessed are the pure in heart: for they shall see God.',
+    'Blessed are the peacemakers: for they shall be called the children of God.',
+    'Blessed are they which are persecuted for righteousness\' sake: for theirs is the kingdom of heaven.',
+    'Blessed are ye, when men shall revile you, and persecute you, and shall say all manner of evil against you falsely, for my sake.',
+    'Rejoice, and be exceeding glad: for great is your reward in heaven: for so persecuted they the prophets which were before you.',
+  ] },
+  { ref: 'John 3:16-17', title: 'For God so loved the world', start: 16, verses: [
+    'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.',
+    'For God sent not his Son into the world to condemn the world; but that the world through him might be saved.',
+  ] },
+  { ref: '1 Corinthians 13:4-8', title: 'Charity never faileth', start: 4, verses: [
+    'Charity suffereth long, and is kind; charity envieth not; charity vaunteth not itself, is not puffed up,',
+    'Doth not behave itself unseemly, seeketh not her own, is not easily provoked, thinketh no evil;',
+    'Rejoiceth not in iniquity, but rejoiceth in the truth;',
+    'Beareth all things, believeth all things, hopeth all things, endureth all things.',
+    'Charity never faileth.',
+  ] },
+  { ref: 'Philippians 4:6-7', title: 'Be careful for nothing', start: 6, verses: [
+    'Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.',
+    'And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.',
+  ] },
+  { ref: 'Isaiah 40:28-31', title: 'They that wait upon the LORD', start: 28, verses: [
+    'Hast thou not known? hast thou not heard, that the everlasting God, the LORD, the Creator of the ends of the earth, fainteth not, neither is weary? there is no searching of his understanding.',
+    'He giveth power to the faint; and to them that have no might he increaseth strength.',
+    'Even the youths shall faint and be weary, and the young men shall utterly fall:',
+    'But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.',
+  ] },
+  { ref: 'Psalm 91:1-2', title: 'The secret place of the most High', verses: [
+    'He that dwelleth in the secret place of the most High shall abide under the shadow of the Almighty.',
+    'I will say of the LORD, He is my refuge and my fortress: my God; in him will I trust.',
+  ] },
+];

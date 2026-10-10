@@ -17,7 +17,7 @@ const TABS = [
   ['map', 'map', 'Map', true],
   ['shop', 'shopping-bag', 'Buy'],
   ['today', 'church', 'Today'],
-  ['phone', 'smartphone', 'Phone'],
+  ['phone', 'smartphone', 'Phone', true],
 ];
 
 const REASON_ICON = { where: 'map-pin', time: 'clock', energy: 'zap', money: 'wallet', done: 'check', service: 'church', busy: 'hourglass', over: 'lock', hidden: 'lock' };
@@ -28,7 +28,7 @@ const REASON_ICON = { where: 'map-pin', time: 'clock', energy: 'zap', money: 'wa
  * @param {HTMLElement} o.root
  * @param {(text: string, opts?: object) => void} o.toast
  * @param {(open: boolean) => void} [o.onToggle]
- * @param {{home?: () => void, map?: () => void}} [o.actions] the Home and Map buttons
+ * @param {{home?: () => void, map?: () => void, phone?: () => void}} [o.actions] the Home, Map and Phone buttons
  */
 export function createDock({ game, root, toast, onToggle = () => {}, actions = {} }) {
   let phoneTab = 'prayer';
@@ -89,7 +89,7 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
 
   function select(id) {
     if (TABS.find((t) => t[0] === id)?.[3]) { setOpen(false); actions[id]?.(); return; }
-    if (id === 'prayer' || id === 'diary') { phoneTab = id; id = 'phone'; lastKey = ''; }
+    if (id === 'prayer' || id === 'diary') { setOpen(false); actions.phone?.(id); return; }
     if (open && tab === id) { setOpen(false); return; }
     tab = id;
     setOpen(true);
@@ -418,6 +418,8 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
 
   return {
     el,
+    /** A count on a tab button (e.g. unread messages on Phone). */
+    setBadge(id, n) { const t = tabs[id]; if (!t) return; t.dot.hidden = !n; t.dot.textContent = n > 9 ? '9+' : String(n || ''); },
     get open() { return open; },
     get tab() { return tab; },
     select,

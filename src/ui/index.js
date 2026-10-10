@@ -12,6 +12,7 @@ import { createDock } from './sheet.js';
 import { createDialogs } from './dialogs.js';
 import { createFront, isLoggedIn } from './front.js';
 import { createMapView } from './mapview.js';
+import { createPhone } from './phone/phone.js';
 import { countdown } from '../game/clock.js';
 
 /**
@@ -229,12 +230,34 @@ export function createUI(ctx, opts) {
     actions: {
       home: () => mapView ? mapView.goHome() : dialogs.toast('The map is not ready yet.'),
       map: () => mapView?.show(),
+      phone: (app) => phone.show(app === 'prayer' ? 'prayer' : app === 'diary' ? 'diary' : null),
     },
     onToggle(open) {
       document.documentElement.classList.toggle('ac-sheet-open', open);
       bus?.emit('ui:sheet', { open });
     },
   });
+
+  /* ---------------------------------------------------------------- the phone */
+  const phone = createPhone({
+    root: el,
+    game,
+    bus,
+    toast: (t, o) => dialogs.toast(t, o),
+    onBadge: (n) => dock.setBadge('phone', n),
+    actions: {
+      openMap: () => mapView?.show(),
+      travel: (to) => mapView?.picker(to),
+      settings: () => openSettings(),
+      snapshot: () => opts.snapshot?.(),
+    },
+  });
+  offs.push(game.on('clock', () => phone.tick()));
+  if (bus) offs.push(bus.on('ui:phone', ({ open }) => {
+    if (!inGame) return;
+    if (opts.input) { opts.input.enabled = !open && !modalOpen; opts.input.setVisible?.(!open); }
+    if (open) game.pause('phone'); else game.resume('phone');
+  }));
 
   function openSettings() {
     dialogs.settings({
@@ -301,6 +324,7 @@ export function createUI(ctx, opts) {
     dock.update();
     mapView?.refresh();
   }
+  offs.push(game.on('start', () => setTimeout(() => phone.tick(), 0)));
 
   /* ---------------------------------------------------------------- game events */
   offs.push(game.on('change', refresh));
@@ -333,6 +357,7 @@ export function createUI(ctx, opts) {
     if ((e.key === 'h' || e.key === 'H') && mapView && !mapView.open) { mapView.goHome(); return; }
     if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); dialogs.help(); return; }
     if (e.key === 'Escape') {
+      if (phone.open) return; // the phone handles its own Esc
       if (dialogs.escape()) return;
       if (mapView?.open) { mapView.close(); return; }
       if (dock.open) dock.setOpen(false);
@@ -360,6 +385,8 @@ export function createUI(ctx, opts) {
     setOnline: (count, mode) => { hud.setOnline(count, mode); if (mode !== 'local') front.setOnline(count); },
     /** Players online on the landing page (from the server's /stats). */
     setLandingOnline: (n) => front.setOnline(n),
+    /** The phone (createPhone). */
+    phone,
     /** A pin on the Lagos map was tapped. */
     mapPick: (p) => mapView?.pick(p),
     get mapOpen() { return !!mapView?.open; },

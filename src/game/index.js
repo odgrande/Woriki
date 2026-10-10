@@ -10,7 +10,7 @@ import {
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
 import { ACTION_BY_ID } from './actions.js';
-import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID } from './life.js';
+import { travel as travelSys, travelQuote, distanceKm, placeOfZone, activitiesAt, doActivity, buyFurniture as buyFurnitureSys, TRAVEL_MODES, PLACE_BY_ID, give as giveSys, doPhone } from './life.js';
 import { deltas as deltasOf } from './systems.js';
 
 /**
@@ -399,6 +399,31 @@ export function createGame(ctx = {}, opts = {}) {
         addLog(s, r.text);
         e.fx.push({ type: 'toast', text: r.text, emoji: r.emoji, deltas: deltasOf(before, s), tone: r.shady ? 'warn' : undefined });
         e.fx.push({ type: 'audio:play', name: r.shady ? 'fail' : 'success' });
+        return r;
+      });
+    },
+    /** Give to the church from the bank app (tithe, offering, thanksgiving…). */
+    give(kind, amount) {
+      return run((e) => {
+        const before = { ...s };
+        const r = giveSys(s, kind, amount, Math.floor(s.T / (1440 * 7)));
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        e.fx.push({ type: 'toast', text: r.text, emoji: '🙏', deltas: deltasOf(before, s), tone: 'good' });
+        e.fx.push({ type: 'audio:play', name: 'success' });
+        return r;
+      });
+    },
+    /** Phone things: calls, sermons, food delivery ('order:amala'), blocking a scammer… */
+    phone(id) {
+      return run((e) => {
+        const before = { ...s };
+        const r = doPhone(s, id);
+        if (!r.ok) return r;
+        addLog(s, r.text);
+        const bad = id === 'replyScam';
+        e.fx.push({ type: 'toast', text: r.text, emoji: bad ? '💔' : '📱', deltas: deltasOf(before, s), tone: bad ? 'warn' : undefined });
+        if (bad) e.fx.push({ type: 'audio:play', name: 'fail' });
         return r;
       });
     },
