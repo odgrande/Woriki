@@ -470,3 +470,10 @@
 .ac-view-opt:hover, .ac-view-opt:focus-visible { background: var(--zinc-100); outline: none; }
 .ac-view-opt[aria-checked="true"] { background: var(--yellow); border-color: var(--ink); }
 .ac-view-hint { margin: 4px 6px 2px; font-size: 12px; color: var(--zinc-500); }
+
+/* replace / upgrade furniture */
+.ac-furn { display: grid; gap: 8px; margin: 12px 0; text-align: left; }
+.ac-furn-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: var(--b); border-radius: var(--r-sm); background: var(--white); }
+.ac-furn-row > span:first-child { flex: 1; display: flex; flex-direction: column; }
+.ac-furn-row small { color: var(--zinc-600); font-weight: 600; }
+.ac-furn-row.is-mine { background: #ecfccb; }

@@ -442,11 +442,11 @@ export function createGame(ctx = {}, opts = {}) {
         return r;
       });
     },
-    /** Buy furniture from the home catalog (delivered to No. 14). */
-    buyFurniture(id) {
+    /** Buy (or replace with) a furniture model for a slot of the home (delivered to No. 14). */
+    buyFurniture(id, variant) {
       return run((e) => {
         const before = { ...s };
-        const r = buyFurnitureSys(s, id);
+        const r = buyFurnitureSys(s, id, variant);
         if (!r.ok) return r;
         addLog(s, r.text);
         e.fx.push({ type: 'toast', text: r.text, emoji: '📦', deltas: deltasOf(before, s), tone: 'good' });

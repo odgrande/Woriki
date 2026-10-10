@@ -28,7 +28,7 @@ const REASON_ICON = { where: 'map-pin', time: 'clock', energy: 'zap', money: 'wa
  * @param {HTMLElement} o.root
  * @param {(text: string, opts?: object) => void} o.toast
  * @param {(open: boolean) => void} [o.onToggle]
- * @param {{home?: () => void, map?: () => void, phone?: () => void}} [o.actions] the Home, Map and Phone buttons
+ * @param {{home?: () => void, map?: () => void, phone?: () => void, furniture?: (slot: string) => void}} [o.actions] the Home, Map and Phone buttons, the furniture chooser
  */
 export function createDock({ game, root, toast, onToggle = () => {}, actions = {} }) {
   let phoneTab = 'prayer';
@@ -315,8 +315,8 @@ export function createDock({ game, root, toast, onToggle = () => {}, actions = {
       ...rooms.flatMap((room) => [
         section(`Home catalog · ${room}`),
         ...CATALOG.filter((c) => c.room === room).map((c) => buyRow({
-          emoji: c.emoji, name: c.name, desc: c.perk, price: naira(c.naira), owned: !!home[c.id], shady: c.vanity,
-          can: !s.over && s.naira >= c.naira, onBuy: () => { const r = game.buyFurniture(c.id); if (r && !r.ok && r.reason) toast(r.reason, { tone: 'warn' }); },
+          emoji: c.emoji, name: c.name, desc: home[c.id] ? `${c.perk} Tap to upgrade or replace.` : c.perk, price: home[c.id] ? 'Change' : `from ${naira(c.naira)}`, shady: c.vanity,
+          can: !s.over, onBuy: () => actions.furniture?.(c.id),
         })),
       ]),
       h('p.ac-note', { text: 'Furniture is delivered to No. 14 straight away. Go home to see it.' }),

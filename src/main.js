@@ -60,7 +60,8 @@ const lagosMap = createLagosMap(ctx, { root: uiRoot, onPick: (p) => ui?.mapPick(
 
 // Furniture from the home catalog, rebuilt when you buy something.
 const decorPromise = worldPromise.then((world) => {
-  const decor = createDecor(ctx, { physics, seats: world.seats });
+  const decor = createDecor(ctx, { physics, seats: world.seats, interactables: world.interactables });
+  decor.set({}); // the sofa set, the old TV and the foam mattress you start with
   world.root.add(decor.root);
   ctx.bus.on('home:changed', ({ home }) => decor.set(home));
   return decor;
@@ -250,7 +251,32 @@ async function crossFootbridge(path) {
     ctx.bus.emit('game:toast', { text: 'You crossed safely by the pedestrian bridge. Wise! 👍', emoji: '🌉' });
   }
 }
-ctx.bus.on('player:interact', (item) => { if (item?.action === 'footbridge') crossFootbridge(item.path); });
+ctx.bus.on('player:interact', (item) => {
+  if (item?.action === 'footbridge') crossFootbridge(item.path);
+  if (item?.action === 'furniture') ui.furniture(item.slot);
+});
+
+/* ---------------------------------------------------------------- click on furniture to replace it */
+{
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let down = null;
+  canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  canvas.addEventListener('pointerup', (e) => {
+    const s = session;
+    if (!down || !s?.decor || !ctx.viewingWorld || s.travelling || document.pointerLockElement) { down = null; return; }
+    const quick = Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && performance.now() - down.t < 400;
+    down = null;
+    if (!quick) return;
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, ctx.camera);
+    ray.far = 14;
+    const hit = ray.intersectObject(s.decor.root, true)[0];
+    const slot = hit && s.decor.slotOf(hit.object);
+    if (slot) ui.furniture(slot);
+  });
+}
 
 /* ---------------------------------------------------------------- travelling */
 /** The trip on the road (walking, okada, danfo, taxi or car); trips that are not walkable come back. */

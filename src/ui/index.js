@@ -13,6 +13,8 @@ import { createDialogs } from './dialogs.js';
 import { createFront, isLoggedIn } from './front.js';
 import { createMapView } from './mapview.js';
 import { createPhone } from './phone/phone.js';
+import { FURNITURE_BY_ID, variantOf } from '../game/life.js';
+import { naira } from '../game/content.js';
 import { countdown } from '../game/clock.js';
 
 /**
@@ -237,6 +239,7 @@ export function createUI(ctx, opts) {
       home: () => mapView ? mapView.goHome() : dialogs.toast('The map is not ready yet.'),
       map: () => mapView?.show(),
       phone: (app) => phone.show(['prayer', 'diary', 'ads'].includes(app) ? app : null),
+      furniture: (slot) => furniture(slot),
     },
     onToggle(open) {
       document.documentElement.classList.toggle('ac-sheet-open', open);
@@ -264,6 +267,34 @@ export function createUI(ctx, opts) {
     if (opts.input) { opts.input.enabled = !open && !modalOpen; opts.input.setVisible?.(!open); }
     if (open) game.pause('phone'); else game.resume('phone');
   }));
+
+  /** Replace or upgrade a piece of furniture (click it, or press F next to it). */
+  function furniture(slot) {
+    const f = FURNITURE_BY_ID[slot];
+    const s = game.state;
+    if (!f || !s || !inGame) return;
+    dialogs.open({
+      id: `furniture:${slot}`,
+      dismissible: true,
+      build(card, close) {
+        const cur = variantOf(s, slot);
+        setChildren(card,
+          h('div.ac-modal-emoji', { text: f.emoji, attrs: { 'aria-hidden': 'true' } }),
+          h('h3', { text: `Your ${f.name.toLowerCase()}`, id: 'ac-modal-title' }),
+          h('p', { text: `${f.perk} Replace it, or upgrade. Your old one goes to a neighbour who needs it.` }),
+          h('div.ac-furn', null, f.variants.map((v) => {
+            const mine = cur?.id === v.id;
+            const can = !mine && !v.free && s.naira >= v.naira;
+            return h(`div.ac-furn-row${mine ? '.is-mine' : ''}`, null,
+              h('span', null, h('b', { text: v.name }), h('small', { text: v.free ? 'What you started with' : naira(v.naira) })),
+              mine ? h('span.ac-chip.is-green', { text: '✓ Yours' })
+                : v.free ? h('span.ac-chip', { text: 'Old model' })
+                  : h('button.ac-btn.is-sm', { type: 'button', class: can ? 'is-yellow' : '', disabled: !can, on: { click: () => { const r = game.buyFurniture(slot, v.id); close(); if (r && !r.ok && r.reason) dialogs.toast(r.reason, { tone: 'warn' }); } } }, can ? 'Buy & replace' : `Need ${naira(v.naira)}`));
+          })),
+          h('div.ac-choices', null, h('button.ac-btn', { type: 'button', on: { click: close } }, 'Keep it')));
+      },
+    });
+  }
 
   function openSettings() {
     dialogs.settings({
@@ -393,6 +424,8 @@ export function createUI(ctx, opts) {
     setLandingOnline: (n) => front.setOnline(n),
     /** The phone (createPhone). */
     phone,
+    /** Replace or upgrade furniture in a slot of the home. */
+    furniture,
     /** A pin on the Lagos map was tapped. */
     mapPick: (p) => mapView?.pick(p),
     get mapOpen() { return !!mapView?.open; },

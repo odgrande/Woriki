@@ -195,47 +195,85 @@ export function crossesLagoon(a, b) {
 /* ================================================================ home catalog */
 
 /**
- * Furniture and appliances for No. 14. `slot` = where it goes (src/world/decor.js builds it).
- * `perk` describes the small boost it gives; `effect` is applied by the game (see perks()).
+ * Furniture slots in No. 14. Each slot has variants (models) you can buy, replace or upgrade;
+ * `free` variants are what you start with. src/world/decor.js builds each variant in 3D.
+ * `perk` describes the small boost the slot gives (see restBonus, actions.js).
  */
-export const CATALOG = [
-  { id: 'chairs', emoji: '🪑', name: 'Plastic chairs and table', naira: 15000, room: 'Living room', perk: 'Seats for visitors from church.' },
-  { id: 'plants', emoji: '🪴', name: 'Potted plants', naira: 9000, room: 'Living room', perk: 'Fresh and green.' },
-  { id: 'altar', emoji: '🕯️', name: 'Family prayer corner', naira: 18000, room: 'Living room', perk: '+2 faith when you pray at home.' },
-  { id: 'picture', emoji: '🖼️', name: 'Framed "The Lord is my Shepherd"', naira: 12000, room: 'Living room', perk: 'Psalm 23 on your wall.' },
-  { id: 'bookshelf', emoji: '📚', name: 'Bookshelf with Christian books', naira: 45000, room: 'Living room', perk: '+1 word every time you read.' },
-  { id: 'fridge', emoji: '🧊', name: 'Fridge', naira: 240000, room: 'Living room', perk: 'Cooking at home fills you more.' },
-  { id: 'tv', emoji: '📺', name: '55-inch flat-screen TV', naira: 320000, room: 'Living room', perk: 'Watch gospel channels. Also cartoons. Also football…' },
-  { id: 'dining', emoji: '🍽️', name: 'Dining set (4 chairs)', naira: 130000, room: 'Living room', perk: 'Family meals. +2 character on Sundays at home.' },
-  { id: 'bed', emoji: '🛏️', name: 'Spring bed and frame', naira: 95000, room: 'Bedroom', perk: '+20 energy when you rest.' },
-  { id: 'fan', emoji: '🌀', name: 'Standing fan', naira: 28000, room: 'Bedroom', perk: '+5 energy when you rest (when there is light).' },
-  { id: 'wardrobe', emoji: '🚪', name: 'Wardrobe', naira: 70000, room: 'Bedroom', perk: 'Your Sunday best stays neat.' },
-  { id: 'desk', emoji: '🗒️', name: 'Reading desk and chair', naira: 35000, room: 'Bedroom', perk: '+1 word when you study.' },
-  { id: 'keyboard', emoji: '🎹', name: 'Keyboard (piano)', naira: 160000, room: 'Bedroom', perk: 'Practise at home. Choir members love it.' },
-  { id: 'ac', emoji: '❄️', name: 'Split air conditioner', naira: 420000, room: 'Bedroom', perk: '+10 energy when you rest. Needs light.' },
-  { id: 'solar', emoji: '🔆', name: 'Solar panels and inverter', naira: 1250000, room: 'Roof', perk: 'No more NEPA wahala: fans and AC always work.' },
-  { id: 'chandelier', emoji: '💡', name: 'Crystal chandelier', naira: 380000, room: 'Living room', perk: 'Pure show. Visitors will talk.', vanity: true },
+export const FURNITURE = [
+  { id: 'sofa', emoji: '🛋️', name: 'Sofa set', room: 'Living room', perk: 'Seats for visitors from church.', variants: [
+    { id: 'maroon', name: 'Old maroon sofa set', naira: 0, free: true },
+    { id: 'lshape', name: 'Grey fabric L-shape', naira: 250000 },
+    { id: 'leather', name: 'Brown leather sofa set', naira: 380000 },
+  ] },
+  { id: 'tv', emoji: '📺', name: 'Television', room: 'Living room', perk: 'Gospel channels, news, and the occasional football match.', variants: [
+    { id: 'old', name: 'Old box TV', naira: 0, free: true },
+    { id: 'flat55', name: '55-inch flat screen', naira: 320000 },
+    { id: 'flat75', name: '75-inch flat screen', naira: 650000 },
+  ] },
+  { id: 'bed', emoji: '🛏️', name: 'Bed', room: 'Bedroom', perk: '+20 energy when you rest (better beds rest you more).', variants: [
+    { id: 'foam', name: 'Foam mattress on the floor', naira: 0, free: true },
+    { id: 'spring', name: 'Spring bed and frame', naira: 95000 },
+    { id: 'king', name: 'King-size bed with headboard', naira: 280000 },
+  ] },
+  { id: 'chairs', emoji: '🪑', name: 'Plastic chairs and table', room: 'Living room', perk: 'Seats for visitors from church.', variants: [{ id: 'plastic', name: 'Plastic chairs and table', naira: 15000 }, { id: 'cane', name: 'Cane chairs and table', naira: 60000 }] },
+  { id: 'plants', emoji: '🪴', name: 'Potted plants', room: 'Living room', perk: 'Fresh and green.', variants: [{ id: 'small', name: 'Potted plants', naira: 9000 }, { id: 'big', name: 'Big indoor palms', naira: 25000 }] },
+  { id: 'altar', emoji: '🕯️', name: 'Family prayer corner', room: 'Living room', perk: '+2 faith when you pray at home.', variants: [{ id: 'corner', name: 'Prayer corner with candle', naira: 18000 }, { id: 'altar', name: 'Family altar with banner', naira: 45000 }] },
+  { id: 'picture', emoji: '🖼️', name: 'Framed scripture', room: 'Living room', perk: 'The Word on your wall.', variants: [{ id: 'psalm23', name: '"The LORD is my shepherd"', naira: 12000 }, { id: 'house', name: '"As for me and my house" (Joshua 24:15)', naira: 15000 }] },
+  { id: 'bookshelf', emoji: '📚', name: 'Bookshelf', room: 'Living room', perk: '+1 word every time you read.', variants: [{ id: 'small', name: 'Bookshelf with Christian books', naira: 45000 }, { id: 'library', name: 'Wall library', naira: 120000 }] },
+  { id: 'fridge', emoji: '🧊', name: 'Fridge', room: 'Living room', perk: 'Cooking at home fills you more.', variants: [{ id: 'small', name: 'Fridge', naira: 240000 }, { id: 'double', name: 'Double-door fridge', naira: 520000 }] },
+  { id: 'dining', emoji: '🍽️', name: 'Dining set', room: 'Living room', perk: 'Family meals.', variants: [{ id: 'wood4', name: 'Wooden dining set (4 chairs)', naira: 130000 }, { id: 'glass6', name: 'Glass dining set (6 chairs)', naira: 310000 }] },
+  { id: 'fan', emoji: '🌀', name: 'Standing fan', room: 'Bedroom', perk: '+5 energy when you rest (when there is light).', variants: [{ id: 'standing', name: 'Standing fan', naira: 28000 }, { id: 'rechargeable', name: 'Rechargeable fan (works without NEPA)', naira: 45000 }] },
+  { id: 'wardrobe', emoji: '🚪', name: 'Wardrobe', room: 'Bedroom', perk: 'Your Sunday best stays neat.', variants: [{ id: 'wood', name: 'Wooden wardrobe', naira: 70000 }, { id: 'mirror', name: 'Wardrobe with mirror doors', naira: 150000 }] },
+  { id: 'desk', emoji: '🗒️', name: 'Reading desk', room: 'Bedroom', perk: '+1 word when you study.', variants: [{ id: 'desk', name: 'Reading desk and chair', naira: 35000 }, { id: 'study', name: 'Study desk with lamp', naira: 90000 }] },
+  { id: 'keyboard', emoji: '🎹', name: 'Keyboard', room: 'Bedroom', perk: 'Practise at home. Choir members love it.', variants: [{ id: 'keyboard', name: 'Keyboard on a stand', naira: 160000 }, { id: 'piano', name: 'Digital piano', naira: 450000 }] },
+  { id: 'ac', emoji: '❄️', name: 'Air conditioner', room: 'Bedroom', perk: '+10 energy when you rest. Needs light.', variants: [{ id: '1hp', name: '1 HP split AC', naira: 420000 }, { id: '2hp', name: '2 HP split AC', naira: 650000 }] },
+  { id: 'solar', emoji: '🔆', name: 'Solar panels and inverter', room: 'Roof', perk: 'No more NEPA wahala: fans and AC always work.', variants: [{ id: 'solar', name: 'Solar panels and inverter', naira: 1250000 }] },
+  { id: 'chandelier', emoji: '💡', name: 'Crystal chandelier', room: 'Living room', perk: 'Pure show. Visitors will talk.', vanity: true, variants: [{ id: 'crystal', name: 'Crystal chandelier', naira: 380000 }] },
 ];
+export const FURNITURE_BY_ID = Object.fromEntries(FURNITURE.map((f) => [f.id, f]));
+/** The Buy tab list: each slot from its cheapest paid model. */
+export const CATALOG = FURNITURE.map((f) => ({ id: f.id, emoji: f.emoji, name: f.name, room: f.room, perk: f.perk, vanity: f.vanity, naira: Math.min(...f.variants.filter((v) => !v.free).map((v) => v.naira)) }));
 export const CATALOG_BY_ID = Object.fromEntries(CATALOG.map((c) => [c.id, c]));
 
-/** Buy a piece of furniture. Mutates `s`. */
-export function buyFurniture(s, id) {
-  const it = CATALOG_BY_ID[id];
-  if (!it) return { ok: false, reason: 'Not in the catalog' };
+/** The model in a slot (old saves stored `true`), or the free default, or null. */
+export function variantOf(s, slot) {
+  const f = FURNITURE_BY_ID[slot];
+  if (!f) return null;
+  const v = s.home?.[slot];
+  if (v === true) return f.variants.find((x) => !x.free) || f.variants[0];
+  return f.variants.find((x) => x.id === v) || f.variants.find((x) => x.free) || null;
+}
+
+/**
+ * Buy a model for a slot, replacing what was there (the old one goes to a neighbour in need).
+ * Mutates `s`. `variant` defaults to the cheapest model you don't have.
+ */
+export function buyFurniture(s, slot, variant) {
+  const f = FURNITURE_BY_ID[slot];
+  if (!f) return { ok: false, reason: 'Not in the catalog' };
   s.home = s.home || {};
-  if (s.home[id]) return { ok: false, reason: 'You already have it' };
-  if (s.naira < it.naira) return { ok: false, reason: `You need ${naira(it.naira)}` };
-  s.naira -= it.naira;
-  s.home[id] = true;
-  if (it.vanity) s.character = clamp(s.character - 2, 0, 100);
-  return { ok: true, text: `${it.emoji} ${it.name} delivered to No. 14!${it.vanity ? ' A neighbour asked where the money came from.' : ''}` };
+  const cur = variantOf(s, slot);
+  const v = f.variants.find((x) => x.id === variant) || f.variants.find((x) => !x.free && x.id !== cur?.id);
+  if (!v || v.free) return { ok: false, reason: 'Choose a model' };
+  if (cur && cur.id === v.id && (s.home[slot] || cur.free)) return { ok: false, reason: 'You already have it' };
+  if (s.naira < v.naira) return { ok: false, reason: `You need ${naira(v.naira)}` };
+  s.naira -= v.naira;
+  const hadOld = !!(cur && (s.home[slot] || cur.free));
+  s.home[slot] = v.id;
+  if (f.vanity) s.character = clamp(s.character - 2, 0, 100);
+  if (hadOld) s.character = clamp(s.character + 1, 0, 100);
+  const text = `${f.emoji} ${v.name} delivered to No. 14!${hadOld ? ` You gave your ${cur.name.toLowerCase()} to a neighbour who needed it. +1 character.` : ''}${f.vanity ? ' A neighbour asked where the money came from.' : ''}`;
+  return { ok: true, text, slot, variant: v.id };
 }
 
 /** Extra energy when you rest at home, from the furniture. */
 export function restBonus(s) {
   const h = s.home || {};
   const light = !!h.solar || Math.random() < 0.6; // NEPA: sometimes there is light, sometimes not
-  return (h.bed ? 20 : 0) + (h.fan && light ? 5 : 0) + (h.ac && light ? 10 : 0);
+  const bed = { king: 28, spring: 20, true: 20 }[h.bed] || 0;
+  const fan = h.fan && (light || h.fan === 'rechargeable') ? 5 : 0;
+  const ac = h.ac && light ? (h.ac === '2hp' ? 12 : 10) : 0;
+  return bed + fan + ac;
 }
 
 /* ================================================================ things to do */

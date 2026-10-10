@@ -44,10 +44,22 @@ describe('home catalog and things to do', () => {
   it('buys furniture once', () => {
     const s = life({ naira: 100000 });
     expect(buyFurniture(s, 'bed').ok).toBe(true);
-    expect(s.home.bed).toBe(true);
+    expect(s.home.bed).toBe('spring');
     expect(s.naira).toBe(5000);
-    expect(buyFurniture(s, 'bed').ok).toBe(false);
-    expect(buyFurniture(s, 'tv').ok).toBe(false);
+    expect(buyFurniture(s, 'bed', 'spring').ok).toBe(false); // already yours
+    expect(buyFurniture(s, 'tv').ok).toBe(false); // not enough money
+  });
+
+  it('replaces furniture with an upgrade and gives the old one away', async () => {
+    const { variantOf } = await import('./life.js');
+    const s = life({ naira: 1000000 });
+    expect(variantOf(s, 'sofa').id).toBe('maroon');
+    const c0 = s.character;
+    const r = buyFurniture(s, 'sofa', 'leather');
+    expect(r.ok).toBe(true);
+    expect(variantOf(s, 'sofa').id).toBe('leather');
+    expect(s.character).toBe(c0 + 1);
+    expect(r.text).toMatch(/neighbour/);
   });
 
   it('opens activities by day and hour', () => {

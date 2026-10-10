@@ -60,9 +60,6 @@ export function buildHome(W) {
   // partition between the living room and the bedroom, with a doorway
   wall(W, 'z', hz0, hz1, HOUSE.living, { y0: fy, h: HOUSE.h, t: 0.15, color: INT, out: 1, inner: '#f1e3c8', mat: 'wallIn', openings: [{ a: 22.05, b: 23.0, y0: 0, y1: 2.1, type: 'open' }] });
   B.boxMM('wood', HOUSE.living - 0.09, fy + 2.1, 22.0, HOUSE.living + 0.09, fy + 2.2, 23.05, { color: '#6b4a2d' });
-  // a foam mattress on the bedroom floor until you buy a bed
-  B.boxMM('fabric', 22.6, fy, 24.8, 24.2, fy + 0.18, 26.8, { color: '#e8edf5' });
-  B.boxMM('fabric', 22.75, fy + 0.18, 26.2, 23.35, fy + 0.3, 26.65, { color: '#ffffff' });
   // base band outside
   for (const [a, b, c, ax] of [[hx0, hx1, hz1 + 0.12, 'x'], [hz0, hz1, hx0 - 0.12, 'z'], [hz0, hz1, hx1 + 0.12, 'z']]) {
     if (ax === 'x') B.boxMM('plaster', a, 0, c - 0.02, b, fy + 0.45, c + 0.02, { color: BASE });
@@ -79,10 +76,7 @@ export function buildHome(W) {
 
   // --- living room furniture
   const fl = fy;
-  // sofa against the west wall, facing +X
-  sofa(W, hx0 + 0.55, fl, 22.5, Math.PI / 2, 3, '#6b2d3a');
-  sofa(W, 13.6, fl, 19.0, 0, 1, '#6b2d3a');
-  sofa(W, 13.6, fl, 26.1, Math.PI, 1, '#6b2d3a');
+  // the sofa set, the TV and the bed are built by decor.js (they can be replaced)
   // centre table, TV stand + TV on the partition wall
   B.box('wood', 15.0, fl + 0.42, 22.5, 1.1, 0.05, 0.6, { color: '#4a2f1c' });
   B.box('glass', 15.0, fl + 0.45, 22.5, 1.0, 0.01, 0.5, { color: '#7d9aa3', uv: 'keep' });
@@ -91,7 +85,6 @@ export function buildHome(W) {
   B.box('paint', 15.1, fl + 0.48, 22.4, 0.28, 0.06, 0.2, { color: '#1a1a1a', uv: 'keep' });
   B.box('wood', HOUSE.living - 0.4, fl + 0.3, 21.0, 0.5, 0.6, 1.5, { color: '#3a2a1e' });
   W.collide(HOUSE.living - 0.7, 0, 20.2, HOUSE.living - 0.1, fl + 0.6, 21.8, 'furniture');
-  B.add('props', atlasBox(0.06, 0.62, 1.05, { all: P.black, nx: P.tv }), { m: mat(HOUSE.living - 0.42, fl + 0.95, 21.0) });
   B.add('props', atlasBox(0.03, 0.5, 0.5, { all: P.black, nx: P.clock }), { m: mat(HOUSE.living - 0.09, fl + 2.6, 21.0) });
   B.add('props', atlasBox(0.03, 0.45, 0.3, { all: P.white, px: P.calendar }), { m: mat(hx0 + 0.13, fl + 1.9, 24.8) });
   const pic = new THREE.PlaneGeometry(1.2, 0.4); rectUV(pic, W.S.scripture);
@@ -155,26 +148,4 @@ function curtains(W, x, y, z, ry, winW, color) {
     B.add('fabric', g, { m: m0, color });
   }
   B.add('metal', new THREE.CylinderGeometry(0.015, 0.015, winW + 1.4, 6).rotateZ(Math.PI / 2), { m: m0.clone().multiply(mat(0, 2.52, 0.02)), color: '#c9a23a' });
-}
-
-/** Upholstered sofa (n seats) with its back towards −Z before rotation. */
-function sofa(W, x, y, z, ry, n, color) {
-  const { b: B } = W;
-  const w = n * 0.75 + 0.3;
-  const m = mat(x, y, z, ry);
-  const add = (cx, cy, cz, sx, sy, sz, c, key = 'fabric') => B.add(key, new THREE.BoxGeometry(sx, sy, sz), { m: m.clone().multiply(mat(cx, cy, cz)), color: c, uv: 'box' });
-  add(0, 0.22, 0.05, w, 0.3, 0.8, color);
-  add(0, 0.42, 0.1, w - 0.3, 0.12, 0.66, '#7c3a47');
-  add(0, 0.62, -0.28, w, 0.75, 0.22, color);
-  for (const s of [-1, 1]) add(s * (w / 2 - 0.08), 0.4, 0.05, 0.16, 0.42, 0.8, color);
-  add(0, 0.03, 0.05, w - 0.1, 0.06, 0.7, '#2a1a10', 'wood');
-  const c = Math.cos(ry), s = Math.sin(ry);
-  // collider: rotate the footprint
-  const hw = w / 2, hd = 0.45;
-  const ex = Math.abs(c) * hw + Math.abs(s) * hd, ez = Math.abs(s) * hw + Math.abs(c) * hd;
-  W.collide(x - ex, 0, z - ez, x + ex, y + 0.9, z + ez, 'furniture');
-  for (let i = 0; i < n; i++) {
-    const lx = -((n - 1) * 0.75) / 2 + i * 0.75, lz = 0.12;
-    W.seat(x + lx * c + lz * s, y + 0.48, z - lx * s + lz * c, ry, n > 1 ? 'chair' : 'chair', 'home');
-  }
 }
