@@ -34,7 +34,9 @@ export function newState(profile = {}, { rng = Math.random, T = START_T } = {}) 
     role,
     appearance: profile.appearance || null,
     start: startId,
-    area: LAGOS_AREAS[Math.floor(rng() * LAGOS_AREAS.length)],
+    // Where you grew up (backstory); you now live at No. 14 in Yaba, near the church.
+    from: LAGOS_AREAS[Math.floor(rng() * LAGOS_AREAS.length)],
+    area: 'Yaba',
     job: st.job,
     salary: st.salary,
     // time

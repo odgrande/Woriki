@@ -7,7 +7,7 @@
 // `{type, ...data}` records that src/game/index.js forwards.
 import {
   ROLES, CHURCH_TYPES, STAGES, STAGE, TITLES, RANK_XP, VENUES, UPGRADES, BRANCHES, SHOP, FOOD, QUIZ,
-  SAMPLE_REQUESTS, DEPARTMENTS, HALL_ZONES, ZONE_LABELS, BIBLE_SCHOOL_FEE, WIN_MEMBERS, V, verseText, naira, num, examNeed,
+  SAMPLE_REQUESTS, DEPARTMENTS, HALL_ZONES, CHURCH_ZONES, ZONE_LABELS, servicesFor, BIBLE_SCHOOL_FEE, WIN_MEMBERS, V, verseText, naira, num, examNeed,
 } from './content.js';
 import { ACTIONS, ACTION_BY_ID, SERVICE_DUTIES, SERVICE_CREDIT, isPastor, isMinister } from './actions.js';
 import { EVENTS, EVENT_BY_ID } from './events.js';
@@ -66,7 +66,34 @@ export function mood(s) {
   return { id: 'miserable', emoji: '😣', label: 'Miserable' };
 }
 
-export const clock = (s) => clockInfo(s.T, s.startT);
+/** Ideas for free time by weekday (Mon = 0): normal life, not only church. */
+const FREE_TIME = [
+  'Work day. Go to work, then Bible study is on Wednesday.',
+  'Work day. Evening: visit the market or rest at home.',
+  'Work day. Bible study tonight at 6pm.',
+  'Work day. A quiet evening at home with your Bible.',
+  'Work day. Tonight is the Friday vigil at 10pm.',
+  'Saturday! Free time: Elegushi Beach, a film at the National Theatre, or Yaba market.',
+  'Sunday: service at 9am, then rice at home and rest.',
+];
+
+/**
+ * Today's plan for the home card and the Today tab: this role's meetings and services plus a
+ * free-time idea, like a real Lagos weekend.
+ */
+export function dayPlan(s) {
+  const c = clock(s);
+  const dayStart = s.T - c.minute;
+  const items = servicesBetween(dayStart, dayStart + DAY, schedule(s))
+    .filter((x) => x.start >= dayStart)
+    .map((x) => ({ kind: x.kind, emoji: x.def.emoji, name: x.name, time: hhmm(x.start), done: !!s.doneToday[x.kind], live: x.start <= s.T && s.T < x.end, past: x.end <= s.T }));
+  return { weekday: c.weekdayName, items, idea: FREE_TIME[c.weekday] };
+}
+
+/** This player's weekly schedule (worship services plus their role's meetings). */
+export const schedule = (s) => servicesFor(s.role);
+
+export const clock = (s) => clockInfo(s.T, s.startT, schedule(s));
 
 /** Zones where this player serves during services, or null for the congregation. */
 export function postZones(s) {
@@ -112,7 +139,9 @@ export function presence(s, loc = { zone: null }) {
   const post = postZones(s);
   const atPost = !!(post && zone && post.includes(zone));
   const congregation = inHall && !!(loc.seated || loc.kneeling || loc.praising);
-  return { inHall, atPost, congregation, present: congregation || atPost };
+  // Cleaning and similar meetings count anywhere on the church premises.
+  const anywhere = !!(s.attendance?.anywhere && CHURCH_ZONES.includes(zone));
+  return { inHall, atPost, congregation, present: congregation || atPost || anywhere };
 }
 
 /* ================================================================ helpers for run() */
@@ -221,7 +250,7 @@ export function canDo(s, id, env = makeEnv()) {
   const cost = costOf(s, a);
   if (cost && s.naira < cost) return { ok: false, code: 'money', reason: `Needs ${naira(cost)}` };
   if (a.away && env.mode !== 'shared' && !a.skipsService) {
-    const clash = servicesBetween(s.T, s.T + a.away).find((x) => !s.doneToday[x.kind]);
+    const clash = servicesBetween(s.T, s.T + a.away, schedule(s)).find((x) => !s.doneToday[x.kind]);
     if (clash) return { ok: false, code: 'service', reason: clash.start <= s.T ? `${clash.name} is on now` : `${clash.name} starts in ${countdown(clash.start - s.T)}` };
   }
   if (s.shift && s.shift.id !== a.id) return { ok: false, code: 'busy', reason: 'Finish your current task first' };
@@ -335,7 +364,7 @@ export function skipTime(s, minutes, env, { label = 'Later…', asleep = false, 
   if (env.mode === 'shared' || minutes <= 0) return;
   if (s.attendance) endService(s, env, { silent: true });
   s.shift = null;
-  const missed = servicesBetween(s.T, s.T + minutes).filter((x) => x.start >= s.T);
+  const missed = servicesBetween(s.T, s.T + minutes, schedule(s)).filter((x) => x.start >= s.T);
   advance(s, minutes, env, { asleep });
   for (const m of missed) addLog(s, `You missed the ${m.name}.`);
   env.fx.push({ type: 'skip', minutes, label, to });
@@ -373,7 +402,7 @@ export function tick(s, dtMin, env) {
   const loc = env.loc || { zone: null };
 
   // Bells before services.
-  const next = nextService(prevT);
+  const next = nextService(prevT, schedule(s));
   if (next) {
     const before = next.start - prevT;
     const after = next.start - s.T;
@@ -384,7 +413,7 @@ export function tick(s, dtMin, env) {
   }
 
   // Services: start, presence, end.
-  const cur = serviceAt(s.T);
+  const cur = serviceAt(s.T, schedule(s));
   if (s.attendance && (!cur || cur.start !== s.attendance.start)) endService(s, env);
   if (cur && !s.attendance) startService(s, cur, env);
   if (s.attendance) {
@@ -461,7 +490,7 @@ export function progress(s, loc = { zone: null }) {
     const value = clamp(a.present / dur, 0, 1);
     const post = postLabel(s);
     let hint = null;
-    if (!p.present) hint = post ? `Serve at ${post}, or sit in the hall` : (p.inHall ? 'Sit down (C) in a pew' : 'Go to the church hall and sit');
+    if (!p.present) hint = a.anywhere ? 'Go to the church compound' : post ? `Serve at ${post}, or sit in the hall` : (p.inHall ? 'Sit down (C) in a pew' : 'Go to the church hall and sit');
     return { kind: 'service', emoji: a.emoji, label: a.name, value, goal: a.credit, hint, present: p.present };
   }
   return null;
@@ -470,12 +499,13 @@ export function progress(s, loc = { zone: null }) {
 /* ================================================================ services */
 
 export function startService(s, svc, env) {
-  s.attendance = { kind: svc.kind, name: svc.name, emoji: svc.def.emoji, start: svc.start, end: svc.end, present: 0, post: 0, credit: svc.def.credit, music: svc.def.music, musicOff: false };
+  const music = svc.def.music > 0;
+  s.attendance = { kind: svc.kind, name: svc.name, emoji: svc.def.emoji, start: svc.start, end: svc.end, present: 0, post: 0, credit: svc.def.credit, music: svc.def.music, musicOff: !music, anywhere: !!svc.def.anywhere };
   env.fx.push({ type: 'service:start', kind: svc.kind, name: svc.name });
   env.fx.push({ type: 'audio:play', name: 'bell' });
-  env.fx.push({ type: 'audio:music', track: 'worship' });
-  const where = postLabel(s);
-  env.fx.push({ type: 'toast', text: `${svc.def.emoji} ${svc.name} has started. ${where ? `Serve at ${where}.` : 'Find a seat in the hall.'}`, tone: 'info' });
+  if (music) env.fx.push({ type: 'audio:music', track: 'worship' });
+  const where = svc.def.anywhere ? 'the church compound' : postLabel(s);
+  env.fx.push({ type: 'toast', text: `${svc.def.emoji} ${svc.name} has started. ${where ? `Be at ${where}.` : 'Find a seat in the hall.'}`, tone: 'info' });
   // A role moment during the service (delivered later, only if you are there).
   if (!isPastor(s) || svc.kind === 'sunday') {
     const pool = eventPool(s, 'service-start');

@@ -38,9 +38,9 @@ export function createUI(ctx, opts) {
   let inGame = false;
   let modalOpen = false;
 
-  // Saved day length preference.
+  // Saved day length preference (only for the fast local clock; the shared clock is real Lagos time).
   const dayMinutes = Number(store.get('amen.dayMinutes', ''));
-  if (dayMinutes > 0) game.realMinutesPerDay = dayMinutes;
+  if (dayMinutes > 0 && game.mode === 'local') game.realMinutesPerDay = dayMinutes;
 
   /* ---------------------------------------------------------------- characters (lazy) */
   let libP = null;

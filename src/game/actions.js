@@ -548,6 +548,21 @@ export const SERVICE_CREDIT = {
       return `You prayed through the night. +${f} faith.` + h.reward(4, 4);
     },
   },
+  cleaning: {
+    energy: 25,
+    run(h) {
+      h.grow('character', 3); h.grow('faith', 2);
+      return `The sanctuary is shining for tomorrow. ${h.pick(['Somebody found ₦500 under a pew and returned it.', 'Mama Titi brought zobo for everyone.', 'You mopped the altar steps twice.'])}` + h.reward(6, 5);
+    },
+  },
+  practice: {
+    energy: 25,
+    run(h) {
+      h.s.services += 1;
+      h.grow('faith', 4); h.grow('word', 2);
+      return `Choir practice done. The director finally said the alto part was "not bad". Tomorrow will be glorious.` + h.reward(8, 6);
+    },
+  },
 };
 
 /** Ordered sections for the Today tab. */

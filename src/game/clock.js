@@ -8,8 +8,10 @@ export const WEEK = DAY * 7;
 export const DEFAULT_REAL_MINUTES_PER_DAY = 24;
 /** New lives start on Sunday at 07:30, so the first service is close. */
 export const START_T = 6 * DAY + 7 * 60 + 30;
-/** Shared-clock epoch: Monday 2024-01-01 00:00 UTC is in-game Monday 00:00. */
-export const SHARED_EPOCH_MS = Date.UTC(2024, 0, 1);
+/** Shared-clock epoch: Monday 2024-01-01 00:00 in Lagos (WAT, UTC+1) is in-game Monday 00:00. */
+export const SHARED_EPOCH_MS = Date.UTC(2024, 0, 1) - 3600_000;
+/** One in-game day per real day: the shared clock then shows the real time in Lagos. */
+export const REAL_TIME = 1440;
 
 /** In-game minutes that pass per real second. */
 export const gameMinutesPerSecond = (realMinutesPerDay = DEFAULT_REAL_MINUTES_PER_DAY) => DAY / (realMinutesPerDay * 60);
@@ -95,14 +97,17 @@ export function countdown(minutes) {
  * Everything the HUD needs about the time at T.
  * @param {number} T absolute in-game minutes
  * @param {number} startT the minute this life began (day 1)
+ * @param {object[]} [services] the schedule for this player (servicesFor(role))
  */
-export function clockInfo(T, startT = START_T) {
+export function clockInfo(T, startT = START_T, services = SERVICES) {
   const wd = weekdayOf(T);
-  const current = serviceAt(T);
-  const next = nextService(T);
+  const current = serviceAt(T, services);
+  const next = nextService(T, services);
   return {
     T,
     day: dayIndex(T) - dayIndex(startT) + 1,
+    /** Day of the month in a real-time world ("Sat 10"), from the shared epoch. */
+    date: calendarDate(T),
     weekday: wd,
     weekdayShort: WEEKDAYS[wd],
     weekdayName: WEEKDAY_NAMES[wd],
@@ -113,4 +118,11 @@ export function clockInfo(T, startT = START_T) {
     current: current ? { ...current, elapsed: T - current.start, left: current.end - T, progress: (T - current.start) / (current.end - current.start) } : null,
     next: next ? { ...next, inMinutes: next.start - T, label: `${next.name} in ${countdown(next.start - T)}`, when: `${WEEKDAY_NAMES[weekdayOf(next.start)]} ${ampm(next.start)}` } : null,
   };
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** Calendar date of in-game minute T when the clock is real Lagos time: {day, month, monthName, year}. */
+export function calendarDate(T) {
+  const d = new Date(Date.UTC(2024, 0, 1) + dayIndex(T) * 86400_000);
+  return { day: d.getUTCDate(), month: d.getUTCMonth(), monthName: MONTHS[d.getUTCMonth()], year: d.getUTCFullYear() };
 }

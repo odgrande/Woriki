@@ -275,7 +275,9 @@ export function createDialogs({ root, game, onModal }) {
             h('div.ac-field', null, h('span', { text: 'Graphics quality' }), qSeg,
               h('small', { text: 'Low runs best on budget phones. Changes apply after a reload.' }), h('div', { style: { marginTop: '8px' } }, reload)),
             h('div.ac-field', null, h('div.ac-switch', null, h('span', { text: 'Sound and music', style: { fontWeight: 700, fontSize: '13px' } }), sw)),
-            h('div.ac-field', null, h('span', { text: 'Length of a day' }), dSeg, h('small', { text: 'Real minutes per in-game day. Services follow the in-game clock.' })),
+            game.mode === 'shared'
+              ? h('div.ac-field', null, h('span', { text: 'Time' }), h('small', { text: 'Amen City runs on real Lagos time (WAT). Services happen when they would in real life.' }))
+              : h('div.ac-field', null, h('span', { text: 'Length of a day' }), dSeg, h('small', { text: 'Real minutes per in-game day. Services follow the in-game clock.' })),
             h('div.ac-field', null, newBtn)),
           h('div.ac-choices', null, h('button.ac-btn.is-primary', { type: 'button', on: { click: close } }, 'Done')));
       },

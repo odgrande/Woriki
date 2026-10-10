@@ -326,7 +326,7 @@ export function createDock({ game, root, toast, onToggle = () => {} }) {
     else stats.push(['Falls', s.falls], ['Repented', s.repentances], ['Salary', naira(s.salary)]);
     return [
       h('div.ac-profile', null, h('div.ac-avatar', { text: r.emoji, attrs: { 'aria-hidden': 'true' } }),
-        h('div', null, h('b', { text: `${game.title} ${s.name}` }), h('span', { text: `${r.name} · ${s.church}, Yaba · from ${s.area} · ${s.job}` }))),
+        h('div', null, h('b', { text: `${game.title} ${s.name}` }), h('span', { text: `${r.name} · ${s.church}, Yaba · from ${s.from || s.area} · ${s.job}` }))),
       h('div.ac-stats', null, stats.map(([k, v]) => h('div.ac-stat', null, h('span', { text: k }), h('strong', { text: String(v) })))),
       section('Your story'),
       h('ul.ac-log', null, s.log.map((e) => h('li', null, h('span.ac-when', { text: logStamp(e, s.startT) }), e.text))),

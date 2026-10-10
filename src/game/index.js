@@ -5,7 +5,7 @@ import { newState, migrate, readSave, writeSave, clearSave, saveSummary, SAVE_KE
 import {
   makeEnv, tick as tickSystems, doAction, canDo, listActions, choose as chooseSys, answerQuiz,
   buyItem, buyFood, buyUpgrade, upgradeChoir, moveVenue, openBranch, postRequest, markAnswered,
-  completeMilestone, milestone, progress, presence, title, mood, clock, postLabel, advance, PRAISE_SECONDS,
+  completeMilestone, milestone, progress, presence, title, mood, clock, postLabel, advance, dayPlan, PRAISE_SECONDS,
 } from './systems.js';
 import { gameMinutesPerSecond, sharedTime, START_T, DEFAULT_REAL_MINUTES_PER_DAY } from './clock.js';
 import { STARTS, ROLES, CHURCH_TYPES, naira } from './content.js';
@@ -182,7 +182,12 @@ export function createGame(ctx = {}, opts = {}) {
     if (mode === 'shared') {
       const T = sharedTime(Date.now(), realMinutesPerDay);
       dtMin = T - s.T;
-      if (dtMin > 1440 * 2) { advance(s, dtMin - 1, e); dtMin = 1; } // long time away
+      if (dtMin > 30) {
+        // Back after a while (the browser was closed): life went on gently. You slept and ate a bit.
+        advance(s, dtMin - 1, e, { asleep: true });
+        s.energy = Math.min(100, s.energy + ((dtMin - 1) / 60) * 8);
+        dtMin = 1;
+      }
       if (dtMin <= 0) return;
     }
     const prevMinute = Math.floor(s.T);
@@ -216,11 +221,13 @@ export function createGame(ctx = {}, opts = {}) {
       const ct = CHURCH_TYPES[s.tradition];
       const c = clock(s);
       const post = postLabel(s);
+      const plan = dayPlan(s);
       const modal = {
         emoji: st.emoji, title: st.title, ok: 'Let\'s go',
-        text: `${st.text}\n\nRole: ${r.emoji} ${r.name}\nChurch: ${s.church}, Yaba (${ct.name})\nHome: ${s.area}, Lagos · Job: ${s.job}\nSavings: ${naira(s.naira)}\n\n`
-          + `It's ${c.weekdayName} morning, ${c.time}. ${c.next ? `${c.next.name} starts at ${c.next.when.split(' ')[1]}.` : ''} `
-          + (post ? `Serve at ${post} during the service.` : 'Walk to the church hall and sit down (C) during the service.'),
+        text: `${st.text}\n\nRole: ${r.emoji} ${r.name}\nChurch: ${s.church}, Yaba (${ct.name})\nHome: No. 14, ${s.area}, Lagos · Job: ${s.job}\nSavings: ${naira(s.naira)}\n\n`
+          + `It's ${c.weekdayName} ${c.part}, ${c.time} in Lagos. You are at home. ${plan.items.length ? `Today: ${plan.items.map((x) => `${x.name} at ${x.time}`).join(', ')}.` : plan.idea} `
+          + (c.next ? `Next: ${c.next.name}, ${c.next.when}. ` : '')
+          + (post ? `During services you serve at ${post}.` : 'During services, sit down (C) in the church hall.'),
       };
       emit('modal', { modal });
     }
@@ -242,6 +249,8 @@ export function createGame(ctx = {}, opts = {}) {
     get presence() { return s ? presence(s, game.loc) : null; },
     get milestone() { return s ? milestone(s) : null; },
     get postLabel() { return s ? postLabel(s) : null; },
+    /** Today's meetings and a free-time idea. */
+    get plan() { return s ? dayPlan(s) : null; },
     get paused() { return pauses.size > 0 || !!(s && (s.activeEvent || s.exam)); },
     /** Summary of the saved life in storage (for "Continue"), or null. */
     get saved() { return saveSummary(readStored()); },

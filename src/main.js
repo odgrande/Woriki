@@ -17,6 +17,7 @@ import { createNet } from './net/client.js';
 import { createRemotes } from './net/remotes.js';
 import { createChatUI } from './ui/chat.js';
 import { createGame } from './game/index.js';
+import { REAL_TIME } from './game/clock.js';
 import { createUI } from './ui/index.js';
 import './main.css';
 
@@ -37,7 +38,8 @@ const input = createInput(uiRoot);
 input.enabled = false;
 input.setVisible?.(false);
 const audio = createAudio(ctx);
-const game = createGame(ctx, { clock: params.get('clock') === 'local' ? 'local' : 'shared' });
+// Real Lagos time: one game day per real day, the same for every player (?clock=local for fast test days).
+const game = createGame(ctx, params.get('clock') === 'local' ? { clock: 'local' } : { clock: 'shared', realMinutesPerDay: REAL_TIME });
 const bubbles = createBubbles(ctx, { root: uiRoot });
 
 // Sound can only start after a user gesture.
@@ -81,7 +83,8 @@ async function enter(profile) {
     const character = createCharacter(kit, appearance, { detail: 'high' });
     const camera = createFollowCamera(ctx, input);
     const player = createPlayer(ctx, { world, physics, input, camera, character });
-    const spawn = world.spawns.byRole[role] || world.spawns.player;
+    // Every day starts at home, like real life; the day's plan says where to go.
+    const spawn = world.spawns.home || world.spawns.byRole[role] || world.spawns.player;
     player.teleport(spawn.position, spawn.rotY);
     // Start with a three-quarter view so doors and posts next to a duty spot don't hide you.
     camera.behind(spawn.rotY || 0);

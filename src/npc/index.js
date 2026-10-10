@@ -488,8 +488,17 @@ export function createCommunity(ctx, opts) {
 
   populate();
   if (ctx.bus) {
-    offs.push(ctx.bus.on('service:start', (e) => setService(e?.kind || 'service')));
-    offs.push(ctx.bus.on('service:end', () => setService(null)));
+    offs.push(ctx.bus.on('service:start', (e) => {
+      const kind = e?.kind || 'service';
+      // Workers' meetings (cleaning, choir practice) don't fill the pews; at practice the choir sings.
+      if (kind === 'practice') { for (const c of npcs.filter((n) => n.kind === 'choir')) setAnim(c, 'dance'); return; }
+      if (kind === 'cleaning') return;
+      setService(kind);
+    }));
+    offs.push(ctx.bus.on('service:end', () => {
+      if (!service) for (const c of npcs.filter((n) => n.kind === 'choir')) setAnim(c, 'idle');
+      setService(null);
+    }));
     offs.push(ctx.bus.on('player:action', onPlayerAction));
   }
 

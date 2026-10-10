@@ -80,6 +80,8 @@ export function makeSpawns() {
   const sp = (x, z, rotY) => ({ position: V(x, groundAt(x, z), z), rotY });
   return {
     player: sp(14.6, 16.6, Math.PI),
+    /** In the living room of No. 14: every day starts at home. */
+    home: sp(16.6, 23.8, Math.PI / 2),
     byRole: {
       worshipper: sp(14.6, 16.6, Math.PI),
       visitor: sp(-53.2, 6.4, Math.PI),

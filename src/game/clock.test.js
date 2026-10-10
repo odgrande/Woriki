@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   DAY, WEEK, START_T, weekdayOf, minuteOfDay, hhmm, ampm, serviceAt, nextService, servicesBetween,
-  countdown, clockInfo, gameMinutesPerSecond, sharedTime, SHARED_EPOCH_MS,
+  countdown, clockInfo, gameMinutesPerSecond, sharedTime, SHARED_EPOCH_MS, REAL_TIME, calendarDate,
 } from './clock.js';
+import { servicesFor } from './content.js';
 
 const at = (weekday, h, m = 0, week = 0) => week * WEEK + weekday * DAY + h * 60 + m;
 
@@ -39,6 +40,13 @@ describe('clock basics', () => {
     expect(sharedTime(SHARED_EPOCH_MS)).toBe(0);
     expect(sharedTime(SHARED_EPOCH_MS + 60_000)).toBe(60); // one real minute = one game hour
   });
+
+  it('shows real Lagos time (WAT) with one game day per real day', () => {
+    const T = sharedTime(Date.UTC(2026, 9, 10, 6, 31), REAL_TIME); // 06:31 UTC on Saturday 10 October 2026
+    expect(weekdayOf(T)).toBe(5);
+    expect(hhmm(T)).toBe('07:31');
+    expect(calendarDate(T)).toMatchObject({ day: 10, monthName: 'Oct', year: 2026 });
+  });
 });
 
 describe('service schedule', () => {
@@ -70,7 +78,14 @@ describe('service schedule', () => {
 
   it('lists services overlapping a range', () => {
     const list = servicesBetween(at(0, 0), at(0, 0, 0, 1));
-    expect(list.map((x) => x.kind)).toEqual(['study', 'vigil', 'sunday']);
+    expect(list.map((x) => x.kind)).toEqual(['study', 'vigil', 'cleaning', 'practice', 'sunday']);
+  });
+
+  it('gives each role its own Saturday meetings', () => {
+    const kinds = (role) => servicesBetween(at(5, 0), at(6, 0), servicesFor(role)).filter((x) => x.start >= at(5, 0)).map((x) => x.kind);
+    expect(kinds('choir')).toEqual(['practice']);
+    expect(kinds('usher')).toEqual(['cleaning']);
+    expect(kinds('worshipper')).toEqual([]);
   });
 
   it('clockInfo shows day number, weekday and a "starts in" label', () => {

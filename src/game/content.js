@@ -180,7 +180,22 @@ export const SERVICES = [
   { kind: 'sunday', name: 'Sunday Service', short: 'Service', emoji: '⛪', weekday: 6, start: 9 * 60, duration: 150, music: Infinity, credit: 0.5 },
   { kind: 'study', name: 'Bible Study', short: 'Bible Study', emoji: '📚', weekday: 2, start: 18 * 60, duration: 90, music: 20, credit: 0.5 },
   { kind: 'vigil', name: 'Friday Vigil', short: 'Vigil', emoji: '🕯️', weekday: 4, start: 22 * 60, duration: 240, music: Infinity, credit: 0.4 },
+  // Saturday is for the workers: the sanctuary gets cleaned in the morning and the choir rehearses in the afternoon.
+  { kind: 'cleaning', name: 'Sanctuary Cleaning', short: 'Cleaning', emoji: '🧹', weekday: 5, start: 8 * 60, duration: 120, music: 0, credit: 0.4,
+    roles: ['hospitality', 'usher', 'security', 'media', 'children', 'prayer'], anywhere: true },
+  { kind: 'practice', name: 'Choir Practice', short: 'Practice', emoji: '🎼', weekday: 5, start: 16 * 60, duration: 120, music: Infinity, credit: 0.5, roles: ['choir'] },
 ];
+
+/** Services that start for everyone (the NPC congregation fills the hall for these). */
+export const WORSHIP_KINDS = ['sunday', 'study', 'vigil'];
+
+/** The weekly schedule for a role: worship services plus that role's own meetings. */
+export function servicesFor(role) {
+  return SERVICES.filter((x) => !x.roles || x.roles.includes(role));
+}
+
+/** Zones of the church compound (for meetings that count anywhere on the premises). */
+export const CHURCH_ZONES = ['compound', 'gate', 'carpark', 'church-hall', 'altar', 'choir', 'media', 'prayer-room', 'kitchen', 'children'];
 
 /* ---------------------------------------------------------------- missions */
 
